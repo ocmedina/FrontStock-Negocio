@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -474,7 +475,44 @@ function RemitoModal({
           if (error) throw error;
 
           if (order) {
-            setOrderData(order as FullOrderDetails);
+            const customerId = order.customer_id;
+            let realDebt = 0;
+
+            try {
+              const [ordersRes, salesRes] = await Promise.all([
+                supabase
+                  .from("orders")
+                  .select("amount_pending, status")
+                  .eq("customer_id", customerId)
+                  .neq("status", "cancelado"),
+                supabase
+                  .from("sales")
+                  .select("amount_pending, payment_method, is_cancelled")
+                  .eq("customer_id", customerId)
+              ]);
+
+              const ordersDebt = (ordersRes.data || [])
+                .filter((o: any) => o.status !== "cancelado" && Number(o.amount_pending || 0) > 0)
+                .reduce((s: number, o: any) => s + Number(o.amount_pending), 0);
+
+              const salesDebt = (salesRes.data || [])
+                .filter(
+                  (sv: any) =>
+                    !sv.is_cancelled &&
+                    (sv.payment_method || "").toLowerCase() === "cuenta_corriente" &&
+                    Number(sv.amount_pending || 0) > 0
+                )
+                .reduce((s: number, sv: any) => s + Number(sv.amount_pending), 0);
+
+              realDebt = ordersDebt + salesDebt;
+            } catch (debtErr) {
+              console.error("[RemitoModal] error calculando deuda:", debtErr);
+            }
+
+            setOrderData({
+              ...order,
+              customers: { ...order.customers, realDebt },
+            } as FullOrderDetails);
           }
         } catch (error: any) {
           toast.error("No se pudieron cargar los datos del remito.");
@@ -588,6 +626,8 @@ export default function OrdersPage() {
   const [selectedOrderIdForRemito, setSelectedOrderIdForRemito] = useState<
     string | null
   >(null);
+  const pathname = usePathname();
+  const loadingTimeoutRef = useRef<number | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<
     "todos" | OrderRow["status"]
@@ -610,54 +650,76 @@ export default function OrdersPage() {
     setCurrentPage(1);
   };
 
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
 
-    const from = (currentPage - 1) * ITEMS_PER_PAGE;
-    const to = from + ITEMS_PER_PAGE - 1;
+    try {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
 
-    let query = supabase
-      .from("orders")
-      .select(
-        `
-        id, created_at, total_amount, status, payment_method, amount_paid, amount_pending,
-        customers ( id, full_name, delivery_day ),
-        order_items ( quantity, products ( id, name, stock ) )
-      `,
-        { count: "exact" }
-      )
-      .order("created_at", { ascending: false })
-      .range(from, to);
+      let query = supabase
+        .from("orders")
+        .select(
+          `
+          id, created_at, total_amount, status, payment_method, amount_paid, amount_pending,
+          customers ( id, full_name, delivery_day )
+        `,
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
-    if (statusFilter !== "todos") query = query.eq("status", statusFilter);
-    if (dateFilter) {
-      // Filtro con zona horaria Argentina (UTC-3)
-      const startDate = `${dateFilter}T00:00:00-03:00`;
-      const endDate = `${dateFilter}T23:59:59.999-03:00`;
-      query = query.gte("created_at", startDate).lte("created_at", endDate);
-    }
-    if (searchQuery.length > 2)
-      query = query.ilike("customers.full_name", `%${searchQuery}%`);
-    if (deliveryDayFilter !== "todos")
-      query = query.eq("customers.delivery_day", deliveryDayFilter);
+      if (statusFilter !== "todos") query = query.eq("status", statusFilter);
+      if (dateFilter) {
+        const startDate = `${dateFilter}T00:00:00-03:00`;
+        const endDate = `${dateFilter}T23:59:59.999-03:00`;
+        query = query.gte("created_at", startDate).lte("created_at", endDate);
+      }
+      if (searchQuery.length > 2)
+        query = query.ilike("customers.full_name", `%${searchQuery}%`);
+      if (deliveryDayFilter !== "todos")
+        query = query.eq("customers.delivery_day", deliveryDayFilter);
 
-    const { data, error, count } = await query;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+      });
 
-    if (error) {
-      toast.error("Error al cargar los pedidos.");
-      console.error(error);
-    } else {
+      const result = await Promise.race([query, timeoutPromise]) as any;
+      const data = result?.data;
+      const error = result?.error;
+      const count = result?.count;
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
       setOrders((data || []) as unknown as OrderRow[]);
       setTotalCount(count || 0);
+    } catch (error: any) {
+      if (error.message === "TIMEOUT_FORZADO") {
+        window.location.reload();
+        return; // Detenemos la ejecución aquí
+      }
+      console.error("Error fetching orders:", error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [currentPage, statusFilter, dateFilter, searchQuery, deliveryDayFilter]);
 
   useEffect(() => {
     const debounce = setTimeout(fetchOrders, 300);
     return () => clearTimeout(debounce);
-  }, [fetchOrders]);
+  }, [fetchOrders, pathname]);
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 

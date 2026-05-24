@@ -123,6 +123,19 @@ const styles = StyleSheet.create({
   customerRow: { flexDirection: "row", marginBottom: 5 },
   customerLabel: { fontSize: 9, fontWeight: "bold", color: "#64748b", width: 82 },
   customerValue: { fontSize: 9, color: "#0f172a", flex: 1 },
+  debtBox: {
+    marginTop: 10,
+    backgroundColor: "#fef2f2",
+    borderWidth: 1.5,
+    borderColor: "#fca5a5",
+    borderRadius: 6,
+    padding: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  debtLabel: { fontSize: 10, fontWeight: "bold", color: "#b91c1c" },
+  debtAmount: { fontSize: 13, fontWeight: "bold", color: "#b91c1c" },
   table: { width: "100%", marginTop: 6 },
   tableHeader: {
     flexDirection: "row",
@@ -214,16 +227,33 @@ export default function OrderPDFDocument({ order }: { order: any }) {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("key, value");
-      if (error) {
-        console.error("Error cargando settings:", error);
-      } else {
-        const mapped = Object.fromEntries(
-          data.map((item: any) => [item.key, item.value])
-        );
-        setSettings(mapped);
+      try {
+        const query = supabase
+          .from("settings")
+          .select("key, value");
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+        });
+
+        const result = await Promise.race([query, timeoutPromise]) as any;
+        const data = result?.data;
+        const error = result?.error;
+
+        if (error) {
+          console.error("Error cargando settings:", error);
+        } else if (data) {
+          const mapped = Object.fromEntries(
+            data.map((item: any) => [item.key, item.value])
+          );
+          setSettings(mapped);
+        }
+      } catch (error: any) {
+        if (error.message === "TIMEOUT_FORZADO") {
+          window.location.reload();
+        } else {
+          console.error("Error cargando settings:", error);
+        }
       }
     };
     fetchSettings();
@@ -321,6 +351,13 @@ export default function OrderPDFDocument({ order }: { order: any }) {
                 </Text>
               </View>
             )}
+          </View>
+          {/* Deuda real del cliente (calculada desde pedidos y ventas pendientes) */}
+          <View style={styles.debtBox}>
+            <Text style={styles.debtLabel}>⚠ Deuda pendiente del cliente:</Text>
+            <Text style={styles.debtAmount}>
+              ${Number(order.customers?.realDebt ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
           </View>
         </View>
 

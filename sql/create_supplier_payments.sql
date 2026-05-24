@@ -10,6 +10,7 @@ CREATE TABLE supplier_payments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   supplier_id UUID REFERENCES suppliers(id) ON DELETE CASCADE NOT NULL,
   amount DECIMAL(10, 2) NOT NULL,
+  payment_method TEXT NOT NULL DEFAULT 'efectivo',
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

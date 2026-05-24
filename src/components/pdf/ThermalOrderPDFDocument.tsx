@@ -173,6 +173,32 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 8,
   },
+  debtSection: {
+    marginTop: 6,
+    marginBottom: 6,
+    padding: 6,
+    borderWidth: 1.5,
+    borderColor: "#000",
+    borderStyle: "dashed",
+  },
+  debtTitle: {
+    fontSize: 8,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 3,
+  },
+  debtRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  debtLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  debtAmount: {
+    fontSize: 10,
+    fontWeight: "bold",
+  },
 });
 
 export default function ThermalOrderPDFDocument({ order }: { order: any }) {
@@ -184,16 +210,33 @@ export default function ThermalOrderPDFDocument({ order }: { order: any }) {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("key, value");
-      if (error) {
-        console.error("Error cargando settings:", error);
-      } else {
-        const mapped = Object.fromEntries(
-          data.map((item: any) => [item.key, item.value])
-        );
-        setSettings(mapped);
+      try {
+        const query = supabase
+          .from("settings")
+          .select("key, value");
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+        });
+
+        const result = await Promise.race([query, timeoutPromise]) as any;
+        const data = result?.data;
+        const error = result?.error;
+
+        if (error) {
+          console.error("Error cargando settings:", error);
+        } else if (data) {
+          const mapped = Object.fromEntries(
+            data.map((item: any) => [item.key, item.value])
+          );
+          setSettings(mapped);
+        }
+      } catch (error: any) {
+        if (error.message === "TIMEOUT_FORZADO") {
+          window.location.reload();
+        } else {
+          console.error("Error cargando settings:", error);
+        }
       }
     };
     fetchSettings();
@@ -268,6 +311,17 @@ export default function ThermalOrderPDFDocument({ order }: { order: any }) {
               {order.customers.reference}
             </Text>
           )}
+        </View>
+
+        {/* Deuda real del cliente (calculada desde pedidos y ventas pendientes) */}
+        <View style={styles.debtSection}>
+          <Text style={styles.debtTitle}>*** SALDO DEL CLIENTE ***</Text>
+          <View style={styles.debtRow}>
+            <Text style={styles.debtLabel}>Saldo adeudado:</Text>
+            <Text style={styles.debtAmount}>
+              ${Number(order.customers?.realDebt ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
         </View>
 
         {/* Tabla de productos */}

@@ -75,7 +75,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
                 // Pending Sales (Current Account)
                 const { data: salesData } = await supabase
                     .from("sales")
-                    .select("id, created_at, total_amount, amount_pending, description")
+                    .select("id, created_at, total_amount, amount_pending")
                     .eq("customer_id", customer.id)
                     .eq("payment_method", "cuenta_corriente")
                     .gt("amount_pending", 0)

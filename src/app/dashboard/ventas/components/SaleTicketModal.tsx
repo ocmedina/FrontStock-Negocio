@@ -27,11 +27,19 @@ export default function SaleTicketModal({
             setLoading(true);
             const fetchFullSale = async () => {
                 try {
-                    const { data: sale, error } = await supabase
+                    let query = supabase
                         .from("sales")
                         .select("*, customers(*), sale_items(*, products(*))")
                         .eq("id", saleId)
                         .single();
+
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+                    });
+
+                    const result = await Promise.race([query, timeoutPromise]) as any;
+                    const sale = result?.data;
+                    const error = result?.error;
 
                     if (error) throw error;
 
@@ -39,6 +47,10 @@ export default function SaleTicketModal({
                         setSaleData(sale);
                     }
                 } catch (error: any) {
+                    if (error.message === "TIMEOUT_FORZADO") {
+                        window.location.reload();
+                        return;
+                    }
                     toast.error("No se pudieron cargar los datos de la venta.");
                     console.error(error);
                     onClose();

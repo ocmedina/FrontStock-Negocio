@@ -14,6 +14,9 @@ type Order = {
   id: string;
   customer_id: string;
   total_amount: number;
+  amount_paid: number;
+  amount_pending: number;
+  payment_method: string | null;
   status: string;
   created_at: string;
   profile_id: string;

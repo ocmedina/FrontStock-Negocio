@@ -5,6 +5,7 @@ import {
   FaEdit,
   FaClipboardList,
   FaHistory,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import { User } from "@supabase/supabase-js";
 
@@ -14,6 +15,7 @@ interface DeliveryHeaderProps {
   view: string;
   setView: (view: string) => void;
   onLogout: () => void;
+  onOpenExpenseModal: () => void;
 }
 
 export default function DeliveryHeader({
@@ -22,6 +24,7 @@ export default function DeliveryHeader({
   view,
   setView,
   onLogout,
+  onOpenExpenseModal,
 }: DeliveryHeaderProps) {
   return (
     <header className="bg-white dark:bg-slate-950 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40">
@@ -36,7 +39,15 @@ export default function DeliveryHeader({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2">
+          <button
+            onClick={onOpenExpenseModal}
+            className="flex items-center gap-2 px-3 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 dark:text-orange-400 rounded-lg text-sm font-bold transition-colors border border-orange-200 dark:border-orange-800"
+          >
+            <FaMoneyBillWave />
+            <span className="hidden sm:inline">Gasto</span>
+          </button>
+          
+          <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 dark:border-slate-700 pl-3 ml-1">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <FaUserCircle className="text-white text-lg" />
             </div>
@@ -46,7 +57,7 @@ export default function DeliveryHeader({
           </div>
           <button
             onClick={onLogout}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium rounded-lg transition-colors border-l border-gray-200 dark:border-slate-700 sm:border-0 pl-3 sm:pl-0 ml-1 sm:ml-0"
           >
             <FaSignOutAlt />
             <span className="hidden sm:inline">Salir</span>
@@ -56,6 +67,7 @@ export default function DeliveryHeader({
       <div className="flex border-t border-gray-200 dark:border-slate-700">
         <button
           onClick={() => setView("new_order")}
+
           className={`flex-1 py-3 text-center font-semibold transition-all flex items-center justify-center gap-2 ${view === "new_order"
             ? "bg-blue-50 dark:bg-blue-900/30 border-b-2 border-blue-600 text-blue-600"
             : "text-gray-500 hover:bg-gray-50"

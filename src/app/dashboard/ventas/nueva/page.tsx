@@ -200,7 +200,7 @@ export default function NewSalePage() {
       try {
         const { data: customersData, error: customersError } = await supabase
           .from("customers")
-          .select("*")
+          .select("id, full_name, customer_type, debt, phone, email, address")
           .eq("is_active", true)
           .order("full_name");
 
@@ -220,7 +220,7 @@ export default function NewSalePage() {
         // Cargar proveedores
         const { data: suppliersData, error: suppliersError } = await supabase
           .from("suppliers")
-          .select("*")
+          .select("id, name, debt")
           .eq("is_active", true)
           .order("name");
 
@@ -231,7 +231,7 @@ export default function NewSalePage() {
           const mappedSuppliers = suppliersData.map((s: any) => ({
             id: s.id,
             name: s.name,
-            debt: s.debt || s.balance || s.total_debt || 0,
+            debt: s.debt || 0,
           }));
           setSuppliers(mappedSuppliers);
         }

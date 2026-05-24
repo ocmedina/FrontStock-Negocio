@@ -17,104 +17,44 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
-    id: "2025-12-11-finance-module",
-    date: "11 Dic 2025",
-    title: "💰 Nuevo Módulo de Finanzas",
+    id: "2026-05-05-role-permissions-panel",
+    date: "5 May 2026",
+    title: "🛡️ Permisos por Rol con switches",
     description:
-      "Control total de tu negocio: Visualiza Ingresos, Costos, Gastos y Ganancia Neta en tiempo real. Gestiona tus gastos operativos y toma decisiones basadas en datos reales.",
-    icon: "💰",
+      "Nueva gestion de permisos por rol con switches, conteos y secciones internas para configurar accesos de forma mas clara.",
+    icon: "🛡️",
     isNew: true,
     type: "feature",
   },
   {
-    id: "2025-12-11-barcode-printing",
-    date: "11 Dic 2025",
-    title: "🏷️ Impresión de Etiquetas",
+    id: "2026-05-05-dashboard-access-control",
+    date: "5 May 2026",
+    title: "🚫 Bloqueo de Dashboard y redireccion",
     description:
-      "Genera e imprime etiquetas con códigos de barra para tus productos. Compatible con impresoras de etiquetas y hojas A4. Organiza tu stock profesionalmente.",
-    icon: "🏷️",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-counter-receipts",
-    date: "11 Dic 2025",
-    title: "🧾 Tickets de Venta (Mostrador)",
-    description:
-      "Ahora puedes emitir comprobantes térmicos (80mm) o A4 para tus ventas de mostrador. Agiliza el cobro y entrega un comprobante profesional a tus clientes.",
-    icon: "🧾",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-product-costs",
-    date: "11 Dic 2025",
-    title: "📉 Gestión de Costos y Márgenes",
-    description:
-      "Agregamos el campo 'Costo' a tus productos. Ahora puedes ver el margen de ganancia exacto y calcular la rentabilidad real de cada venta.",
-    icon: "📉",
+      "Ahora podes bloquear el acceso al dashboard por permisos. Si se desactiva, la pantalla principal redirige a Nueva Venta.",
+    icon: "🚫",
     isNew: true,
     type: "improvement",
   },
   {
-    id: "2025-12-11-settings-redesign",
-    date: "11 Dic 2025",
-    title: "⚙️ Nueva Configuración",
+    id: "2026-05-05-reports-section",
+    date: "5 May 2026",
+    title: "📊 Reportes con graficos",
     description:
-      "Panel de configuración rediseñado y organizado por pestañas. Personaliza tu negocio, controla la apariencia y gestiona tus preferencias más fácilmente.",
-    icon: "⚙️",
-    isNew: true,
-    type: "improvement",
-  },
-  {
-    id: "2025-12-11-remitos-deuda",
-    date: "11 Dic 2025",
-    title: "📄 Generación de Remitos de Saldo",
-    description:
-      "Nueva funcionalidad en el panel de Deudores: Ahora puedes generar y descargar remitos PDF específicamente para pedidos con saldo pendiente, facilitando el control de cuentas corrientes.",
-    icon: "📄",
+      "Seccion de reportes actualizada con graficos por semana, mes y año, metodos de pago y tendencias.",
+    icon: "📊",
     isNew: true,
     type: "feature",
   },
   {
-    id: "2025-12-11-visual-fixes",
-    date: "11 Dic 2025",
-    title: "🎨 Ajustes Visuales & Modo Oscuro",
+    id: "2026-05-05-menu-permissions",
+    date: "5 May 2026",
+    title: "🧭 Menu por permisos",
     description:
-      "Refinamiento visual en tablas, modales y botones. Se solucionaron problemas de contraste en modo oscuro para una experiencia más consistente en toda la aplicación.",
-    icon: "🎨",
-    isNew: false,
-    type: "fix",
-  },
-  {
-    id: "2025-12-11-sidebar-redesign",
-    date: "11 Dic 2025",
-    title: "🧭 Nueva Navegación Lateral",
-    description:
-      "Reemplazamos la barra superior por un Sidebar lateral más intuitivo y espacioso, mejorando la organización de los módulos y el acceso rápido a todas las funciones.",
+      "El menu ahora respeta permisos por rol, ocultando secciones segun configuracion del administrador.",
     icon: "🧭",
     isNew: true,
     type: "improvement",
-  },
-  {
-    id: "2025-12-08-dark-mode-complete",
-    date: "8 Dic 2025",
-    title: "🌙 Modo Oscuro Completo",
-    description:
-      "Implementación completa de dark mode en toda la aplicación. Todos los elementos, botones, inputs y gradientes ahora se adaptan perfectamente al tema oscuro.",
-    icon: "🌙",
-    isNew: false,
-    type: "improvement",
-  },
-  {
-    id: "2025-12-08-top-products-chart",
-    date: "8 Dic 2025",
-    title: "📊 Gráfico Top 10 Productos Corregido",
-    description:
-      "Corregido el gráfico de productos más vendidos con visualización vertical mejorada y colores optimizados para mejor visibilidad en ambos modos.",
-    icon: "📊",
-    isNew: false,
-    type: "fix",
   },
 ];
 
@@ -136,25 +76,9 @@ export default function UpdatesNotification() {
       );
       setHasNewUpdates(hasNew);
       if (!hasNew) setActiveTab("all");
-
-      // AUTO-OPEN: Si hay novedades no vistas, abrir el panel automáticamente después de 1.5s
-      if (hasNew) {
-        const timer = setTimeout(() => {
-          setIsOpen(true);
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
     } else {
       const hasNew = UPDATES.some((update) => update.isNew);
       setHasNewUpdates(hasNew);
-
-      // Si es la primera vez que entra (no hay storage), también abrir
-      if (hasNew) {
-        const timer = setTimeout(() => {
-          setIsOpen(true);
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
     }
   }, []);
 

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/server";
 import Link from "next/link";
-import { Database } from "@/lib/database.types";
+import { redirect } from "next/navigation";
+import { PERMISSIONS, ROLES, hasPermission } from "@/lib/permissions";
 import {
   FaBoxes,
   FaUsers,
@@ -13,8 +14,6 @@ import {
   FaBalanceScale,
 } from "react-icons/fa";
 import QuickActionsHeader from "@/components/QuickActionsHeader";
-import NewsSection from "@/components/NewsSection";
-import ChristmasCountdown from "@/components/ChristmasCountdown";
 
 // --- Tipos ---
 type CustomerRow = {
@@ -37,6 +36,8 @@ type SaleRow = {
   total_amount: number;
   created_at: string;
 };
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 // --- Componente de tarjeta simple ---
 function DashboardCard({
@@ -65,8 +66,87 @@ function DashboardCard({
 }
 
 // --- Obtener datos del dashboard ---
-async function getDashboardData() {
-  const supabase = await createClient();
+type AccessState = {
+  role: string | null;
+  legacyAllow: string[];
+  profileAllow: string[];
+  profileDeny: string[];
+  roleAllow: string[];
+  roleDeny: string[];
+};
+
+async function getUserAccess(supabase: SupabaseClient): Promise<AccessState> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return {
+      role: null,
+      legacyAllow: [],
+      profileAllow: [],
+      profileDeny: [],
+      roleAllow: [],
+      roleDeny: [],
+    };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, permissions, permissions_allow, permissions_deny")
+    .eq("id", session.user.id)
+    .single();
+
+  const role =
+    (profile?.role as string | undefined) ??
+    (session.user.user_metadata?.role as string | undefined) ??
+    null;
+
+  const { data: rolePermissions } = role
+    ? await supabase
+        .from("role_permissions")
+        .select("permissions_allow, permissions_deny")
+        .eq("role", role)
+        .maybeSingle()
+    : { data: null };
+
+  return {
+    role,
+    legacyAllow: Array.isArray(profile?.permissions) ? profile.permissions : [],
+    profileAllow: Array.isArray(profile?.permissions_allow)
+      ? profile.permissions_allow
+      : [],
+    profileDeny: Array.isArray(profile?.permissions_deny)
+      ? profile.permissions_deny
+      : [],
+    roleAllow: Array.isArray(rolePermissions?.permissions_allow)
+      ? rolePermissions.permissions_allow
+      : [],
+    roleDeny: Array.isArray(rolePermissions?.permissions_deny)
+      ? rolePermissions.permissions_deny
+      : [],
+  };
+}
+
+function canPermission(
+  access: AccessState,
+  permission: keyof typeof PERMISSIONS
+) {
+  const allowSet = new Set([...access.legacyAllow, ...access.profileAllow]);
+
+  if (access.profileDeny.includes(permission)) return false;
+  if (allowSet.has(permission)) return true;
+  if (access.roleDeny.includes(permission)) return false;
+  if (access.roleAllow.includes(permission)) return true;
+
+  return hasPermission(access.role as any, permission);
+}
+
+async function getDashboardData(
+  supabase: SupabaseClient,
+  options: { isFull: boolean; isRepartidor: boolean }
+) {
+  const { isFull, isRepartidor } = options;
 
   // Obtener fecha en zona horaria Argentina
   const now = new Date();
@@ -91,6 +171,42 @@ async function getDashboardData() {
   const startOfNextMonth = `${firstDayOfNextMonth.toISOString().split("T")[0]
     }T00:00:00-03:00`;
 
+  // --- Optimización: usar RPC para dashboard completo (1 query en vez de 10) ---
+  if (isFull) {
+    const { data: summary, error: rpcError } = await supabase.rpc(
+      "get_dashboard_summary",
+      {
+        p_start_of_month: startOfMonth,
+        p_start_of_next_month: startOfNextMonth,
+      }
+    );
+
+    if (!rpcError && summary) {
+      const totalOrdersDebt = Number(summary.totalOrdersDebt) || 0;
+      const totalSalesDebt = Number(summary.totalSalesDebt) || 0;
+
+      return {
+        productCount: Number(summary.productCount) || 0,
+        clientCount: Number(summary.clientCount) || 0,
+        totalOrders: Number(summary.totalOrders) || 0,
+        totalSales: Number(summary.totalSales) || 0,
+        totalOrderSales: Number(summary.totalOrderSales) || 0,
+        totalDebt: totalOrdersDebt + totalSalesDebt,
+        customersWithDebtCount: Number(summary.customersWithDebtCount) || 0,
+        pendingOrders: (summary.pendingOrders || []) as any[],
+        criticalStockProducts: (summary.criticalStockProducts || []) as any[],
+        recentSales: (summary.recentSales || []) as any[],
+      };
+    }
+
+    // Fallback: si la RPC falla (ej. no existe aún), usar queries individuales
+    console.warn("Dashboard RPC fallback — usando queries individuales:", rpcError?.message);
+  }
+
+  // --- Fallback para acceso limitado o si la RPC no está disponible ---
+  const emptyCount = Promise.resolve({ count: 0 } as any);
+  const emptyList = Promise.resolve({ data: [] } as any);
+
   const [
     productCountRes,
     clientCountRes,
@@ -103,57 +219,75 @@ async function getDashboardData() {
     ordersWithDebtRes,
     salesWithDebtRes,
   ] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
-    supabase
-      .from("customers")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
-    supabase
-      .from("orders" as any)
-      .select("id", { count: "exact", head: true }),
-    supabase
-      .from("sales")
-      .select("total_amount")
-      .gte("created_at", startOfMonth)
-      .lt("created_at", startOfNextMonth),
-    supabase
-      .from("orders" as any)
-      .select("total_amount")
-      .eq("status", "entregado")
-      .gte("created_at", startOfMonth)
-      .lt("created_at", startOfNextMonth),
+    isFull
+      ? supabase
+          .from("products")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+      : emptyCount,
+    isFull
+      ? supabase
+          .from("customers")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+      : emptyCount,
+    isFull
+      ? supabase
+          .from("orders" as any)
+          .select("id", { count: "exact", head: true })
+      : emptyCount,
+    !isRepartidor
+      ? supabase
+          .from("sales")
+          .select("total_amount")
+          .gte("created_at", startOfMonth)
+          .lt("created_at", startOfNextMonth)
+      : emptyList,
+    isFull
+      ? supabase
+          .from("orders" as any)
+          .select("total_amount")
+          .eq("status", "entregado")
+          .gte("created_at", startOfMonth)
+          .lt("created_at", startOfNextMonth)
+      : emptyList,
     supabase
       .from("orders" as any)
       .select("id, customers ( id, full_name ), created_at")
       .eq("status", "pendiente")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("products")
-      .select("name, stock, id")
-      .eq("is_active", true)
-      .lte("stock", 5)
-      .order("stock", { ascending: true })
-      .limit(5),
-    supabase
-      .from("sales")
-      .select("id, total_amount, created_at, customers ( full_name )")
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("orders" as any)
-      .select("amount_pending, customer_id")
-      .gt("amount_pending", 0)
-      .neq("status", "cancelado"),
-    supabase
-      .from("sales")
-      .select("amount_pending, customer_id")
-      .eq("payment_method", "cuenta_corriente")
-      .gt("amount_pending", 0)
-      .eq("is_cancelled", false),
+    !isRepartidor
+      ? supabase
+          .from("products")
+          .select("name, stock, id")
+          .eq("is_active", true)
+          .lte("stock", 5)
+          .order("stock", { ascending: true })
+          .limit(5)
+      : emptyList,
+    !isRepartidor
+      ? supabase
+          .from("sales")
+          .select("id, total_amount, created_at, customers ( full_name )")
+          .order("created_at", { ascending: false })
+          .limit(5)
+      : emptyList,
+    isFull
+      ? supabase
+          .from("orders" as any)
+          .select("amount_pending, customer_id")
+          .gt("amount_pending", 0)
+          .neq("status", "cancelado")
+      : emptyList,
+    isFull
+      ? supabase
+          .from("sales")
+          .select("amount_pending, customer_id")
+          .eq("payment_method", "cuenta_corriente")
+          .gt("amount_pending", 0)
+          .eq("is_cancelled", false)
+      : emptyList,
   ]);
 
   const salesThisMonth = salesThisMonthRes.data;
@@ -219,6 +353,24 @@ async function getDashboardData() {
 
 // --- Página principal ---
 export default async function DashboardPage() {
+  const supabase = await createClient();
+  const access = await getUserAccess(supabase);
+  const role = access.role;
+  const canFull = canPermission(access, "VER_DASHBOARD_COMPLETO");
+  const canLimited = canPermission(access, "VER_DASHBOARD_LIMITADO");
+  const canDashboard = canFull || canLimited;
+  const isRepartidor = role === ROLES.REPARTIDOR;
+
+  if (isRepartidor) {
+    redirect("/reparto");
+  }
+
+  if (!canDashboard) {
+    redirect("/dashboard/ventas/nueva");
+  }
+
+  const isFull = canFull;
+
   const {
     productCount,
     clientCount,
@@ -230,7 +382,7 @@ export default async function DashboardPage() {
     pendingOrders,
     criticalStockProducts,
     recentSales,
-  } = await getDashboardData();
+  } = await getDashboardData(supabase, { isFull, isRepartidor });
 
   const currentMonth = new Date().toLocaleDateString("es-ES", {
     month: "long",
@@ -239,47 +391,99 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Cuenta regresiva navideña */}
-      <ChristmasCountdown />
 
       {/* Acciones Rápidas como Header */}
-      <QuickActionsHeader />
+      {!isRepartidor && <QuickActionsHeader />}
 
-      {/* Sección de Novedades - Colapsable */}
-      <NewsSection />
+      {isRepartidor && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <FaTruck className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-blue-700 dark:text-blue-200">Modo reparto</p>
+              <p className="text-base font-semibold text-gray-800 dark:text-slate-100">
+                Solo se muestran entregas y pedidos pendientes
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/reparto"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
+          >
+            Ir a Reparto <FaArrowRight />
+          </Link>
+        </div>
+      )}
 
       {/* Tarjetas principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DashboardCard
-          title="Ventas del Mes"
-          value={`$${totalSales.toLocaleString("es-AR", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`}
-          icon={<FaCashRegister />}
-          note={currentMonth}
-        />
-        <DashboardCard
-          title="Pedidos Totales"
-          value={totalOrders}
-          icon={<FaDolly />}
-          note="Históricos"
-        />
-        <DashboardCard
-          title="Productos Activos"
-          value={productCount}
-          icon={<FaBoxes />}
-          note="En catálogo"
-        />
-        <DashboardCard
-          title="Clientes Activos"
-          value={clientCount}
-          icon={<FaUsers />}
-          note="Registrados"
-        />
-      </div>
+      {isFull && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <DashboardCard
+            title="Ventas del Mes"
+            value={`$${totalSales.toLocaleString("es-AR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
+            icon={<FaCashRegister />}
+            note={currentMonth}
+          />
+          <DashboardCard
+            title="Pedidos Totales"
+            value={totalOrders}
+            icon={<FaDolly />}
+            note="Historicos"
+          />
+          <DashboardCard
+            title="Productos Activos"
+            value={productCount}
+            icon={<FaBoxes />}
+            note="En catalogo"
+          />
+          <DashboardCard
+            title="Clientes Activos"
+            value={clientCount}
+            icon={<FaUsers />}
+            note="Registrados"
+          />
+        </div>
+      )}
+
+      {!isRepartidor && !isFull && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <DashboardCard
+            title="Ventas del Mes"
+            value={`$${totalSales.toLocaleString("es-AR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
+            icon={<FaCashRegister />}
+            note={currentMonth}
+          />
+          <DashboardCard
+            title="Pedidos Pendientes"
+            value={pendingOrders.length}
+            icon={<FaDolly />}
+            note="Pendientes"
+          />
+          <DashboardCard
+            title="Stock Critico"
+            value={criticalStockProducts.length}
+            icon={<FaBoxes />}
+            note="Productos"
+          />
+          <DashboardCard
+            title="Ventas Recientes"
+            value={recentSales.length}
+            icon={<FaCashRegister />}
+            note="Ultimas 5"
+          />
+        </div>
+      )}
 
       {/* Balance: Ventas Local vs Reparto */}
+      {isFull && (
       <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-purple-950/30 dark:via-blue-950/30 dark:to-cyan-950/30 p-6 rounded-xl shadow-lg border-2 border-purple-200 dark:border-purple-900">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
@@ -441,9 +645,10 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Tarjeta de Cuenta Corriente */}
-      {totalDebt > 0 && (
+      {isFull && totalDebt > 0 && (
         <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 p-6 rounded-lg shadow-sm border-2 border-orange-200 dark:border-orange-900">
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -527,6 +732,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stock Crítico */}
+        {!isRepartidor && (
         <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
           <div className="p-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
@@ -569,8 +775,10 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Últimas Ventas */}
+        {!isRepartidor && (
         <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
           <div className="p-4 border-b border-gray-100 dark:border-slate-700">
             <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
@@ -618,6 +826,7 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

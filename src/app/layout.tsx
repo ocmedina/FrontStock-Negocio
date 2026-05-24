@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import ConditionalChristmasDecorations from "@/components/ConditionalChristmasDecorations";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,12 +30,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ConditionalChristmasDecorations
-            density="heavy"
-            showSnow={true}
-            showLights={true}
-            showFloating={false}
-          />
+
           {children}
           <Toaster
             position="bottom-right"

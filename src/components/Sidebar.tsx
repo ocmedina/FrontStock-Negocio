@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/hooks/useAuth";
 import {
   HiOutlineChartPie,
   HiOutlineDocumentText,
@@ -31,37 +32,51 @@ const navSections = {
       href: "/dashboard/ventas/nueva",
       label: "Nueva Venta",
       icon: HiOutlineTicket,
+      permission: "CREAR_VENTAS",
     },
     {
       href: "/dashboard/presupuestos",
       label: "Presupuestos",
       icon: HiOutlineDocumentText,
+      permission: "VER_PRESUPUESTOS",
     },
     {
       href: "/dashboard/pedidos",
       label: "Pedidos",
       icon: HiOutlineShoppingCart,
-      adminOnly: true,
+      permission: "VER_PEDIDOS",
     },
-    { href: "/dashboard/clientes", label: "Clientes", icon: HiOutlineUsers },
+    {
+      href: "/dashboard/clientes",
+      label: "Clientes",
+      icon: HiOutlineUsers,
+      permission: "VER_CLIENTES",
+    },
     {
       href: "/dashboard/ventas",
       label: "Historial",
       icon: HiOutlineDocumentText,
+      permission: "VER_VENTAS",
     },
   ],
   logistica: [
-    { href: "/dashboard/products", label: "Productos", icon: HiOutlineTag },
+    {
+      href: "/dashboard/products",
+      label: "Productos",
+      icon: HiOutlineTag,
+      permission: "VER_PRODUCTOS",
+    },
     {
       href: "/dashboard/inventario",
       label: "Inventario",
       icon: HiOutlineClipboardList,
+      permission: "VER_INVENTARIO",
     },
     {
       href: "/dashboard/proveedores",
       label: "Proveedores",
       icon: HiOutlineTruck,
-      adminOnly: true,
+      permission: "VER_PROVEEDORES",
     },
   ],
   administracion: [
@@ -69,31 +84,31 @@ const navSections = {
       href: "/dashboard/finanzas",
       label: "Finanzas",
       icon: HiOutlineCash, // WARNING: Make sure to import this icon
-      adminOnly: true,
+      permission: "VER_FINANZAS",
     },
     {
-      href: "/dashboard/reportes",
+      href: "/dashboard/cierre",
       label: "Cierre de Caja",
       icon: HiOutlineDocumentReport,
-      adminOnly: true,
+      permission: "VER_CIERRE",
     },
     {
       href: "/dashboard/facturas",
       label: "Facturas",
       icon: HiOutlineDocumentText,
-      adminOnly: true,
+      permission: "VER_FACTURAS",
     },
     {
-      href: "/dashboard/graficos",
-      label: "Gráficos",
-      icon: HiOutlineChartPie,
-      adminOnly: true,
+      href: "/dashboard/reportes",
+      label: "Reportes",
+      icon: HiOutlineDocumentReport,
+      permission: "VER_REPORTES",
     },
     {
       href: "/dashboard/usuarios",
       label: "Usuarios",
       icon: HiOutlineUserGroup,
-      adminOnly: true,
+      permission: "VER_USUARIOS",
     },
   ],
 };
@@ -113,60 +128,46 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<{
-    full_name: string;
-    email: string;
-    role: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, role")
-          .eq("id", session.user.id)
-          .single();
-
-        setUserProfile({
-          full_name: profile?.full_name ?? "Usuario",
-          email: session.user.email ?? "",
-          role: profile?.role ?? "vendedor",
-        });
-      }
-    };
-    fetchUserProfile();
-  }, []);
+  const { profile, role, can } = useAuth();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        await supabase.auth.signOut({ scope: "local" });
+      }
+    } catch (error) {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        // ignore logout cleanup errors
+      }
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   };
 
   // Roles
-  const role = userProfile?.role;
   const isAdmin = role === "administrador";
-  // @ts-ignore
   const isSuper = role === "supervendedor";
+  const canSeeDashboard =
+    can("VER_DASHBOARD_COMPLETO") || can("VER_DASHBOARD_LIMITADO");
 
   // Filtro de visibilidad
   const getVisibleLinks = (section: any[]) =>
     section.filter((link) => {
-      if (!link.adminOnly) return true;
-      if (isAdmin) return true;
-      // @ts-ignore
-      if (
-        isSuper &&
-        ["pedidos", "facturas", "reportes"].some((word) =>
-          link.href.includes(word)
-        )
-      )
-        return true;
-      return false;
+      if (!link.permission) return true;
+      return can(link.permission);
     });
+
+  const roleLabel = isAdmin
+    ? "Admin"
+    : isSuper
+      ? "Supervendedor"
+      : role === "repartidor"
+        ? "Repartidor"
+        : "Vendedor";
 
   const isLinkActive = (href: string) => {
     if (href === "/dashboard") return pathname === href;
@@ -198,7 +199,7 @@ export default function Sidebar({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-screen bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:shadow-none shadow-2xl flex flex-col
+        className={`fixed top-0 left-0 z-50 h-screen bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:h-screen lg:shadow-none shadow-2xl flex flex-col
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         ${isCollapsed ? "lg:w-20" : "lg:w-72"} w-72`}
       >
@@ -229,30 +230,32 @@ export default function Sidebar({
         </div>
 
         {/* Scrollable Navigation */}
-        <div className="flex-1 overflow-y-auto py-6 px-3 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-700 overflow-x-hidden">
+        <div className="flex-1 py-6 px-3 space-y-6 overflow-x-hidden">
           {/* Dashboard Link */}
-          <div>
-            <Link
-              href="/dashboard"
-              onClick={onClose}
-              title={isCollapsed ? "Dashboard" : ""}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group
-                ${
-                  pathname === "/dashboard"
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold shadow-sm ring-1 ring-blue-100 dark:ring-blue-800"
-                    : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-200"
-                } ${isCollapsed ? "justify-center" : ""}`}
-            >
-              <HiOutlineChartPie
-                className={`w-6 h-6 flex-shrink-0 ${
-                  pathname === "/dashboard"
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-400 group-hover:text-gray-600 dark:text-slate-500 dark:group-hover:text-slate-300"
-                }`}
-              />
-              {!isCollapsed && <span>Dashboard</span>}
-            </Link>
-          </div>
+          {canSeeDashboard && (
+            <div>
+              <Link
+                href="/dashboard"
+                onClick={onClose}
+                title={isCollapsed ? "Dashboard" : ""}
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group
+                  ${
+                    pathname === "/dashboard"
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold shadow-sm ring-1 ring-blue-100 dark:ring-blue-800"
+                      : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-200"
+                  } ${isCollapsed ? "justify-center" : ""}`}
+              >
+                <HiOutlineChartPie
+                  className={`w-6 h-6 flex-shrink-0 ${
+                    pathname === "/dashboard"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-400 group-hover:text-gray-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+                  }`}
+                />
+                {!isCollapsed && <span>Dashboard</span>}
+              </Link>
+            </div>
+          )}
 
           {/* Comercial */}
           <div className="space-y-1">
@@ -396,15 +399,15 @@ export default function Sidebar({
               }`}
             >
               <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                {userProfile?.full_name?.charAt(0).toUpperCase() || "U"}
+                {profile?.full_name?.charAt(0).toUpperCase() || "U"}
               </div>
               {!isCollapsed && (
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <p className="text-sm font-bold text-gray-900 dark:text-slate-100 truncate">
-                    {userProfile?.full_name}
+                    {profile?.full_name}
                   </p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate">
-                    {role === "administrador" ? "Admin" : "Vendedor"}
+                    {roleLabel}
                   </p>
                 </div>
               )}
@@ -420,14 +423,16 @@ export default function Sidebar({
             {/* Actions */}
             {!isCollapsed ? (
               <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href="/dashboard/configuracion"
-                  onClick={onClose}
-                  className="flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-medium text-gray-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
-                >
-                  <HiOutlineCog className="w-4 h-4" />
-                  Config
-                </Link>
+                {can("VER_CONFIGURACION") && (
+                  <Link
+                    href="/dashboard/configuracion"
+                    onClick={onClose}
+                    className="flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-medium text-gray-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
+                  >
+                    <HiOutlineCog className="w-4 h-4" />
+                    Config
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"

@@ -15,7 +15,7 @@ export default function SidebarLayout({
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-slate-950 overflow-hidden">
+        <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
             {/* Sidebar Component */}
             <Sidebar
                 isOpen={mobileMenuOpen}
@@ -45,8 +45,12 @@ export default function SidebarLayout({
                 </header>
 
                 {/* Scrollable Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth">
-                    <div className="w-full h-full">
+                <main
+                    className={`flex-1 scroll-smooth ${
+                        isCollapsed ? "lg:pl-20" : "lg:pl-72"
+                    }`}
+                >
+                    <div className="w-full p-4 sm:p-6 lg:p-8">
                         {children}
                     </div>
                 </main>

@@ -61,7 +61,7 @@ export default function RegisterPayment({
     // 2. Fetch pending sales (current account)
     const { data: sales } = await supabase
       .from("sales")
-      .select("id, amount_pending, total_amount, created_at, description, payment_method")
+      .select("id, amount_pending, total_amount, created_at, payment_method")
       .eq("customer_id", customerId)
       .eq("payment_method", "cuenta_corriente")
       .eq("is_cancelled", false)

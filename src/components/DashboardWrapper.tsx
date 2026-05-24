@@ -1,9 +1,47 @@
 // src/components/DashboardWrapper.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import StartingFloatModal from "./StartingFloatModal";
+
+const CACHE_KEY = "frontstock_starting_float_check";
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora
+
+function getTodayArg(): string {
+  const now = new Date();
+  const argDate = new Date(
+    now.toLocaleString("en-US", {
+      timeZone: "America/Argentina/Buenos_Aires",
+    })
+  );
+  return argDate.toISOString().split("T")[0];
+}
+
+function getCachedResult(): { date: string; needsFloat: boolean } | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    const now = Date.now();
+    if (now - cached.timestamp > CACHE_TTL_MS) return null;
+    if (cached.date !== getTodayArg()) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedResult(date: string, needsFloat: boolean) {
+  try {
+    sessionStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ date, needsFloat, timestamp: Date.now() })
+    );
+  } catch {
+    // sessionStorage may not be available
+  }
+}
 
 export default function DashboardWrapper({
   children,
@@ -12,23 +50,52 @@ export default function DashboardWrapper({
 }) {
   const [showStartingFloatModal, setShowStartingFloatModal] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const hasChecked = useRef(false);
 
   useEffect(() => {
+    // Evitar doble-ejecución en StrictMode y navegaciones
+    if (hasChecked.current) {
+      setIsChecking(false);
+      return;
+    }
+    hasChecked.current = true;
+
     checkStartingFloat();
+  }, []);
+
+  // GLOBAL KEEP-ALIVE PARA PREVENIR SUSPENSIÓN POR INACTIVIDAD
+  // Ping a Supabase cada 45 segundos para que la conexión no muera.
+  useEffect(() => {
+    const keepAliveInterval = setInterval(async () => {
+      try {
+        await supabase.from("profiles").select("id").limit(1);
+      } catch (e) {
+        // Ignorar errores del ping
+      }
+    }, 45000); // 45 segundos
+
+    return () => clearInterval(keepAliveInterval);
   }, []);
 
   const checkStartingFloat = async () => {
     try {
-      // Obtener fecha en zona horaria Argentina (UTC-3)
-      const now = new Date();
-      const argDate = new Date(
-        now.toLocaleString("en-US", {
+      const today = getTodayArg();
+
+      // Verificar caché primero
+      const cached = getCachedResult();
+      if (cached) {
+        if (cached.needsFloat) {
+          setShowStartingFloatModal(true);
+        }
+        setIsChecking(false);
+        return;
+      }
+
+      const yesterdayDate = new Date(
+        new Date().toLocaleString("en-US", {
           timeZone: "America/Argentina/Buenos_Aires",
         })
       );
-      const today = argDate.toISOString().split("T")[0];
-
-      const yesterdayDate = new Date(argDate);
       yesterdayDate.setDate(yesterdayDate.getDate() - 1);
       const yesterday = yesterdayDate.toISOString().split("T")[0];
 
@@ -43,6 +110,7 @@ export default function DashboardWrapper({
 
       // Si ya hay fondo inicial de hoy, no mostrar modal
       if (todayFloat) {
+        setCachedResult(today, false);
         setIsChecking(false);
         return;
       }
@@ -57,11 +125,13 @@ export default function DashboardWrapper({
       // Si NO hay cierre de ayer, es el primer día o no se cerró ayer
       // En este caso NO mostramos el modal
       if (!yesterdayReport) {
+        setCachedResult(today, false);
         setIsChecking(false);
         return;
       }
 
       // 3. Si hay cierre de ayer pero NO hay fondo inicial de hoy, mostrar modal
+      setCachedResult(today, true);
       setShowStartingFloatModal(true);
     } catch (error) {
       console.error("Error checking starting float:", error);
@@ -72,6 +142,8 @@ export default function DashboardWrapper({
 
   const handleCloseModal = () => {
     setShowStartingFloatModal(false);
+    // Actualizar caché: ya no necesita float (lo acaba de cargar)
+    setCachedResult(getTodayArg(), false);
   };
 
   if (isChecking) {

@@ -11,12 +11,20 @@ import {
   FaCalendarAlt,
   FaChevronLeft,
   FaChevronRight,
+  FaMoneyBillWave,
+  FaUniversity,
+  FaMobileAlt,
+  FaFileInvoice,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 type Order = {
   id: string;
   customer_id: string;
   total_amount: number;
+  amount_paid: number;
+  amount_pending: number;
+  payment_method: string | null;
   status: string;
   created_at: string;
   profile_id: string;
@@ -73,6 +81,20 @@ export default function DailyOrdersView({
     onDateChange(`${yyyy}-${mm}-${dd}`);
   };
 
+  // ── Totals bar ───────────────────────────────────────────────────────────
+  const deliveredOrders = dailyOrders.filter((o) => o.status === "entregado");
+  const totalCobrado = deliveredOrders.reduce((s, o) => s + (o.amount_paid || 0), 0);
+  const totalPendiente = deliveredOrders.reduce((s, o) => s + (o.amount_pending || 0), 0);
+  const totalEfectivo = deliveredOrders
+    .filter((o) => (o.payment_method || "").toLowerCase() === "efectivo")
+    .reduce((s, o) => s + (o.amount_paid || 0), 0);
+  const totalTransf = deliveredOrders
+    .filter((o) => (o.payment_method || "").toLowerCase() === "transferencia")
+    .reduce((s, o) => s + (o.amount_paid || 0), 0);
+
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n);
+
   return (
     <main className="p-4 space-y-4 bg-gray-50 dark:bg-slate-900 min-h-screen">
       {/* Date Selector */}
@@ -121,6 +143,37 @@ export default function DailyOrdersView({
         </div>
       </div>
 
+      {/* Totals bar — solo si hay entregados */}
+      {deliveredOrdersCount > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 space-y-2">
+          <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Resumen de cobros</p>
+          <div className="grid grid-cols-2 gap-2">
+            {totalEfectivo > 0 && (
+              <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2">
+                <span className="text-xs font-medium text-green-700 dark:text-green-300 flex items-center gap-1"><FaMoneyBillWave className="text-green-500" />Efectivo</span>
+                <span className="text-xs font-bold text-green-700 dark:text-green-300">{fmt(totalEfectivo)}</span>
+              </div>
+            )}
+            {totalTransf > 0 && (
+              <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2">
+                <span className="text-xs font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1"><FaUniversity className="text-blue-500" />Transf.</span>
+                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{fmt(totalTransf)}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between items-center pt-1 border-t border-gray-100 dark:border-slate-700">
+            <span className="text-xs font-semibold text-gray-600 dark:text-slate-300">Total cobrado</span>
+            <span className="text-sm font-black text-green-600 dark:text-green-400">{fmt(totalCobrado)}</span>
+          </div>
+          {totalPendiente > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1"><FaExclamationTriangle className="text-xs" />Deuda generada</span>
+              <span className="text-sm font-black text-red-600 dark:text-red-400">{fmt(totalPendiente)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-lg border border-gray-200 dark:border-slate-700">
         <h2 className="font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2 text-lg">
           <FaClipboardList className="text-blue-600" /> Pedidos del{" "}
@@ -162,9 +215,25 @@ export default function DailyOrdersView({
                       })}
                     </p>
                   </div>
-                  <p className="font-bold text-xl text-green-600">
-                    ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-xl text-green-600">
+                      ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    {order.status === "entregado" && (
+                      <div className="mt-1 space-y-0.5">
+                        {order.amount_paid > 0 && (
+                          <p className="text-xs font-semibold text-green-500">
+                            Cobrado: {fmt(order.amount_paid)}
+                          </p>
+                        )}
+                        {order.amount_pending > 0 && (
+                          <p className="text-xs font-bold text-red-500 flex items-center gap-0.5 justify-end">
+                            <FaExclamationTriangle className="text-xs" /> Debe: {fmt(order.amount_pending)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t">
                   <span

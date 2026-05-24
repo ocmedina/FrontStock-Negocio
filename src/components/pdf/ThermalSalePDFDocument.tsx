@@ -181,16 +181,33 @@ export default function ThermalSalePDFDocument({ sale }: { sale: any }) {
 
     useEffect(() => {
         const fetchSettings = async () => {
-            const { data, error } = await supabase
-                .from("settings")
-                .select("key, value");
-            if (error) {
-                console.error("Error cargando settings:", error);
-            } else {
-                const mapped = Object.fromEntries(
-                    data.map((item: any) => [item.key, item.value])
-                );
-                setSettings(mapped);
+            try {
+                const query = supabase
+                    .from("settings")
+                    .select("key, value");
+
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+                });
+
+                const result = await Promise.race([query, timeoutPromise]) as any;
+                const data = result?.data;
+                const error = result?.error;
+
+                if (error) {
+                    console.error("Error cargando settings:", error);
+                } else if (data) {
+                    const mapped = Object.fromEntries(
+                        data.map((item: any) => [item.key, item.value])
+                    );
+                    setSettings(mapped);
+                }
+            } catch (error: any) {
+                if (error.message === "TIMEOUT_FORZADO") {
+                    window.location.reload();
+                } else {
+                    console.error("Error cargando settings:", error);
+                }
             }
         };
         fetchSettings();

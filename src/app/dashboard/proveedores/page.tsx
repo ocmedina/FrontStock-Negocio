@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { formatCurrency } from "@/lib/numberFormat";
@@ -27,21 +28,51 @@ export default function SuppliersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debtFilter, setDebtFilter] = useState("all");
   const [userRole, setUserRole] = useState<string | null>(null);
+  const pathname = usePathname();
+  const loadingTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const fetchSuppliers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("suppliers")
-      .select("*")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
 
-    if (error) {
-      toast.error("Error al cargar los proveedores.");
-    } else {
+    try {
+      let query = supabase
+        .from("suppliers")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+      });
+
+      const result = await Promise.race([query, timeoutPromise]) as any;
+      const data = result?.data;
+      const error = result?.error;
+
+      if (error) {
+        console.error("Error fetching suppliers:", error);
+        return;
+      }
+
       setSuppliers(data || []);
+    } catch (error: any) {
+      if (error.message === "TIMEOUT_FORZADO") {
+        window.location.reload();
+        return;
+      }
+      console.error("Error fetching suppliers:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Obtener el rol del usuario una sola vez
@@ -80,7 +111,7 @@ export default function SuppliersPage() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [pathname]);
 
   // Filtrar proveedores por búsqueda y deuda
   const filteredSuppliers = useMemo(() => {

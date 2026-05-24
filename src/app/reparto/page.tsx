@@ -22,6 +22,7 @@ import RemitoModal from "./components/modals/RemitoModal";
 import CancelOrderModal from "./components/modals/CancelOrderModal";
 import OrderDetailsModal from "./components/modals/OrderDetailsModal";
 import EditOrderModal from "./components/modals/EditOrderModal";
+import AddExpenseModal from "./components/modals/AddExpenseModal";
 
 // --- Tipos de Datos ---
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
@@ -31,6 +32,9 @@ type Order = {
   id: string;
   customer_id: string;
   total_amount: number;
+  amount_paid: number;
+  amount_pending: number;
+  payment_method: string | null;
   status: string;
   created_at: string;
   profile_id: string;
@@ -62,6 +66,7 @@ export default function RepartoPage() {
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isCancelOrderModalOpen, setIsCancelOrderModalOpen] = useState(false);
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
+  const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
 
   // Selection States
   const [selectedOrderForDelivery, setSelectedOrderForDelivery] =
@@ -128,7 +133,7 @@ export default function RepartoPage() {
         const { data, error } = await (supabase as any)
           .from("orders")
           .select(
-            "id, total_amount, status, created_at, customer_id, profile_id, customers(full_name, address, reference)"
+            "id, total_amount, status, created_at, customer_id, profile_id, amount_paid, amount_pending, payment_method, customers(full_name, address, reference)"
           )
           // Sin filtro de profile_id: se muestran todos los pedidos del negocio
           .gte("created_at", startDate)
@@ -530,8 +535,21 @@ export default function RepartoPage() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        await supabase.auth.signOut({ scope: "local" });
+      }
+    } catch (error) {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        // ignore logout cleanup errors
+      }
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   };
 
   const pendingOrdersCount = dailyOrders.filter(
@@ -592,6 +610,15 @@ export default function RepartoPage() {
         onClose={() => setIsOrderDetailsModalOpen(false)}
         orderId={selectedOrderIdForDetails}
       />
+      <AddExpenseModal
+        isOpen={isAddExpenseModalOpen}
+        userId={currentUser?.id || ""}
+        onClose={() => setIsAddExpenseModalOpen(false)}
+        onSuccess={() => {
+          // If we want to refresh anything specific when an expense is added, we can do it here.
+          // By default, it's just saved to the database.
+        }}
+      />
 
       <DeliveryHeader
         currentUser={currentUser}
@@ -599,6 +626,7 @@ export default function RepartoPage() {
         view={view}
         setView={setView}
         onLogout={handleLogout}
+        onOpenExpenseModal={() => setIsAddExpenseModalOpen(true)}
       />
 
       {view === "new_order" && (

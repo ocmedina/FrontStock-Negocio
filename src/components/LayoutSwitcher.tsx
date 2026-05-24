@@ -3,6 +3,7 @@
 import { useLayout } from "@/contexts/LayoutContext";
 import SidebarLayout from "./SidebarLayout";
 import NavbarLayout from "./NavbarLayout";
+import { usePathname } from "next/navigation";
 
 export default function LayoutSwitcher({
     children,
@@ -10,6 +11,7 @@ export default function LayoutSwitcher({
     children: React.ReactNode;
 }) {
     const { layout, isLoading } = useLayout();
+    const pathname = usePathname();
 
     // Mientras carga la preferencia, mostramos un estado vacío o un loader mínimo
     // para evitar "fouc" (flash of unstyled content) o movimientos bruscos.

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import CustomerActions from "@/components/CustomerActions";
 import { supabase } from "@/lib/supabaseClient";
@@ -38,6 +38,7 @@ type CustomerRow = {
 function CustomersPageContent() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter");
+  const pathname = usePathname();
 
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [debtFilter, setDebtFilter] = useState(
@@ -46,6 +47,30 @@ function CustomersPageContent() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const loadingTimeoutRef = useRef<number | null>(null);
+
+  const ITEMS_PER_PAGE = 50;
+
+  // Debounce de búsqueda (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset a página 1 al buscar
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Obtener el rol del usuario una sola vez
   useEffect(() => {
@@ -72,29 +97,65 @@ function CustomersPageContent() {
       setLoading(true);
 
       try {
-        // Obtener todos los clientes activos
-        const { data: customersData, error: customersError } = await supabase
+        const from = (currentPage - 1) * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+
+        let query = supabase
           .from("customers")
-          .select("id, full_name, email, phone, address, customer_type")
+          .select("id, full_name, email, phone, address, customer_type", { count: "exact" })
           .eq("is_active", true)
-          .order("full_name", { ascending: true });
+          .order("full_name", { ascending: true })
+          .range(from, to);
+
+        if (debouncedSearch.trim()) {
+          query = query.or(
+            `full_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
+          );
+        }
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+        });
+
+        const result = await Promise.race([query, timeoutPromise]) as any;
+        const customersData = result?.data;
+        const customersError = result?.error;
+        const count = result?.count;
 
         if (customersError) throw customersError;
+        setTotalCount(count || 0);
 
-        // Reducimos N+1: traemos deudas globales y agregamos por cliente en memoria
-        const [ordersDebtRes, salesDebtRes] = await Promise.all([
+        const customerIds = (customersData || [])
+          .map((customer: any) => customer.id)
+          .filter(Boolean);
+
+        if (customerIds.length === 0) {
+          setCustomers([]);
+          setLoading(false);
+          return;
+        }
+
+        const timeoutPromise2 = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT_FORZADO")), 2000);
+        });
+
+        const debtsPromise = Promise.all([
           supabase
             .from("orders")
             .select("customer_id, amount_pending")
+            .in("customer_id", customerIds)
             .gt("amount_pending", 0)
             .neq("status", "cancelado"),
           supabase
             .from("sales")
             .select("customer_id, amount_pending")
+            .in("customer_id", customerIds)
             .eq("payment_method", "cuenta_corriente")
             .eq("is_cancelled", false)
             .gt("amount_pending", 0),
         ]);
+
+        const [ordersDebtRes, salesDebtRes] = await Promise.race([debtsPromise, timeoutPromise2]) as any;
 
         if (ordersDebtRes.error) throw ordersDebtRes.error;
         if (salesDebtRes.error) throw salesDebtRes.error;
@@ -109,30 +170,33 @@ function CustomersPageContent() {
           debtByCustomer.set(customerId, current + Number(amountPending || 0));
         };
 
-        (ordersDebtRes.data || []).forEach((row) => {
-          addDebt(row.customer_id, row.amount_pending as number | null);
+        (ordersDebtRes.data || []).forEach((row: any) => {
+          addDebt(row.customer_id, row.amount_pending);
         });
-        (salesDebtRes.data || []).forEach((row) => {
-          addDebt(row.customer_id, row.amount_pending as number | null);
+        (salesDebtRes.data || []).forEach((row: any) => {
+          addDebt(row.customer_id, row.amount_pending);
         });
 
-        const customersWithDebt = (customersData || []).map((customer) => ({
+        const customersWithDebt = (customersData || []).map((customer: any) => ({
           ...customer,
           debt: debtByCustomer.get(customer.id) || 0,
         }));
 
-        // Aplicar filtro de deuda
         let filteredCustomers = customersWithDebt;
         if (debtFilter === "with_debt") {
-          filteredCustomers = customersWithDebt.filter((c) => (c.debt || 0) > 0);
+          filteredCustomers = customersWithDebt.filter((c: any) => (c.debt || 0) > 0);
         } else if (debtFilter === "no_debt") {
           filteredCustomers = customersWithDebt.filter(
-            (c) => (c.debt || 0) === 0
+            (c: any) => (c.debt || 0) === 0
           );
         }
 
         setCustomers(filteredCustomers);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.message === "TIMEOUT_FORZADO") {
+          window.location.reload();
+          return;
+        }
         console.error("Error fetching customers:", error);
         setCustomers([]);
       } finally {
@@ -141,22 +205,12 @@ function CustomersPageContent() {
     };
 
     fetchCustomers();
-  }, [debtFilter]);
+  }, [debtFilter, currentPage, debouncedSearch, pathname]);
 
-  // Filtrar clientes por término de búsqueda
-  const filteredCustomers = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return customers;
-    }
+  // filteredCustomers ahora es directamente customers (búsqueda ya es server-side)
+  const filteredCustomers = customers;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-    const search = searchTerm.toLowerCase();
-    return customers.filter(
-      (customer) =>
-        customer.full_name?.toLowerCase().includes(search) ||
-        customer.email?.toLowerCase().includes(search) ||
-        customer.phone?.toLowerCase().includes(search)
-    );
-  }, [customers, searchTerm]);
 
   const handleExportCustomersExcel = async () => {
     if (filteredCustomers.length === 0) {
@@ -439,6 +493,34 @@ function CustomersPageContent() {
           </table>
         </div>
       </div>
+
+      {/* PAGINACIÓN */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-4 border border-gray-200 dark:border-slate-700">
+          <p className="text-sm text-gray-600 dark:text-slate-300">
+            Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} de {totalCount} clientes
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Anterior
+            </button>
+            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200 px-3">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
