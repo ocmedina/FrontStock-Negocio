@@ -327,7 +327,7 @@ export default function SalesHistoryPage() {
             >
               <FaCreditCard className="text-blue-500" /> Método de pago
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <select
                 id="paymentFilter"
                 value={paymentFilter}
@@ -346,7 +346,7 @@ export default function SalesHistoryPage() {
                 </option>
               </select>
               {paymentFilter === "cuenta_corriente" && (
-                <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 whitespace-nowrap flex items-center gap-2">
+                <span className="w-full sm:w-auto text-sm font-semibold text-orange-600 bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 whitespace-nowrap flex items-center gap-2">
                   <FaFileInvoice /> Solo fiadas
                 </span>
               )}
@@ -356,7 +356,7 @@ export default function SalesHistoryPage() {
       </div>
 
       {/* TABLA DE VENTAS */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+      <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
@@ -542,6 +542,112 @@ export default function SalesHistoryPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* TARJETAS DE VENTAS (Mobile/Tablet) */}
+      <div className="lg:hidden space-y-3">
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">
+              Cargando ventas...
+            </p>
+          </div>
+        ) : sales.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm p-6 text-center">
+            <FaInbox className="w-12 h-12 mx-auto text-gray-300" />
+            <p className="text-gray-600 dark:text-slate-300 mt-3">
+              No hay ventas para la fecha seleccionada
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Ajusta la fecha o el metodo de pago
+            </p>
+          </div>
+        ) : (
+          sales.map((sale) => (
+            <div
+              key={sale.id}
+              className={`bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border ${sale.is_cancelled
+                ? "border-red-200 dark:border-red-900"
+                : sale.payment_method === "cuenta_corriente"
+                  ? "border-orange-200 dark:border-orange-900"
+                  : "border-gray-200 dark:border-slate-700"
+                }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Fecha</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                    {new Date(sale.created_at).toLocaleDateString("es-AR")}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
+                    {new Date(sale.created_at).toLocaleTimeString("es-AR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                {sale.is_cancelled ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
+                    <FaTimesCircle /> Anulada
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300">
+                    <FaCheckCircle /> Activa
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
+                  <FaUser className="text-blue-500" />
+                  {sale.customers?.full_name ?? "Sin cliente"}
+                </div>
+                <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
+                  <FaCreditCard className="text-amber-500" />
+                  {sale.payment_method === "cuenta_corriente"
+                    ? "Cuenta corriente"
+                    : sale.payment_method === "mercado_pago"
+                      ? "Mercado Pago"
+                      : sale.payment_method?.replace("_", " ") ?? "N/A"}
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs text-gray-500 dark:text-slate-400">Total</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-slate-100">
+                  ${sale.total_amount?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedSaleId(sale.id);
+                    setIsTicketModalOpen(true);
+                  }}
+                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs font-semibold"
+                >
+                  <FaPrint /> Ticket
+                </button>
+                <Link
+                  href={`/dashboard/ventas/${sale.id}`}
+                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-xs font-semibold"
+                >
+                  <FaEye /> Ver
+                </Link>
+                {!sale.is_cancelled && (
+                  <button
+                    onClick={() => handleCancelSale(sale.id)}
+                    className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-xs font-semibold"
+                  >
+                    <FaTrash /> Anular
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* PAGINACIÓN */}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import ProductActions from "@/components/ProductActions";
+import ProductListDownloadButton from "@/components/pdf/ProductListDownloadButton";
 import { Database } from "@/lib/database.types";
 import toast from "react-hot-toast";
 import {
@@ -35,6 +36,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,46 @@ export default function ProductsPage() {
   const [isMassUpdateModalOpen, setIsMassUpdateModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const isProductSelected = (productId: string) =>
+    selectedProducts.some((item) => item.id === productId);
+
+  const toggleProductSelection = (product: Product) => {
+    setSelectedProducts((prev) => {
+      if (prev.some((item) => item.id === product.id)) {
+        return prev.filter((item) => item.id !== product.id);
+      }
+      return [...prev, product];
+    });
+  };
+
+  const allSelectedOnPage =
+    products.length > 0 &&
+    products.every((product) =>
+      selectedProducts.some((item) => item.id === product.id)
+    );
+
+  const toggleSelectAllCurrentPage = () => {
+    setSelectedProducts((prev) => {
+      const selectedIds = new Set(prev.map((item) => item.id));
+      const allSelected =
+        products.length > 0 &&
+        products.every((product) => selectedIds.has(product.id));
+
+      if (allSelected) {
+        return prev.filter(
+          (item) => !products.some((product) => product.id === item.id)
+        );
+      }
+
+      const additions = products.filter(
+        (product) => !selectedIds.has(product.id)
+      );
+      return [...prev, ...additions];
+    });
+  };
+
+  const clearSelection = () => setSelectedProducts([]);
 
   // Obtener rol del usuario una sola vez
   useEffect(() => {
@@ -246,40 +288,40 @@ export default function ProductsPage() {
             Administra tu inventario y precios
           </p>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 w-full lg:w-auto no-scrollbar">
+        <div className="flex flex-wrap gap-3 w-full lg:w-auto">
           <button
             onClick={handleExportCurrentStock}
-            className="px-5 py-3 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <FaFileExcel /> Exportar Stock Excel
           </button>
           <button
             onClick={() => setIsMassUpdateModalOpen(true)}
-            className="px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <FaPercentage /> Actualización Masiva
           </button>
           <button
             onClick={() => setIsBarcodeModalOpen(true)}
-            className="px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg hover:from-gray-800 hover:to-gray-900 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg hover:from-gray-800 hover:to-gray-900 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <FaBarcode /> Etiquetas
           </button>
           <Link
             href="/dashboard/clasificacion"
-            className="px-5 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <FaTags /> Clasificación
           </Link>
           <Link
             href="/dashboard/products/importar"
-            className="px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <FaUpload /> Importar Excel
           </Link>
           <Link
             href="/dashboard/products/new"
-            className="px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <FaPlus /> Agregar Producto
           </Link>
@@ -373,13 +415,13 @@ export default function ProductsPage() {
           </div>
 
           {/* Filtro de stock */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <FaFilter className="text-gray-400 text-lg" />
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
               aria-label="Filtrar por stock"
-              className="px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-700 dark:text-slate-200 font-medium min-w-[200px] bg-white dark:bg-slate-800"
+              className="w-full sm:min-w-[200px] px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-700 dark:text-slate-200 font-medium bg-white dark:bg-slate-800"
             >
               <option value="all">📦 Todos los productos</option>
               <option value="sin_stock">❌ Sin stock (0)</option>
@@ -430,6 +472,37 @@ export default function ProductsPage() {
             )}
           </div>
         )}
+
+        <div className="mt-4 flex flex-col lg:flex-row lg:items-center gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+            <input
+              type="checkbox"
+              checked={allSelectedOnPage}
+              onChange={toggleSelectAllCurrentPage}
+              disabled={loading || products.length === 0}
+              aria-label="Seleccionar todos los productos de la pagina"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Seleccionar pagina actual
+          </label>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-semibold">
+              Seleccionados: {selectedProducts.length}
+            </span>
+            <button
+              onClick={clearSelection}
+              disabled={selectedProducts.length === 0}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Limpiar seleccion
+            </button>
+            <ProductListDownloadButton
+              products={selectedProducts}
+              disabled={selectedProducts.length === 0}
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
+            />
+          </div>
+        </div>
       </div>
 
       {/* TABLA DE PRODUCTOS (Desktop) */}
@@ -438,6 +511,19 @@ export default function ProductsPage() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
               <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allSelectedOnPage}
+                      onChange={toggleSelectAllCurrentPage}
+                      disabled={loading || products.length === 0}
+                      aria-label="Seleccionar todos los productos de la pagina"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    Sel.
+                  </label>
+                </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <FaBarcode /> SKU
@@ -471,7 +557,7 @@ export default function ProductsPage() {
             <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={7} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                       <span className="text-gray-500 dark:text-slate-400 font-medium">
@@ -482,7 +568,7 @@ export default function ProductsPage() {
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={7} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <FaInbox className="text-6xl text-gray-300" />
                       <span className="text-gray-500 dark:text-slate-400 font-medium">
@@ -512,6 +598,15 @@ export default function ProductsPage() {
                     key={product.id}
                     className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={isProductSelected(product.id)}
+                        onChange={() => toggleProductSelection(product)}
+                        aria-label={`Seleccionar ${product.name}`}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <FaBarcode className="text-gray-400" />
@@ -621,8 +716,8 @@ export default function ProductsPage() {
               className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 p-4"
             >
               {/* Header de la tarjeta */}
-              <div className="flex justify-between items-start mb-3">
-                <div>
+              <div className="flex justify-between items-start mb-3 gap-3">
+                <div className="flex-1">
                   <h3 className="font-bold text-gray-900 dark:text-slate-50 text-lg leading-tight mb-1">
                     {product.name}
                   </h3>
@@ -633,7 +728,16 @@ export default function ProductsPage() {
                     </span>
                   </div>
                 </div>
-                <ProductActions productId={product.id} userRole={userRole} />
+                <div className="flex flex-col items-end gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isProductSelected(product.id)}
+                    onChange={() => toggleProductSelection(product)}
+                    aria-label={`Seleccionar ${product.name}`}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <ProductActions productId={product.id} userRole={userRole} />
+                </div>
               </div>
 
               {/* Detalles */}

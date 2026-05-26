@@ -17,6 +17,16 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-05-26-price-list-pdf",
+    date: "26 May 2026",
+    title: "🧾 Lista de Precios en PDF",
+    description:
+      "Ahora puedes seleccionar productos y generar una lista de precios en PDF para compartir con tus clientes.",
+    icon: "🧾",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2025-12-11-finance-module",
     date: "11 Dic 2025",
     title: "💰 Nuevo Módulo de Finanzas",
@@ -136,25 +146,9 @@ export default function UpdatesNotification() {
       );
       setHasNewUpdates(hasNew);
       if (!hasNew) setActiveTab("all");
-
-      // AUTO-OPEN: Si hay novedades no vistas, abrir el panel automáticamente después de 1.5s
-      if (hasNew) {
-        const timer = setTimeout(() => {
-          setIsOpen(true);
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
     } else {
       const hasNew = UPDATES.some((update) => update.isNew);
       setHasNewUpdates(hasNew);
-
-      // Si es la primera vez que entra (no hay storage), también abrir
-      if (hasNew) {
-        const timer = setTimeout(() => {
-          setIsOpen(true);
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
     }
   }, []);
 
@@ -182,24 +176,43 @@ export default function UpdatesNotification() {
   const displayedUpdates =
     activeTab === "new" ? newUpdatesList : allUpdatesList;
 
+  const updateStyles: Record<NonNullable<Update["type"]>, { badge: string; icon: string; accent: string }> = {
+    feature: {
+      badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200",
+      icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200",
+      accent: "border-emerald-400",
+    },
+    fix: {
+      badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200",
+      icon: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200",
+      accent: "border-rose-400",
+    },
+    improvement: {
+      badge: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200",
+      icon: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200",
+      accent: "border-sky-400",
+    },
+  };
+
+  const getUpdateStyle = (type?: Update["type"]) =>
+    updateStyles[type || "improvement"];
+
   return (
     <>
-      {/* Botón Flotante Premium (Mantiene el estilo llamativo) */}
+      {/* Botón Flotante */}
       <button
         onClick={handleOpen}
         className="fixed bottom-6 right-6 group z-50"
         aria-label="Ver actualizaciones"
       >
-        <div className="absolute inset-0 bg-blue-600 rounded-full blur opacity-40 group-hover:opacity-75 transition-opacity duration-500 animate-pulse"></div>
-        <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 rounded-full shadow-2xl border border-white/10 hover:scale-110 transition-transform duration-300 flex items-center justify-center">
-          <FaBell
-            className={`w-6 h-6 ${hasNewUpdates ? "animate-swing" : ""}`}
-          />
+        <div className="absolute inset-0 rounded-full bg-amber-500/40 blur-lg group-hover:bg-amber-500/60 transition-all duration-500"></div>
+        <div className="relative bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 text-white p-4 rounded-full shadow-2xl border border-white/20 hover:scale-110 transition-transform duration-300 flex items-center justify-center">
+          <FaBell className={`w-6 h-6 ${hasNewUpdates ? "animate-swing" : ""}`} />
 
           {hasNewUpdates && (
             <span className="absolute -top-1 -right-1 flex h-6 w-6">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-6 w-6 bg-red-500 text-[10px] font-bold items-center justify-center border-2 border-slate-900">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-6 w-6 bg-white text-[10px] font-bold items-center justify-center border-2 border-rose-600 text-rose-700">
                 {newUpdatesList.length}
               </span>
             </span>
@@ -215,71 +228,61 @@ export default function UpdatesNotification() {
         />
       )}
 
-      {/* Drawer / Panel Lateral (Desliza desde la derecha) */}
+      {/* Drawer / Panel Lateral */}
       <div
-        className={`fixed inset-y-0 right-0 z-[100] w-full sm:w-[450px] bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-500 ease-out flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed inset-y-0 right-0 z-[100] w-full sm:w-[460px] bg-slate-50 dark:bg-slate-950 shadow-2xl transform transition-transform duration-500 ease-out flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"
           }`}
       >
-        {/* Header Llamativo con Gradiente */}
-        <div className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-6 shrink-0 overflow-hidden">
-          {/* Elementos decorativos de fondo */}
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <FaBolt className="w-40 h-40 transform rotate-12 translate-x-10 -translate-y-10" />
-          </div>
-          <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
-
+        {/* Header */}
+        <div className="relative bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 text-white p-6 shrink-0 overflow-hidden">
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.35),_transparent_55%)]" />
           <div className="relative z-10">
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
-                <span className="bg-white dark:bg-slate-900/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10 flex items-center gap-1 text-blue-200">
-                  <HiSparkles className="text-yellow-400" /> NOVEDADES
+                <span className="bg-white/10 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase flex items-center gap-1">
+                  <HiSparkles className="text-amber-300" /> Actualizaciones
                 </span>
               </div>
               <button
                 onClick={handleClose}
-                className="bg-white dark:bg-slate-900/10 hover:bg-white/20 p-2 rounded-full transition-colors backdrop-blur-md text-white/80 hover:text-white"
+                className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors text-white/80 hover:text-white"
               >
                 <FaTimes className="w-5 h-5" />
               </button>
             </div>
 
-            <h2 className="text-3xl font-black tracking-tight mb-2">
-              ¿Qué hay de nuevo?
-            </h2>
-            <p className="text-blue-200 text-sm leading-relaxed max-w-xs">
-              Mantente al día con las últimas mejoras de tu sistema.
-            </p>
+            <div className="mt-4">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight font-outfit">
+                Resumen de cambios
+              </h2>
+              <p className="text-amber-100 text-sm mt-2 max-w-sm">
+                Novedades, mejoras y ajustes listos para tu equipo.
+              </p>
+            </div>
 
-            {/* Tabs Integrados en el Header */}
-            <div className="flex gap-6 mt-8 border-b border-white/10">
+            <div className="mt-6 flex items-center gap-2 bg-white/10 p-1 rounded-full w-fit">
               <button
                 onClick={() => setActiveTab("new")}
-                className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "new"
-                  ? "text-white"
-                  : "text-blue-300/70 hover:text-white"
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === "new"
+                  ? "bg-white text-slate-900"
+                  : "text-white/80 hover:text-white"
                   }`}
               >
                 Nuevas
                 {newUpdatesList.length > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-sm">
+                  <span className="ml-2 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                     {newUpdatesList.length}
                   </span>
-                )}
-                {activeTab === "new" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.7)]" />
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("all")}
-                className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "all"
-                  ? "text-white"
-                  : "text-blue-300/70 hover:text-white"
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === "all"
+                  ? "bg-white text-slate-900"
+                  : "text-white/80 hover:text-white"
                   }`}
               >
                 Historial
-                {activeTab === "all" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.7)]" />
-                )}
               </button>
             </div>
           </div>
@@ -306,31 +309,28 @@ export default function UpdatesNotification() {
           ) : (
             <div className="space-y-6">
               {displayedUpdates.map((update, index) => (
-                <div
-                  key={update.id}
-                  className={`group relative bg-white dark:bg-slate-800 rounded-2xl p-5 border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-in slide-in-from-right-8 fade-in duration-500 ${update.isNew && !seenUpdates.includes(update.id)
-                    ? "border-blue-200 dark:border-blue-700 shadow-md ring-1 ring-blue-50 dark:ring-blue-900/50"
-                    : "border-gray-100 dark:border-slate-700 shadow-sm"
-                    }`}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
+                <div key={update.id} style={{ animationDelay: `${index * 50}ms` }}>
+                  {(() => {
+                    const style = getUpdateStyle(update.type);
+                    return (
+                      <div
+                        className={`group relative bg-white dark:bg-slate-900/70 rounded-2xl p-5 border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-in slide-in-from-right-8 fade-in duration-500 ${style.accent} ${update.isNew && !seenUpdates.includes(update.id)
+                          ? "border border-slate-200 dark:border-slate-700 shadow-md"
+                          : "border border-transparent"
+                          }`}
+                      >
                   {/* Indicador de Nuevo (Punto pulsante) */}
                   {update.isNew && !seenUpdates.includes(update.id) && (
                     <span className="absolute top-5 right-5 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                     </span>
                   )}
 
                   <div className="flex items-start gap-4">
                     {/* Icono con fondo */}
                     <div
-                      className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm ${update.type === "feature"
-                        ? "bg-purple-50 text-purple-600"
-                        : update.type === "fix"
-                          ? "bg-red-50 text-red-600"
-                          : "bg-blue-50 text-blue-600"
-                        }`}
+                      className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${style.icon}`}
                     >
                       {update.icon}
                     </div>
@@ -338,12 +338,7 @@ export default function UpdatesNotification() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${update.type === "feature"
-                            ? "bg-purple-100 text-purple-700"
-                            : update.type === "fix"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-blue-100 text-blue-700"
-                            }`}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${style.badge}`}
                         >
                           {update.type || "Update"}
                         </span>
@@ -352,7 +347,7 @@ export default function UpdatesNotification() {
                         </span>
                       </div>
 
-                      <h3 className="text-base font-bold text-gray-900 dark:text-slate-50 mb-1 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-base font-bold text-gray-900 dark:text-slate-50 mb-1 group-hover:text-amber-600 transition-colors">
                         {update.title}
                       </h3>
 
@@ -361,6 +356,9 @@ export default function UpdatesNotification() {
                       </p>
                     </div>
                   </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -374,7 +372,7 @@ export default function UpdatesNotification() {
               onClick={markAllAsRead}
               className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
             >
-              <FaCheckDouble className="text-blue-400" />
+              <FaCheckDouble className="text-amber-300" />
               Marcar todo como leído
             </button>
           </div>

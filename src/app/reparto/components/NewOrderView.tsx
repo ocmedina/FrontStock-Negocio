@@ -243,8 +243,8 @@ export default function NewOrderView({
           <span className="font-bold text-lg">${subTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
 
-        <div className="flex justify-between items-center gap-4">
-          <label className="font-medium text-gray-600 dark:text-slate-300 whitespace-nowrap">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <label className="font-medium text-gray-600 dark:text-slate-300 sm:whitespace-nowrap">
             Descuento (%):
           </label>
           <input
@@ -253,12 +253,12 @@ export default function NewOrderView({
             max="100"
             value={discount}
             onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-            className="w-24 p-2 border border-gray-300 dark:border-slate-600 rounded-lg text-right font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full sm:w-24 p-2 border border-gray-300 dark:border-slate-600 rounded-lg text-right font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
 
-        <div className="flex justify-between items-center gap-4">
-          <label className="font-medium text-gray-600 dark:text-slate-300 whitespace-nowrap">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <label className="font-medium text-gray-600 dark:text-slate-300 sm:whitespace-nowrap">
             Envío ($):
           </label>
           <input
@@ -266,7 +266,7 @@ export default function NewOrderView({
             min="0"
             value={shipping}
             onChange={(e) => setShipping(parseFloat(e.target.value) || 0)}
-            className="w-24 p-2 border border-gray-300 dark:border-slate-600 rounded-lg text-right font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full sm:w-24 p-2 border border-gray-300 dark:border-slate-600 rounded-lg text-right font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
 

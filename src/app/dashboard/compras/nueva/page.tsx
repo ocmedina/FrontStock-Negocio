@@ -689,7 +689,7 @@ export default function NewPurchasePage() {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="min-w-full">
                     <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                       <tr>
@@ -819,6 +819,112 @@ export default function NewPurchasePage() {
                       })}
                     </tbody>
                   </table>
+                </div>
+                <div className="lg:hidden divide-y divide-gray-200 dark:divide-slate-700">
+                  {cart.map((item) => {
+                    const subtotal =
+                      item.quantity * (parseFloat(item.cost_price) || 0);
+                    return (
+                      <div key={item.product.id} className="p-4 space-y-3">
+                        <div>
+                          <p className="font-semibold text-gray-800 dark:text-slate-100">
+                            {item.product.name}
+                          </p>
+                          {item.product.sku && (
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                              <FaBarcode /> {item.product.sku}
+                            </p>
+                          )}
+                          <p className="text-xs text-blue-600 font-medium mt-0.5">
+                            Stock actual: {item.product.stock}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-gray-500">Cantidad</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                handleCartChange(
+                                  item.product.id,
+                                  "quantity",
+                                  e.target.value
+                                )
+                              }
+                              className="mt-1 w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">Costo unit.</label>
+                            <div className="relative mt-1">
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                                $
+                              </span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.cost_price}
+                                onChange={(e) =>
+                                  handleCartChange(
+                                    item.product.id,
+                                    "cost_price",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="0.00"
+                                required
+                                className="w-full pl-7 pr-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
+                              />
+                            </div>
+                            {(() => {
+                              const currentCost = item.product.cost_price || 0;
+                              const newCost = parseFloat(item.cost_price) || 0;
+
+                              if (!currentCost) return null;
+
+                              const diff = newCost - currentCost;
+                              const percent = (diff / currentCost) * 100;
+
+                              if (Math.abs(diff) < 0.01) return null;
+
+                              return (
+                                <div
+                                  className={`text-xs mt-1 font-bold flex items-center gap-1 ${diff > 0 ? "text-red-500" : "text-green-600"}`}
+                                >
+                                  {diff > 0 ? "▲" : "▼"}
+                                  {Math.abs(percent).toFixed(1)}%
+                                  <span className="text-gray-400 font-normal">
+                                    ({formatCurrency(currentCost)})
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-gray-500">Subtotal</div>
+                          <div className="font-bold text-green-600 text-lg">
+                            {formatCurrency(subtotal)}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => handleRemoveFromCart(item.product.id)}
+                            className="px-3 py-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-all text-sm font-semibold"
+                            title="Eliminar producto"
+                          >
+                            <FaTrash /> Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import UpdatesNotification from "./UpdatesNotification";
+import MobileBottomNav from "./MobileBottomNav";
 import { HiMenu } from "react-icons/hi";
 import Link from "next/link";
 
@@ -45,7 +46,7 @@ export default function SidebarLayout({
                 </header>
 
                 {/* Scrollable Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth">
+                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-36 sm:pb-32 lg:pb-8 scroll-smooth">
                     <div className="w-full h-full">
                         {children}
                     </div>
@@ -53,6 +54,9 @@ export default function SidebarLayout({
 
                 {/* Updates Notification (Toast) */}
                 <UpdatesNotification />
+                {!mobileMenuOpen && (
+                    <MobileBottomNav onOpenMenu={() => setMobileMenuOpen(true)} />
+                )}
             </div>
         </div>
     );
