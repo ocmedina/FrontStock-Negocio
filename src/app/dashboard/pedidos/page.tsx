@@ -1220,7 +1220,7 @@ export default function OrdersPage() {
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 rounded-lg shadow-sm p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 rounded-lg shadow-sm p-3 sm:p-4 mb-24 lg:mb-0">
           <span className="text-xs sm:text-sm text-gray-700 dark:text-slate-200 text-center sm:text-left">
             Mostrando <span className="font-medium">{orders.length}</span> de{" "}
             <span className="font-medium">{totalCount}</span> pedidos

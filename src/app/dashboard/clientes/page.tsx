@@ -458,7 +458,7 @@ function CustomersPageContent() {
       </div>
 
       {filteredCustomers.length > 0 && (
-        <div className="mt-6 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-4 border border-gray-200 dark:border-slate-700">
+        <div className="mt-6 mb-24 lg:mb-0 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
             <span className="text-sm text-gray-700 dark:text-slate-200">
               Mostrando{" "}

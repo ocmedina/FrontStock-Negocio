@@ -46,7 +46,10 @@ export default function SidebarLayout({
                 </header>
 
                 {/* Scrollable Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-36 sm:pb-32 lg:pb-8 scroll-smooth">
+                <main
+                    className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 lg:pb-8 scroll-smooth"
+                    style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 104px)" }}
+                >
                     <div className="w-full h-full">
                         {children}
                     </div>

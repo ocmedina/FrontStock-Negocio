@@ -795,7 +795,7 @@ export default function ProductsPage() {
       </div>
 
       {/* PAGINACIÓN */}
-      <div className="mt-6 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
+      <div className="mt-6 mb-24 lg:mb-0 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-800 px-4 py-2 rounded-lg flex items-center gap-2">
