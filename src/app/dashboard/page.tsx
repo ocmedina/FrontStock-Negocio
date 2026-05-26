@@ -13,7 +13,6 @@ import {
   FaBalanceScale,
 } from "react-icons/fa";
 import QuickActionsHeader from "@/components/QuickActionsHeader";
-import NewsSection from "@/components/NewsSection";
 import ChristmasCountdown from "@/components/ChristmasCountdown";
 
 // --- Tipos ---
@@ -245,8 +244,6 @@ export default async function DashboardPage() {
       {/* Acciones Rápidas como Header */}
       <QuickActionsHeader />
 
-      {/* Sección de Novedades - Colapsable */}
-      <NewsSection />
 
       {/* Tarjetas principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
