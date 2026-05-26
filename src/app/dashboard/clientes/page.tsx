@@ -35,6 +35,8 @@ type CustomerRow = {
   debt?: number | null;
 };
 
+const ITEMS_PER_PAGE = 12;
+
 function CustomersPageContent() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter");
@@ -46,6 +48,7 @@ function CustomersPageContent() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Obtener el rol del usuario una sola vez
   useEffect(() => {
@@ -157,6 +160,20 @@ function CustomersPageContent() {
         customer.phone?.toLowerCase().includes(search)
     );
   }, [customers, searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, debtFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE)
+  );
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredCustomers.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredCustomers]);
 
   const handleExportCustomersExcel = async () => {
     if (filteredCustomers.length === 0) {
@@ -368,7 +385,7 @@ function CustomersPageContent() {
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((customer) => (
+                paginatedCustomers.map((customer) => (
                   <tr
                     key={customer.id}
                     className={`hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${customer.debt && customer.debt > 0
@@ -439,6 +456,46 @@ function CustomersPageContent() {
           </table>
         </div>
       </div>
+
+      {filteredCustomers.length > 0 && (
+        <div className="mt-6 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+            <span className="text-sm text-gray-700 dark:text-slate-200">
+              Mostrando{" "}
+              <span className="font-semibold">
+                {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+              </span>
+              {" "}-{" "}
+              <span className="font-semibold">
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredCustomers.length)}
+              </span>
+              {" "}de{" "}
+              <span className="font-semibold">{filteredCustomers.length}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-gray-700 dark:text-slate-200">
+                Pagina <span className="font-semibold">{currentPage}</span> / {totalPages}
+              </span>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
+                disabled={currentPage >= totalPages}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
