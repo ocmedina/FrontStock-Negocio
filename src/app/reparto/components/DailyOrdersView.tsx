@@ -41,6 +41,11 @@ interface DailyOrdersViewProps {
   deliveredOrdersCount: number;
   selectedDate: string;
   onDateChange: (date: string) => void;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
   onViewDetails: (orderId: string) => void;
   onEditOrder: (orderId: string) => void;
   onPrintRemito: (orderId: string) => void;
@@ -54,6 +59,11 @@ export default function DailyOrdersView({
   deliveredOrdersCount,
   selectedDate,
   onDateChange,
+  currentPage,
+  totalPages,
+  totalCount,
+  onPrevPage,
+  onNextPage,
   onViewDetails,
   onEditOrder,
   onPrintRemito,
@@ -181,7 +191,7 @@ export default function DailyOrdersView({
             day: "numeric",
             month: "long",
           })}{" "}
-          ({dailyOrders.length})
+          ({totalCount})
         </h2>
         <ul className="space-y-3">
           {dailyOrders.length > 0 ? (
@@ -317,6 +327,30 @@ export default function DailyOrdersView({
             </div>
           )}
         </ul>
+
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span className="text-xs text-gray-600 dark:text-slate-300">
+              Pagina {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onPrevPage}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FaChevronLeft /> Anterior
+              </button>
+              <button
+                onClick={onNextPage}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente <FaChevronRight />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

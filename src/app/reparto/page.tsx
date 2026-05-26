@@ -44,6 +44,9 @@ type Order = {
   };
 };
 
+const DAILY_PAGE_SIZE = 20;
+const HISTORY_PAGE_SIZE = 20;
+
 export default function RepartoPage() {
   const [view, setView] = useState("new_order");
   const [dailyOrders, setDailyOrders] = useState<Order[]>([]);
@@ -84,6 +87,12 @@ export default function RepartoPage() {
   const [discount, setDiscount] = useState(0);
   const [shipping, setShipping] = useState(0);
   const [historyFilter, setHistoryFilter] = useState("all");
+  const [dailyPage, setDailyPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [dailyTotalCount, setDailyTotalCount] = useState(0);
+  const [historyTotalCount, setHistoryTotalCount] = useState(0);
+  const [pendingTotalCount, setPendingTotalCount] = useState(0);
+  const [deliveredTotalCount, setDeliveredTotalCount] = useState(0);
 
   // Date State for Daily View — usar zona horaria Argentina para evitar desfasaje con UTC
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -116,8 +125,10 @@ export default function RepartoPage() {
 
   // Fetch daily orders
   const fetchDailyHistory = useCallback(
-    async (_userId: string, date: string) => {
+    async (_userId: string, date: string, page: number) => {
       try {
+        const dailySelectFields =
+          "id, total_amount, status, created_at, customer_id, profile_id, amount_paid, amount_pending, payment_method, customers(full_name, address, reference)";
         // Create start and end timestamps for the selected date in Argentina timezone
         // We assume the date string is YYYY-MM-DD
         const startDate = `${date}T00:00:00-03:00`;
@@ -128,18 +139,39 @@ export default function RepartoPage() {
         const nextDay = dateObj.toISOString().split("T")[0];
         const endDate = `${nextDay}T00:00:00-03:00`;
 
-        const { data, error } = await (supabase as any)
+        const from = (page - 1) * DAILY_PAGE_SIZE;
+        const to = from + DAILY_PAGE_SIZE - 1;
+
+        const { data, error, count } = await (supabase as any)
           .from("orders")
-          .select(
-            "id, total_amount, status, created_at, customer_id, profile_id, amount_paid, amount_pending, payment_method, customers(full_name, address, reference)"
-          )
+          .select(dailySelectFields, { count: "exact" })
           // Sin filtro de profile_id: se muestran todos los pedidos del negocio
           .gte("created_at", startDate)
           .lt("created_at", endDate)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .range(from, to);
 
         if (error) throw error;
         setDailyOrders((data || []) as unknown as Order[]);
+        setDailyTotalCount(count || 0);
+
+        const [pendingRes, deliveredRes] = await Promise.all([
+          supabase
+            .from("orders")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", startDate)
+            .lt("created_at", endDate)
+            .eq("status", "pendiente"),
+          supabase
+            .from("orders")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", startDate)
+            .lt("created_at", endDate)
+            .eq("status", "entregado"),
+        ]);
+
+        setPendingTotalCount(pendingRes.count || 0);
+        setDeliveredTotalCount(deliveredRes.count || 0);
       } catch (error: any) {
         toast.error("No se pudo cargar el historial.");
       }
@@ -148,19 +180,28 @@ export default function RepartoPage() {
   );
 
   // Fetch all orders history
-  const fetchAllOrdersHistory = useCallback(async (_userId: string) => {
+  const fetchAllOrdersHistory = useCallback(async (_userId: string, page: number, filter: string) => {
     try {
-      const { data, error } = await (supabase as any)
+      const from = (page - 1) * HISTORY_PAGE_SIZE;
+      const to = from + HISTORY_PAGE_SIZE - 1;
+
+      let query = (supabase as any)
         .from("orders")
         .select(
-          "id, total_amount, status, created_at, customer_id, profile_id, customers(full_name, address, reference)"
+          "id, total_amount, status, created_at, customer_id, profile_id, customers(full_name, address, reference)",
+          { count: "exact" }
         )
-        // Sin filtro de profile_id: se muestran todos los pedidos del negocio
-        .order("created_at", { ascending: false })
-        .limit(200);
+        .order("created_at", { ascending: false });
+
+      if (filter !== "all") {
+        query = query.eq("status", filter);
+      }
+
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
       setAllOrders((data || []) as unknown as Order[]);
+      setHistoryTotalCount(count || 0);
     } catch (error: any) {
       toast.error("No se pudo cargar el historial completo.");
     }
@@ -174,7 +215,6 @@ export default function RepartoPage() {
       } = await supabase.auth.getSession();
       if (session?.user) {
         setCurrentUser(session.user);
-        fetchAllOrdersHistory(session.user.id);
       } else {
         router.push("/login");
       }
@@ -189,8 +229,21 @@ export default function RepartoPage() {
 
   useEffect(() => {
     if (!currentUser) return;
-    fetchDailyHistory(currentUser.id, selectedDate);
-  }, [currentUser, selectedDate, fetchDailyHistory]);
+    fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+  }, [currentUser, selectedDate, dailyPage, fetchDailyHistory]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
+  }, [currentUser, historyPage, historyFilter, fetchAllOrdersHistory]);
+
+  useEffect(() => {
+    setDailyPage(1);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyFilter]);
 
   // Real-time subscription for orders
   useEffect(() => {
@@ -209,7 +262,8 @@ export default function RepartoPage() {
         (payload) => {
           console.log("Order change detected:", payload);
           fetchDailyHistory(currentUser.id, selectedDate);
-          fetchAllOrdersHistory(currentUser.id);
+          fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+          fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
         }
       )
       .subscribe();
@@ -388,8 +442,8 @@ export default function RepartoPage() {
 
       // Refrescar datos
       if (currentUser) {
-        fetchDailyHistory(currentUser.id, selectedDate);
-        fetchAllOrdersHistory(currentUser.id);
+        fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+        fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
       }
 
       // Limpiar formulario
@@ -488,8 +542,8 @@ export default function RepartoPage() {
 
       // Refrescar datos
       if (currentUser) {
-        fetchDailyHistory(currentUser.id, selectedDate);
-        fetchAllOrdersHistory(currentUser.id);
+        fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+        fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
       }
     } catch (error: any) {
       toast.error("Error al marcar el pedido como entregado");
@@ -512,8 +566,8 @@ export default function RepartoPage() {
 
       // Refrescar datos
       if (currentUser) {
-        fetchDailyHistory(currentUser.id, selectedDate);
-        fetchAllOrdersHistory(currentUser.id);
+        fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+        fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
       }
     } catch (error: any) {
       toast.error("Error al cancelar el pedido");
@@ -537,18 +591,10 @@ export default function RepartoPage() {
     router.push("/login");
   };
 
-  const pendingOrdersCount = dailyOrders.filter(
-    (o) => o.status === "pendiente"
-  ).length;
-  const deliveredOrdersCount = dailyOrders.filter(
-    (o) => o.status === "entregado"
-  ).length;
+  const pendingOrdersCount = pendingTotalCount;
+  const deliveredOrdersCount = deliveredTotalCount;
 
-  // Filter orders for history view
-  const filteredHistoryOrders = useMemo(() => {
-    if (historyFilter === "all") return allOrders;
-    return allOrders.filter((o) => o.status === historyFilter);
-  }, [allOrders, historyFilter]);
+  const filteredHistoryOrders = useMemo(() => allOrders, [allOrders]);
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen font-sans">
@@ -574,8 +620,8 @@ export default function RepartoPage() {
         orderId={selectedOrderIdForEdit}
         onOrderUpdated={() => {
           if (currentUser) {
-            fetchDailyHistory(currentUser.id, selectedDate);
-            fetchAllOrdersHistory(currentUser.id);
+            fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+            fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
           }
         }}
       />
@@ -633,6 +679,18 @@ export default function RepartoPage() {
           deliveredOrdersCount={deliveredOrdersCount}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          currentPage={dailyPage}
+          totalPages={Math.max(1, Math.ceil(dailyTotalCount / DAILY_PAGE_SIZE))}
+          totalCount={dailyTotalCount}
+          onPrevPage={() => setDailyPage((prev) => Math.max(1, prev - 1))}
+          onNextPage={() =>
+            setDailyPage((prev) =>
+              Math.min(
+                Math.max(1, Math.ceil(dailyTotalCount / DAILY_PAGE_SIZE)),
+                prev + 1
+              )
+            )
+          }
           onViewDetails={(id) => {
             setSelectedOrderIdForDetails(id);
             setIsOrderDetailsModalOpen(true);
@@ -661,6 +719,18 @@ export default function RepartoPage() {
           filteredHistoryOrders={filteredHistoryOrders}
           historyFilter={historyFilter}
           setHistoryFilter={setHistoryFilter}
+          currentPage={historyPage}
+          totalPages={Math.max(1, Math.ceil(historyTotalCount / HISTORY_PAGE_SIZE))}
+          totalCount={historyTotalCount}
+          onPrevPage={() => setHistoryPage((prev) => Math.max(1, prev - 1))}
+          onNextPage={() =>
+            setHistoryPage((prev) =>
+              Math.min(
+                Math.max(1, Math.ceil(historyTotalCount / HISTORY_PAGE_SIZE)),
+                prev + 1
+              )
+            )
+          }
           onViewDetails={(id) => {
             setSelectedOrderIdForDetails(id);
             setIsOrderDetailsModalOpen(true);

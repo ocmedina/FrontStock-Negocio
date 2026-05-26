@@ -31,6 +31,11 @@ interface HistoryViewProps {
   filteredHistoryOrders: Order[];
   historyFilter: string;
   setHistoryFilter: (filter: string) => void;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
   onViewDetails: (orderId: string) => void;
   onEditOrder: (orderId: string) => void;
   onPrintRemito: (orderId: string) => void;
@@ -42,6 +47,11 @@ export default function HistoryView({
   filteredHistoryOrders,
   historyFilter,
   setHistoryFilter,
+  currentPage,
+  totalPages,
+  totalCount,
+  onPrevPage,
+  onNextPage,
   onViewDetails,
   onEditOrder,
   onPrintRemito,
@@ -68,7 +78,7 @@ export default function HistoryView({
         </div>
 
         <div className="text-sm text-gray-600 dark:text-slate-300 mb-4">
-          Mostrando {filteredHistoryOrders.length} pedido(s)
+          Mostrando {filteredHistoryOrders.length} de {totalCount} pedido(s)
         </div>
 
         <ul className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -204,6 +214,30 @@ export default function HistoryView({
             </div>
           )}
         </ul>
+
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span className="text-xs text-gray-600 dark:text-slate-300">
+              Pagina {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onPrevPage}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={onNextPage}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
