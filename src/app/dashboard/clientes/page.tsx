@@ -22,6 +22,8 @@ import {
   FaExclamationTriangle,
   FaSearch,
   FaFileExcel,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 
 // 🔹 Tipos manuales para TypeScript
@@ -49,6 +51,7 @@ function CustomersPageContent() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [areActionsOpen, setAreActionsOpen] = useState(false);
 
   // Obtener el rol del usuario una sola vez
   useEffect(() => {
@@ -234,27 +237,38 @@ function CustomersPageContent() {
             Administra tu cartera de clientes y sus cuentas
           </p>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <ExportAllCustomersMovementsButton />
-          <ExportAllOrdersWithCustomerButton />
+        <div className="flex flex-col gap-3 w-full lg:w-auto">
           <button
-            onClick={handleExportCustomersExcel}
-            className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
+            onClick={() => setAreActionsOpen((prev) => !prev)}
+            className="lg:hidden w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm flex items-center justify-between text-gray-700 dark:text-slate-200 font-semibold"
           >
-            <FaFileExcel /> Exportar Excel
+            Acciones
+            {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
           </button>
-          <Link
-            href="/dashboard/clientes/deudores"
-            className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
+          <div
+            className={`${areActionsOpen ? "grid" : "hidden"} grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:gap-3`}
           >
-            <FaExclamationTriangle /> Ver Deudores
-          </Link>
-          <Link
-            href="/dashboard/clientes/new"
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
-          >
-            <FaPlus /> Agregar Cliente
-          </Link>
+            <ExportAllCustomersMovementsButton />
+            <ExportAllOrdersWithCustomerButton />
+            <button
+              onClick={handleExportCustomersExcel}
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaFileExcel /> Exportar Excel
+            </button>
+            <Link
+              href="/dashboard/clientes/deudores"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaExclamationTriangle /> Ver Deudores
+            </Link>
+            <Link
+              href="/dashboard/clientes/new"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaPlus /> Agregar Cliente
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -306,7 +320,7 @@ function CustomersPageContent() {
       </div>
 
       {/* TABLA DE CLIENTES */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
@@ -455,6 +469,78 @@ function CustomersPageContent() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* TARJETAS DE CLIENTES (Mobile) */}
+      <div className="md:hidden space-y-4">
+        {loading ? (
+          <div className="text-center py-10 text-gray-500 dark:text-slate-400">
+            Cargando clientes...
+          </div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="text-center py-10 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
+            {searchTerm
+              ? "No se encontraron clientes con ese criterio"
+              : "No hay clientes para mostrar"}
+          </div>
+        ) : (
+          paginatedCustomers.map((customer) => (
+            <div
+              key={customer.id}
+              className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border border-gray-100"
+            >
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <div className="flex-1">
+                  <Link
+                    href={`/dashboard/clientes/${customer.id}`}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-2"
+                  >
+                    <div className="w-9 h-9 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {customer.full_name?.charAt(0).toUpperCase()}
+                    </div>
+                    {customer.full_name}
+                  </Link>
+                  <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <FaPhone className="text-gray-400" />
+                      {customer.phone || "—"}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaEnvelope className="text-gray-400" />
+                      {customer.email || "—"}
+                    </div>
+                  </div>
+                </div>
+                <CustomerActions
+                  customerId={customer.id}
+                  userRole={userRole}
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <span
+                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${customer.customer_type === "mayorista"
+                    ? "bg-purple-100 text-purple-800 border border-purple-300"
+                    : "bg-blue-100 text-blue-800 border border-blue-300"
+                    }`}
+                >
+                  <FaUserTag />
+                  {customer.customer_type === "mayorista" ? "Mayorista" : "Minorista"}
+                </span>
+
+                {customer.debt && customer.debt > 0 ? (
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300">
+                    <FaExclamationTriangle /> {formatCurrency(customer.debt)}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600">
+                    <FaDollarSign /> {formatCurrency(0).replace("$", "")}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {filteredCustomers.length > 0 && (

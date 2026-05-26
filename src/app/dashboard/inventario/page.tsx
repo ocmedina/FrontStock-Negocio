@@ -12,6 +12,8 @@ import {
   FaCalendarAlt,
   FaPlus,
   FaFileExcel,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import AdjustmentModal from "./components/AdjustmentModal";
@@ -48,6 +50,7 @@ export default function InventoryKardexPage() {
     new Date().toISOString().split("T")[0]
   );
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [areActionsOpen, setAreActionsOpen] = useState(false);
 
   useEffect(() => {
     fetchMovements();
@@ -210,38 +213,49 @@ export default function InventoryKardexPage() {
             Auditoría completa de entradas y salidas de inventario.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 w-full md:w-auto">
           <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
+            onClick={() => setAreActionsOpen((prev) => !prev)}
+            className="md:hidden w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm flex items-center justify-between text-gray-700 dark:text-slate-200 font-semibold"
           >
-            <FaFileExcel /> Exportar Excel
+            Acciones
+            {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
           </button>
-          <button
-            onClick={() => setIsAdjustmentModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-bold"
+          <div
+            className={`${areActionsOpen ? "grid" : "hidden"} grid-cols-2 gap-2 md:flex md:gap-3`}
           >
-            <FaPlus /> Nuevo Ajuste
-          </button>
+            <button
+              onClick={handleExportExcel}
+              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium text-sm"
+            >
+              <FaFileExcel /> Exportar Excel
+            </button>
+            <button
+              onClick={() => setIsAdjustmentModalOpen(true)}
+              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-bold text-sm"
+            >
+              <FaPlus /> Nuevo Ajuste
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Tarjetas de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Total Entradas</p>
-          <p className="text-2xl font-bold text-green-600">+{totalEntries}</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+        <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+          <p className="text-xs md:text-sm text-gray-500 dark:text-slate-400 font-medium">Total Entradas</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600">+{totalEntries}</p>
           <p className="text-xs text-gray-400 mt-1">Unidades ingresadas</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border-l-4 border-red-500">
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Total Salidas</p>
-          <p className="text-2xl font-bold text-red-600">-{totalExits}</p>
+        <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+          <p className="text-xs md:text-sm text-gray-500 dark:text-slate-400 font-medium">Total Salidas</p>
+          <p className="text-xl md:text-2xl font-bold text-red-600">-{totalExits}</p>
           <p className="text-xs text-gray-400 mt-1">Unidades retiradas</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Cambio Neto</p>
+        <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+          <p className="text-xs md:text-sm text-gray-500 dark:text-slate-400 font-medium">Cambio Neto</p>
           <p
-            className={`text-2xl font-bold ${
+            className={`text-xl md:text-2xl font-bold ${
               netChange >= 0 ? "text-blue-600" : "text-orange-600"
             }`}
           >
@@ -253,7 +267,7 @@ export default function InventoryKardexPage() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-md mb-6 flex flex-col md:flex-row gap-4 items-end">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-md mb-6 flex flex-col md:flex-row gap-4 items-stretch md:items-end">
         <div className="flex-1 w-full">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">
             Buscar Producto
@@ -270,7 +284,7 @@ export default function InventoryKardexPage() {
           </div>
         </div>
 
-        <div>
+        <div className="w-full md:w-auto">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">
             Tipo de Movimiento
           </label>
@@ -279,7 +293,7 @@ export default function InventoryKardexPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900"
+              className="w-full md:w-auto pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900"
             >
               <option value="all">Todos</option>
               <option value="venta">Venta</option>
@@ -290,7 +304,7 @@ export default function InventoryKardexPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">
               Desde
@@ -299,7 +313,7 @@ export default function InventoryKardexPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
           <div>
@@ -310,7 +324,7 @@ export default function InventoryKardexPage() {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
         </div>

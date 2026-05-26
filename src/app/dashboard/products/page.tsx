@@ -27,6 +27,8 @@ import {
   FaBan,
   FaPercentage,
   FaFileExcel,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 import MassUpdateModal from "./components/MassUpdateModal";
 import BarcodeModal from "./components/BarcodeModal";
@@ -52,6 +54,7 @@ export default function ProductsPage() {
   const [isMassUpdateModalOpen, setIsMassUpdateModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [areActionsOpen, setAreActionsOpen] = useState(false);
 
   const isProductSelected = (productId: string) =>
     selectedProducts.some((item) => item.id === productId);
@@ -288,57 +291,68 @@ export default function ProductsPage() {
             Administra tu inventario y precios
           </p>
         </div>
-        <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+        <div className="flex flex-col gap-3 w-full lg:w-auto">
           <button
-            onClick={handleExportCurrentStock}
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
+            onClick={() => setAreActionsOpen((prev) => !prev)}
+            className="lg:hidden w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm flex items-center justify-between text-gray-700 dark:text-slate-200 font-semibold"
           >
-            <FaFileExcel /> Exportar Stock Excel
+            Acciones
+            {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
           </button>
-          <button
-            onClick={() => setIsMassUpdateModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
+          <div
+            className={`${areActionsOpen ? "grid" : "hidden"} grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:gap-3`}
           >
-            <FaPercentage /> Actualización Masiva
-          </button>
-          <button
-            onClick={() => setIsBarcodeModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg hover:from-gray-800 hover:to-gray-900 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
-          >
-            <FaBarcode /> Etiquetas
-          </button>
-          <Link
-            href="/dashboard/clasificacion"
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
-          >
-            <FaTags /> Clasificación
-          </Link>
-          <Link
-            href="/dashboard/products/importar"
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
-          >
-            <FaUpload /> Importar Excel
-          </Link>
-          <Link
-            href="/dashboard/products/new"
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
-          >
-            <FaPlus /> Agregar Producto
-          </Link>
+            <button
+              onClick={handleExportCurrentStock}
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaFileExcel /> Exportar Stock
+            </button>
+            <button
+              onClick={() => setIsMassUpdateModalOpen(true)}
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaPercentage /> Actualización
+            </button>
+            <button
+              onClick={() => setIsBarcodeModalOpen(true)}
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg hover:from-gray-800 hover:to-gray-900 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaBarcode /> Etiquetas
+            </button>
+            <Link
+              href="/dashboard/clasificacion"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaTags /> Clasificación
+            </Link>
+            <Link
+              href="/dashboard/products/importar"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaUpload /> Importar Excel
+            </Link>
+            <Link
+              href="/dashboard/products/new"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaPlus /> Agregar Producto
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* ESTADÍSTICAS DE STOCK */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {/* Total de productos */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-5 text-white">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 md:p-5 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium opacity-90">Total Productos</p>
-              <p className="text-3xl font-bold mt-1">{stats.total}</p>
+              <p className="text-xs md:text-sm font-medium opacity-90">Total Productos</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.total}</p>
             </div>
-            <div className="w-12 h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaBoxes className="text-2xl text-blue-600" />
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
+              <FaBoxes className="text-lg md:text-2xl text-blue-600" />
             </div>
           </div>
         </div>
@@ -346,16 +360,16 @@ export default function ProductsPage() {
         {/* Sin stock */}
         <button
           onClick={() => setStockFilter("sin_stock")}
-          className={`bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-5 text-white hover:shadow-xl transition-all ${stockFilter === "sin_stock" ? "ring-4 ring-red-300" : ""
+          className={`bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl transition-all ${stockFilter === "sin_stock" ? "ring-4 ring-red-300" : ""
             }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium opacity-90">Sin Stock</p>
-              <p className="text-3xl font-bold mt-1">{stats.sinStock}</p>
+              <p className="text-xs md:text-sm font-medium opacity-90">Sin Stock</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.sinStock}</p>
             </div>
-            <div className="w-12 h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaBan className="text-2xl text-red-600" />
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
+              <FaBan className="text-lg md:text-2xl text-red-600" />
             </div>
           </div>
         </button>
@@ -363,18 +377,18 @@ export default function ProductsPage() {
         {/* Stock bajo */}
         <button
           onClick={() => setStockFilter("stock_bajo")}
-          className={`bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-5 text-white hover:shadow-xl transition-all ${stockFilter === "stock_bajo" ? "ring-4 ring-yellow-300" : ""
+          className={`bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl transition-all ${stockFilter === "stock_bajo" ? "ring-4 ring-yellow-300" : ""
             }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium opacity-90">
+              <p className="text-xs md:text-sm font-medium opacity-90">
                 Stock Bajo (1-10)
               </p>
-              <p className="text-3xl font-bold mt-1">{stats.stockBajo}</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.stockBajo}</p>
             </div>
-            <div className="w-12 h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaExclamationTriangle className="text-2xl text-yellow-600" />
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
+              <FaExclamationTriangle className="text-lg md:text-2xl text-yellow-600" />
             </div>
           </div>
         </button>
@@ -382,18 +396,18 @@ export default function ProductsPage() {
         {/* Con stock */}
         <button
           onClick={() => setStockFilter("con_stock")}
-          className={`bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-5 text-white hover:shadow-xl transition-all ${stockFilter === "con_stock" ? "ring-4 ring-green-300" : ""
+          className={`bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl transition-all ${stockFilter === "con_stock" ? "ring-4 ring-green-300" : ""
             }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium opacity-90">
+              <p className="text-xs md:text-sm font-medium opacity-90">
                 Con Stock (&gt;10)
               </p>
-              <p className="text-3xl font-bold mt-1">{stats.conStock}</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.conStock}</p>
             </div>
-            <div className="w-12 h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaCheckCircle className="text-2xl text-green-600" />
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
+              <FaCheckCircle className="text-lg md:text-2xl text-green-600" />
             </div>
           </div>
         </button>
@@ -728,16 +742,13 @@ export default function ProductsPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <input
-                    type="checkbox"
-                    checked={isProductSelected(product.id)}
-                    onChange={() => toggleProductSelection(product)}
-                    aria-label={`Seleccionar ${product.name}`}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <ProductActions productId={product.id} userRole={userRole} />
-                </div>
+                <input
+                  type="checkbox"
+                  checked={isProductSelected(product.id)}
+                  onChange={() => toggleProductSelection(product)}
+                  aria-label={`Seleccionar ${product.name}`}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
               </div>
 
               {/* Detalles */}
@@ -758,8 +769,14 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {product.description && (
+                <p className="text-xs text-gray-400 italic truncate">
+                  {product.description}
+                </p>
+              )}
+
               {/* Footer de la tarjeta */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${product.stock === 0
                     ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
@@ -782,12 +799,9 @@ export default function ProductsPage() {
                     </>
                   )}
                 </span>
-
-                {product.description && (
-                  <span className="text-xs text-gray-400 italic truncate max-w-[150px]">
-                    {product.description}
-                  </span>
-                )}
+                <div className="ml-auto">
+                  <ProductActions productId={product.id} userRole={userRole} />
+                </div>
               </div>
             </div>
           ))
@@ -796,9 +810,9 @@ export default function ProductsPage() {
 
       {/* PAGINACIÓN */}
       <div className="mt-6 mb-24 lg:mb-0 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-800 px-4 py-2 rounded-lg flex items-center gap-2">
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+          <div className="flex items-center justify-center md:justify-start">
+            <span className="w-full md:w-auto text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-800 px-4 py-2 rounded-lg flex items-center justify-center md:justify-start gap-2">
               <FaChartBar className="text-blue-600" />
               Mostrando{" "}
               <span className="font-bold text-blue-600">
@@ -813,25 +827,24 @@ export default function ProductsPage() {
               de <span className="font-bold">{totalCount}</span> productos
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1 || loading}
-              className="px-5 py-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 text-gray-700 dark:text-slate-200 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:from-gray-200 hover:to-gray-300 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+              className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 text-gray-700 dark:text-slate-200 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:from-gray-200 hover:to-gray-300 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
             >
               <FaChevronLeft /> Anterior
             </button>
-            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-lg border-2 border-blue-200 dark:border-slate-600">
+            <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-lg border-2 border-blue-200 dark:border-slate-600">
               <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
-                Página{" "}
-                <span className="text-blue-600 text-lg">{currentPage}</span> de{" "}
+                Página <span className="text-blue-600 text-lg">{currentPage}</span> de{" "}
                 <span className="text-gray-900 dark:text-slate-50">{Math.max(1, totalPages)}</span>
               </span>
             </div>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage >= totalPages || loading}
-              className="px-5 py-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 text-gray-700 dark:text-slate-200 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:from-gray-200 hover:to-gray-300 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+              className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 text-gray-700 dark:text-slate-200 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:from-gray-200 hover:to-gray-300 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
             >
               Siguiente <FaChevronRight />
             </button>

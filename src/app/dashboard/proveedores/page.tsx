@@ -19,6 +19,8 @@ import {
   FaShoppingCart,
   FaBuilding,
   FaUserTie,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 
 export default function SuppliersPage() {
@@ -27,6 +29,7 @@ export default function SuppliersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debtFilter, setDebtFilter] = useState("all");
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [areActionsOpen, setAreActionsOpen] = useState(false);
 
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -121,25 +124,36 @@ export default function SuppliersPage() {
             Administra tus proveedores y compras
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href="/dashboard/compras/nueva"
-            className="px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 text-sm"
+        <div className="flex flex-col gap-3 w-full lg:w-auto">
+          <button
+            onClick={() => setAreActionsOpen((prev) => !prev)}
+            className="lg:hidden w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm flex items-center justify-between text-gray-700 dark:text-slate-200 font-semibold"
           >
-            <FaShoppingCart /> Registrar Compra
-          </Link>
-          <Link
-            href="/dashboard/compras/generar"
-            className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 text-sm"
+            Acciones
+            {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          <div
+            className={`${areActionsOpen ? "grid" : "hidden"} grid-cols-2 gap-2 lg:flex lg:gap-2`}
           >
-            <FaShoppingCart /> Generar Orden
-          </Link>
-          <Link
-            href="/dashboard/proveedores/nuevo"
-            className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2 text-sm"
-          >
-            <FaPlus /> Agregar Proveedor
-          </Link>
+            <Link
+              href="/dashboard/compras/nueva"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaShoppingCart /> Registrar Compra
+            </Link>
+            <Link
+              href="/dashboard/compras/generar"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaShoppingCart /> Generar Orden
+            </Link>
+            <Link
+              href="/dashboard/proveedores/nuevo"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
+            >
+              <FaPlus /> Agregar Proveedor
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -166,13 +180,13 @@ export default function SuppliersPage() {
           </div>
 
           {/* Filtro de deuda */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <FaFilter className="text-gray-400 text-sm" />
             <select
               value={debtFilter}
               onChange={(e) => setDebtFilter(e.target.value)}
               aria-label="Filtrar por estado de deuda"
-              className="px-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm min-w-[180px] bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
+              className="w-full sm:min-w-[180px] px-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
             >
               <option value="all">Todos</option>
               <option value="with_debt">Con deudas</option>
@@ -197,7 +211,7 @@ export default function SuppliersPage() {
       </div>
 
       {/* TABLA DE PROVEEDORES */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
@@ -336,6 +350,82 @@ export default function SuppliersPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* TARJETAS DE PROVEEDORES (Mobile) */}
+      <div className="md:hidden space-y-4">
+        {loading ? (
+          <div className="text-center py-10 text-gray-500 dark:text-slate-400">
+            Cargando proveedores...
+          </div>
+        ) : filteredSuppliers.length === 0 ? (
+          <div className="text-center py-10 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
+            {searchTerm
+              ? "No se encontraron proveedores con ese criterio"
+              : "No hay proveedores registrados"}
+          </div>
+        ) : (
+          filteredSuppliers.map((supplier) => {
+            const debt = supplier.debt || 0;
+            return (
+              <div
+                key={supplier.id}
+                className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border border-gray-100"
+              >
+                <div className="flex justify-between items-start gap-3 mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {supplier.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-slate-50">
+                          {supplier.name}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          {supplier.contact_person || "Sin contacto"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <SupplierActions
+                    supplierId={supplier.id}
+                    onUpdate={fetchSuppliers}
+                    userRole={userRole}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-300 mb-2">
+                  <FaPhone className="text-gray-400" />
+                  {supplier.phone || "—"}
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  {debt > 0 ? (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300">
+                      <FaExclamationTriangle /> Deuda: {formatCurrency(debt)}
+                    </span>
+                  ) : debt < 0 ? (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300">
+                      <FaDollarSign /> A favor: {formatCurrency(Math.abs(debt))}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 dark:text-slate-300">
+                      <FaDollarSign /> {formatCurrency(0)}
+                    </span>
+                  )}
+
+                  <Link
+                    href={`/dashboard/proveedores/${supplier.id}`}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                  >
+                    Ver detalle
+                  </Link>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
