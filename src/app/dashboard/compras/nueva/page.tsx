@@ -689,6 +689,7 @@ export default function NewPurchasePage() {
                   </p>
                 </div>
               ) : (
+                <>
                 <div className="hidden lg:block overflow-x-auto">
                   <table className="min-w-full">
                     <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -926,6 +927,7 @@ export default function NewPurchasePage() {
                     );
                   })}
                 </div>
+                </>
               )}
             </div>
           </div>
