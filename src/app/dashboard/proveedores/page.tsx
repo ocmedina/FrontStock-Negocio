@@ -113,7 +113,7 @@ export default function SuppliersPage() {
   }, [suppliers, searchTerm, debtFilter]);
 
   return (
-    <div className="p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+    <div className="p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER AREA */}
         <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-6 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">

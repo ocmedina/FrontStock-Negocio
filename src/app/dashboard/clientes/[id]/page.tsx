@@ -225,7 +225,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
 
   if (!customer) {
     return (
-      <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen flex items-center justify-center">
+      <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full flex items-center justify-center">
         <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 text-center space-y-4 max-w-sm">
           <FaExclamationTriangle className="text-4xl text-rose-500 mx-auto" />
           <h1 className="text-base font-bold text-gray-900 dark:text-slate-100">
@@ -334,7 +334,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
   );
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full text-slate-800 dark:text-slate-100">
       <div className="max-w-[1250px] mx-auto space-y-6">
         
         {/* BOTÓN VOLVER */}

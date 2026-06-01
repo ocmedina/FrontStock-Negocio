@@ -33,7 +33,7 @@ export default async function SaleDetailPage({
   if (error || !sale) {
     console.error("Error al obtener detalles de la venta:", error?.message);
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen flex items-center justify-center">
+      <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full flex items-center justify-center">
         <div className="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-lg max-w-md w-full text-center border border-gray-200 dark:border-slate-700">
           <div className="mb-6">
             <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">

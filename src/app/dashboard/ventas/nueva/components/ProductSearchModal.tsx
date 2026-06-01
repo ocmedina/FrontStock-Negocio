@@ -200,8 +200,8 @@ export default function ProductSearchModal({
                   onClick={() => handleSelectProduct(product)}
                   className={`p-4 rounded-xl border text-left transition-all duration-200 group ${
                     index === selectedIndex
-                      ? "border-purple-500 bg-white shadow-md ring-1 ring-purple-500 transform scale-[1.01]"
-                      : "border-gray-200 bg-white hover:border-purple-300 hover:shadow-sm"
+                      ? "border-purple-500 bg-white dark:bg-slate-800 shadow-md ring-1 ring-purple-500 transform scale-[1.01]"
+                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-sm dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="flex justify-between items-start">
@@ -209,8 +209,8 @@ export default function ProductSearchModal({
                       <h3
                         className={`font-bold text-lg mb-1 ${
                           index === selectedIndex
-                            ? "text-purple-700"
-                            : "text-gray-800"
+                            ? "text-purple-700 dark:text-purple-300"
+                            : "text-gray-800 dark:text-slate-100"
                         }`}
                       >
                         {product.name}

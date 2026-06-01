@@ -117,7 +117,7 @@ export default function EditCustomerPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="flex items-center justify-center min-h-full bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
           <span className="text-sm font-semibold text-slate-500">Cargando datos del cliente...</span>
@@ -127,7 +127,7 @@ export default function EditCustomerPage() {
   }
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full text-slate-800 dark:text-slate-100">
       <div className="max-w-3xl mx-auto space-y-6">
         
         {/* BOTÓN VOLVER */}

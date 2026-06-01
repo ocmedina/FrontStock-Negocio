@@ -392,7 +392,7 @@ export default function GraficosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 flex flex-col items-center justify-center">
+      <div className="min-h-full bg-slate-50 dark:bg-slate-950 p-6 flex flex-col items-center justify-center">
         <div className="text-center space-y-4">
           <div className="relative w-16 h-16 mx-auto">
             <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 animate-pulse"></div>
@@ -406,7 +406,7 @@ export default function GraficosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 md:p-8 transition-colors duration-300">
+    <div className="min-h-full bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 md:p-8 transition-colors duration-300">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Banner de Cabecera con Segmented Controls */}

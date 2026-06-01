@@ -9,7 +9,7 @@ export default function ClassificationPage() {
   const [activeTab, setActiveTab] = useState<"brands" | "categories">("brands");
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">

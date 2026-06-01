@@ -38,7 +38,7 @@ export default async function BudgetDetailPage(props: {
 
   if (!budget) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6">
+      <div className="min-h-full bg-slate-50 dark:bg-slate-950 p-6">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-slate-700 text-center">
             <div className="mb-4">

@@ -633,7 +633,7 @@ export default function NewSalePage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-6 pb-16">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950 py-6 pb-16">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Barra superior compacta */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 px-5 py-4">

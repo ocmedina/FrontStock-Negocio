@@ -216,7 +216,7 @@ export default function NewPurchaseOrderPage() {
   );
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -280,7 +280,7 @@ export default function NewPurchaseOrderPage() {
                   <button
                     key={product.id}
                     onClick={() => addProduct(product)}
-                    className="w-full text-left px-4 py-3 bg-white dark:bg-slate-900 hover:bg-blue-50 rounded-lg border border-gray-200 dark:border-slate-700 transition-colors"
+                    className="w-full text-left px-4 py-3 bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg border border-gray-200 dark:border-slate-700 transition-colors"
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -376,7 +376,7 @@ export default function NewPurchaseOrderPage() {
                       <td className="px-4 py-4 text-center">
                         <button
                           onClick={() => removeItem(index)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
                         >
                           <FaTrash />
                         </button>

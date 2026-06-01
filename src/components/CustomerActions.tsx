@@ -51,15 +51,19 @@ export default function CustomerActions({
     <div className="flex items-center gap-2">
       <Link
         href={`/dashboard/clientes/edit/${customerId}`}
-        className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium text-xs flex items-center gap-1.5 shadow-sm"
+        title="Editar"
+        className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium text-xs flex items-center justify-center gap-1.5 shadow-sm h-8 w-8 sm:w-auto"
       >
-        <FaEdit /> Editar
+        <FaEdit className="flex-shrink-0" />
+        <span className="hidden sm:inline">Editar</span>
       </Link>
       <button
         onClick={handleDelete}
-        className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium text-xs flex items-center gap-1.5 shadow-sm"
+        title="Borrar"
+        className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium text-xs flex items-center justify-center gap-1.5 shadow-sm h-8 w-8 sm:w-auto"
       >
-        <FaTrash /> Borrar
+        <FaTrash className="flex-shrink-0" />
+        <span className="hidden sm:inline">Borrar</span>
       </button>
     </div>
   );

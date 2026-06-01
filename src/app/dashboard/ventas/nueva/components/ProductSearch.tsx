@@ -194,7 +194,7 @@ export default function ProductSearch({
             <li
               key={product.id}
               onClick={() => handleSelect(product)}
-              className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group"
+              className="px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group"
             >
               <div className="flex justify-between items-center">
                 <div>

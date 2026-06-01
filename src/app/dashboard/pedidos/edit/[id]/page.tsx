@@ -270,7 +270,7 @@ export default function EditOrderPage({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-full">
         <div className="text-gray-500 dark:text-slate-400">Cargando pedido...</div>
       </div>
     );
@@ -339,8 +339,8 @@ export default function EditOrderPage({
                 setAmountReceived(calculateTotal());
               }}
               className={`px-4 py-3 rounded-lg border-2 transition-all ${paymentMethod === "efectivo"
-                ? "border-green-500 bg-green-50 text-green-700 font-semibold"
-                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                ? "border-green-500 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold"
+                : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:border-gray-400 dark:hover:border-slate-500"
                 }`}
             >
               💵 Efectivo
@@ -352,8 +352,8 @@ export default function EditOrderPage({
                 setAmountReceived(calculateTotal());
               }}
               className={`px-4 py-3 rounded-lg border-2 transition-all ${paymentMethod === "transferencia"
-                ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
-                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold"
+                : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:border-gray-400 dark:hover:border-slate-500"
                 }`}
             >
               🏦 Transferencia
@@ -365,8 +365,8 @@ export default function EditOrderPage({
                 setAmountReceived(0);
               }}
               className={`px-4 py-3 rounded-lg border-2 transition-all ${paymentMethod === "fiado"
-                ? "border-orange-500 bg-orange-50 text-orange-700 font-semibold"
-                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                ? "border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 font-semibold"
+                : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:border-gray-400 dark:hover:border-slate-500"
                 }`}
             >
               📋 Fiado
@@ -378,8 +378,8 @@ export default function EditOrderPage({
                 setAmountReceived(0);
               }}
               className={`px-4 py-3 rounded-lg border-2 transition-all ${paymentMethod === "mixto"
-                ? "border-purple-500 bg-purple-50 text-purple-700 font-semibold"
-                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                ? "border-purple-500 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-semibold"
+                : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:border-gray-400 dark:hover:border-slate-500"
                 }`}
             >
               💳 Mixto

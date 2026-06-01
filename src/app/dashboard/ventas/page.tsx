@@ -259,7 +259,7 @@ export default function SalesHistoryPage() {
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-full">
       {/* HEADER CARD */}
       <div className="group relative overflow-hidden rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-5 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-indigo-50/50 dark:bg-indigo-950/20" />

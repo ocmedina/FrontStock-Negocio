@@ -15,7 +15,7 @@ export default function GenerateOrderRedirectPage() {
   const router = useRouter();
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen flex items-center justify-center">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full flex items-center justify-center">
       <div className="max-w-3xl w-full">
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-8 border border-gray-200 dark:border-slate-700">
           {/* Icon */}

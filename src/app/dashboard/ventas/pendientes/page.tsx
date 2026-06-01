@@ -187,7 +187,7 @@ export default function VentasPendientesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-slate-300">Cargando ventas pendientes...</p>
@@ -199,7 +199,7 @@ export default function VentasPendientesPage() {
   const totalPendiente = ventas.reduce((sum, v) => sum + v.amount_pending, 0);
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
       {/* HEADER */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 sm:mb-8 gap-4">
         <div className="w-full lg:w-auto">

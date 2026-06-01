@@ -101,7 +101,7 @@ export default function CartList({
                     <div className="flex justify-center items-center gap-2">
                       <button
                         onClick={() => onUpdateQuantity(item.id, -1)}
-                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
                       >
                         <FaMinus size={12} />
                       </button>
@@ -110,7 +110,7 @@ export default function CartList({
                       </span>
                       <button
                         onClick={() => onUpdateQuantity(item.id, 1)}
-                        className="p-1 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded transition-colors"
+                        className="p-1 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-950/30 rounded transition-colors"
                       >
                         <FaPlus size={12} />
                       </button>
@@ -143,7 +143,7 @@ export default function CartList({
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button
                       onClick={() => onRemoveFromCart(item.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50"
+                      className="text-gray-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30"
                       title="Eliminar del carrito"
                     >
                       <FaTrash size={16} />

@@ -101,7 +101,7 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
   };
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
       <div className="max-w-6xl mx-auto">
         {/* HEADER */}
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 mb-6 border border-gray-200 dark:border-slate-700">

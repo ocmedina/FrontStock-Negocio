@@ -215,7 +215,7 @@ export default function InventoryKardexPage() {
   );
 
   return (
-    <div className="p-6 bg-gray-50 dark:bg-slate-950 min-h-screen">
+    <div className="p-6 bg-gray-50 dark:bg-slate-950 min-h-full">
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-3">

@@ -75,7 +75,7 @@ export default function NewCustomerPage() {
   ];
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full text-slate-800 dark:text-slate-100">
       <div className="max-w-3xl mx-auto space-y-6">
         
         {/* BOTÓN VOLVER */}

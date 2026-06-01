@@ -50,7 +50,7 @@ export default async function OrderDetailPage(props: {
 
   if (!order) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+      <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-slate-700 text-center">
             <div className="mb-4">

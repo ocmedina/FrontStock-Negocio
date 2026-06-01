@@ -222,7 +222,7 @@ function CustomersPageContent() {
   };
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full text-slate-800 dark:text-slate-100">
       <div className="max-w-[1550px] mx-auto space-y-6">
         
         {/* HEADER DE LA SECCIÓN */}
@@ -537,7 +537,7 @@ export default function CustomersPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center items-center min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="flex justify-center items-center min-h-full bg-slate-50 dark:bg-slate-950">
           <div className="text-slate-505 font-bold">Cargando interfaz...</div>
         </div>
       }

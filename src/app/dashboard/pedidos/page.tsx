@@ -621,7 +621,7 @@ export default function OrdersPage() {
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   return (
-    <div className="p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-950 min-h-full text-slate-900 dark:text-slate-100 transition-colors">
       
       {/* Modales */}
       <OrderDetailsModal

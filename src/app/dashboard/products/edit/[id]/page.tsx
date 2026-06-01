@@ -155,7 +155,7 @@ export default function EditProductPage() {
 
   if (!product) {
     return (
-      <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen flex items-center justify-center">
+      <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           <span className="text-3xs font-bold text-slate-400 uppercase tracking-wider">Cargando producto...</span>
@@ -165,7 +165,7 @@ export default function EditProductPage() {
   }
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full text-slate-800 dark:text-slate-100">
       <div className="max-w-[850px] mx-auto space-y-6">
         
         {/* BOTÓN VOLVER */}

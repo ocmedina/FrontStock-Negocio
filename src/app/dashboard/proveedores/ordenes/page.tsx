@@ -129,7 +129,7 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
@@ -333,7 +333,7 @@ export default function PurchaseOrdersPage() {
                           <div className="flex items-center justify-center gap-2">
                             <Link
                               href={`/dashboard/proveedores/ordenes/${order.id}`}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
                               title="Ver detalles"
                             >
                               <FaEye />
@@ -341,7 +341,7 @@ export default function PurchaseOrdersPage() {
                             {order.status === "draft" && (
                               <Link
                                 href={`/dashboard/proveedores/ordenes/${order.id}/editar`}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
                                 title="Editar"
                               >
                                 <FaEdit />
