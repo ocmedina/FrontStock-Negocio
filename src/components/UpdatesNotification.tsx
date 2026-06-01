@@ -17,6 +17,46 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-06-01-supplier-accounts-redesign",
+    date: "1 Jun 2026",
+    title: "📋 Rediseño de Cuentas y Deudas de Proveedores",
+    description:
+      "Nueva interfaz limpia con avatares, deudas dinámicas mediante indicadores de color y botones de acción rápidos simplificados para pantallas pequeñas.",
+    icon: "📋",
+    isNew: true,
+    type: "improvement",
+  },
+  {
+    id: "2026-06-01-cash-closings-automation",
+    date: "1 Jun 2026",
+    title: "💰 Arqueo y Conciliación de Cierre de Caja",
+    description:
+      "Optimización del arqueo de caja con cálculos automáticos de balances, ingresos y control rápido de discrepancias.",
+    icon: "💰",
+    isNew: true,
+    type: "feature",
+  },
+  {
+    id: "2026-06-01-login-landing-overhaul",
+    date: "1 Jun 2026",
+    title: "🎨 Nuevo Acceso y Portal de Bienvenida",
+    description:
+      "Rediseño visual de las páginas de inicio y login bajo una estética moderna en modo oscuro, con efectos de vidrio translúcido y luces ambientales azules corporativas.",
+    icon: "🎨",
+    isNew: true,
+    type: "improvement",
+  },
+  {
+    id: "2026-05-27-purchase-orders-system",
+    date: "27 May 2026",
+    title: "🧾 Sistema de Órdenes de Compra",
+    description:
+      "En desarrollo activo: gestión completa de órdenes (Borrador → Enviada → Recibida), actualización automática de stock al recibir, PDFs profesionales, y próximamente WhatsApp, email y seguimiento de entregas.",
+    icon: "🧾",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2026-05-26-price-list-pdf",
     date: "26 May 2026",
     title: "🧾 Lista de Precios en PDF",

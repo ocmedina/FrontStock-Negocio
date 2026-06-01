@@ -402,63 +402,103 @@ export default function OrderDetailPage({
         {/* Products */}
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 mb-6 border border-gray-200 dark:border-slate-700">
           <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">Productos</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-              <thead className="bg-gray-50 dark:bg-slate-950">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
-                    SKU
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
-                    Producto
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
-                    Cantidad
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
-                    Precio Unit.
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
-                    Subtotal
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
-                {order.purchase_order_items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-4 text-sm font-mono text-gray-600 dark:text-slate-300">
-                      {item.products.sku}
+          <>
+            {/* Desktop view */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead className="bg-gray-50 dark:bg-slate-950">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
+                      SKU
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
+                      Producto
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
+                      Cantidad
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
+                      Precio Unit.
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase">
+                      Subtotal
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                  {order.purchase_order_items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-4 text-sm font-mono text-gray-600 dark:text-slate-300">
+                        {item.products.sku}
+                      </td>
+                      <td className="px-4 py-4 text-sm font-semibold text-gray-900 dark:text-slate-50">
+                        {item.products.name}
+                      </td>
+                      <td className="px-4 py-4 text-center font-bold text-gray-900 dark:text-slate-50">
+                        {item.quantity}
+                      </td>
+                      <td className="px-4 py-4 text-right text-sm text-gray-600 dark:text-slate-300">
+                        ${item.unit_price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-4 text-right font-bold text-gray-900 dark:text-slate-50">
+                        ${item.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-indigo-50/50 dark:bg-indigo-950/20">
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-4 text-right font-bold text-slate-700 dark:text-slate-300 uppercase"
+                    >
+                      Total:
                     </td>
-                    <td className="px-4 py-4 text-sm font-semibold text-gray-900 dark:text-slate-50">
-                      {item.products.name}
-                    </td>
-                    <td className="px-4 py-4 text-center font-bold text-gray-900 dark:text-slate-50">
-                      {item.quantity}
-                    </td>
-                    <td className="px-4 py-4 text-right text-sm text-gray-600 dark:text-slate-300">
-                      ${item.unit_price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-4 text-right font-bold text-gray-900 dark:text-slate-50">
-                      ${item.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className="px-4 py-4 text-right text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                      ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-blue-50">
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-4 text-right font-bold text-gray-700 dark:text-slate-200 uppercase"
-                  >
-                    Total:
-                  </td>
-                  <td className="px-4 py-4 text-right text-xl font-bold text-blue-600">
-                    ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Mobile cards view */}
+            <div className="md:hidden space-y-3.5">
+              {order.purchase_order_items.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900/60"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                        {item.products.name}
+                      </h4>
+                      <p className="text-[10px] font-mono text-slate-450 dark:text-slate-500 mt-1">
+                        SKU: {item.products.sku}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/60 text-xs">
+                    <div>
+                      <p className="text-slate-500 dark:text-slate-450">Cant: <span className="font-bold text-slate-800 dark:text-slate-200">{item.quantity}</span></p>
+                      <p className="text-slate-500 dark:text-slate-450 mt-0.5">Precio: <span className="font-bold text-slate-800 dark:text-slate-200">${item.unit_price.toLocaleString("es-AR")}</span></p>
+                    </div>
+                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                      ${item.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/40 flex justify-between items-center">
+                <span className="text-xs font-black text-indigo-850 dark:text-indigo-300 uppercase tracking-wider">Total Orden:</span>
+                <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+                  ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </>
         </div>
 
         {/* Actions */}

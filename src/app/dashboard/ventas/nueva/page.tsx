@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { formatCurrency } from "@/lib/numberFormat";
 import toast from "react-hot-toast";
-import { FaUser, FaShoppingCart, FaMoneyBillWave } from "react-icons/fa";
+import { FaUser, FaShoppingCart, FaMoneyBillWave, FaSearch } from "react-icons/fa";
 
 import {
   Customer,
@@ -52,6 +52,8 @@ export default function NewSalePage() {
   const [editingTabId, setEditingTabId] = useState<number | null>(null);
   const [editingTabName, setEditingTabName] = useState("");
   const [showProductSearchModal, setShowProductSearchModal] = useState(false);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [isCustomerMenuOpen, setIsCustomerMenuOpen] = useState(false);
 
   // Obtener la pestaña activa
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
@@ -347,6 +349,14 @@ export default function NewSalePage() {
     [cart, selectedCustomer]
   );
 
+  const filteredCustomers = useMemo(() => {
+    const query = customerQuery.trim().toLowerCase();
+    if (!query) return customers;
+    return customers.filter((customer) =>
+      customer.full_name?.toLowerCase().includes(query)
+    );
+  }, [customers, customerQuery]);
+
   const handleUpdateQuantity = (productId: string, delta: number) => {
     setCart(
       cart.map((item) => {
@@ -623,10 +633,34 @@ export default function NewSalePage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-6 pb-16">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-6 pb-16">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Barra superior compacta */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 px-5 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-50">
+                Nueva venta
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                F9 nueva pestaña · F10 buscar producto · F12 pagar
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                Productos: {cart.reduce((acc, item) => acc + item.quantity, 0)}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                Total: {formatCurrency(total)}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                {selectedCustomer?.full_name || "Sin cliente"}
+              </span>
+            </div>
+          </div>
+        </div>
         {/* Pestañas de Ventas */}
-        <div className="mb-4 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 p-1">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-2">
           <SaleTabs
             tabs={tabs}
             activeTabId={activeTabId}
@@ -646,14 +680,21 @@ export default function NewSalePage() {
           {/* Columna Izquierda: Buscador y Lista de Productos (si se quisiera mostrar) */}
           <div className="lg:col-span-8 space-y-6">
             {/* Buscador de Productos */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <FaShoppingCart className="text-blue-600" /> Agregar Productos
-              </h2>
-              <ProductSearch
-                onProductSelect={handleAddProduct}
-                isEditingTab={editingTabId !== null}
-              />
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-visible">
+              <div className="px-6 py-4 border-b border-blue-100 dark:border-blue-900/40 bg-gradient-to-r from-blue-50 to-white dark:from-blue-950/30 dark:to-slate-900">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                  <FaShoppingCart className="text-blue-600" /> Agregar Productos
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                  Busca por nombre, SKU o codigo de barras.
+                </p>
+              </div>
+              <div className="p-6">
+                <ProductSearch
+                  onProductSelect={handleAddProduct}
+                  isEditingTab={editingTabId !== null}
+                />
+              </div>
             </div>
 
             {/* Lista del Carrito */}
@@ -668,85 +709,132 @@ export default function NewSalePage() {
           {/* Columna Derecha: Cliente y Resumen */}
           <div className="lg:col-span-4 space-y-6">
             {/* Selección de Cliente */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <FaUser className="text-blue-600" /> Cliente
-              </h2>
-              <select
-                value={selectedCustomer?.id || ""}
-                onChange={(e) => {
-                  const customer = customers.find(
-                    (c) => c.id === e.target.value
-                  );
-                  setSelectedCustomer(customer || null);
-                }}
-                className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-slate-950 hover:bg-white dark:bg-slate-900 transition-colors"
-              >
-                <option value="">Seleccionar cliente...</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.full_name}
-                  </option>
-                ))}
-              </select>
-              {selectedCustomer && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                  <p className="text-sm text-blue-800">
-                    <span className="font-semibold">Tipo:</span>{" "}
-                    <span className="capitalize">
-                      {selectedCustomer.customer_type}
-                    </span>
-                  </p>
-                  <p className="text-sm text-blue-800 mt-1">
-                    <span className="font-semibold">Deuda Actual:</span> $
-                    {formatCurrency(selectedCustomer.debt || 0).replace("$", "")}
-                  </p>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+              <div className="px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-900">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                  <FaUser className="text-emerald-600" /> Cliente
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                  Selecciona el cliente para esta venta.
+                </p>
+              </div>
+              <div className="p-6">
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={customerQuery}
+                    onChange={(e) => {
+                      setCustomerQuery(e.target.value);
+                      if (!isCustomerMenuOpen) setIsCustomerMenuOpen(true);
+                    }}
+                    onFocus={() => {
+                      setIsCustomerMenuOpen(true);
+                      if (!customerQuery) {
+                        setCustomerQuery(selectedCustomer?.full_name || "");
+                      }
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setIsCustomerMenuOpen(false), 120);
+                    }}
+                    placeholder="Buscar cliente..."
+                    className="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-gray-50 dark:bg-slate-950 hover:bg-white dark:bg-slate-900 transition-colors"
+                  />
                 </div>
-              )}
+                {isCustomerMenuOpen && (
+                  <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
+                    {filteredCustomers.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-500 dark:text-slate-400">
+                        No hay clientes con ese nombre
+                      </div>
+                    ) : (
+                      filteredCustomers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setCustomerQuery("");
+                            setIsCustomerMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-100 dark:border-slate-800 last:border-b-0 ${
+                            selectedCustomer?.id === customer.id
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                              : "hover:bg-emerald-50/70 dark:hover:bg-emerald-950/30 text-gray-700 dark:text-slate-200"
+                          }`}
+                        >
+                          {customer.full_name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {selectedCustomer && (
+                  <div className="mt-4 p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
+                    <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                      <span className="font-semibold">Tipo:</span>{" "}
+                      <span className="capitalize">
+                        {selectedCustomer.customer_type}
+                      </span>
+                    </p>
+                    <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1">
+                      <span className="font-semibold">Deuda Actual:</span> $
+                      {formatCurrency(selectedCustomer.debt || 0).replace("$", "")}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Resumen de Venta */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-lg border border-gray-100 sticky top-6">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-6 flex items-center gap-2">
-                <FaMoneyBillWave className="text-green-600" /> Resumen
-              </h2>
-
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between items-center text-gray-600 dark:text-slate-300">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(total)}</span>
-                </div>
-                <div className="flex justify-between items-center text-gray-600 dark:text-slate-300">
-                  <span>Impuestos</span>
-                  <span>{formatCurrency(0)}</span>
-                </div>
-                <div className="border-t border-dashed border-gray-200 dark:border-slate-700 pt-4 flex justify-between items-center">
-                  <span className="text-xl font-bold text-gray-900 dark:text-slate-50">Total</span>
-                  <span className="text-3xl font-bold text-green-600">
-                    {formatCurrency(total)}
-                  </span>
-                </div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-800 sticky top-6 overflow-hidden">
+              <div className="px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-900">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                  <FaMoneyBillWave className="text-emerald-600" /> Resumen
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                  Total y acciones de cobro.
+                </p>
               </div>
 
-              <button
-                onClick={() => {
-                  if (cart.length === 0) {
-                    toast.error("El carrito está vacío");
-                    return;
-                  }
-                  if (!selectedCustomer) {
-                    toast.error("Selecciona un cliente");
-                    return;
-                  }
-                  setShowPaymentPanel(true);
-                }}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 text-lg"
-              >
-                <span>Pagar</span>
-                <span className="bg-white dark:bg-slate-900/20 px-2 py-0.5 rounded text-sm font-normal">
-                  F12
-                </span>
-              </button>
+              <div className="p-6">
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between items-center text-gray-600 dark:text-slate-300">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(total)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-gray-600 dark:text-slate-300">
+                    <span>Impuestos</span>
+                    <span>{formatCurrency(0)}</span>
+                  </div>
+                  <div className="border-t border-dashed border-gray-200 dark:border-slate-700 pt-4 flex justify-between items-center">
+                    <span className="text-xl font-bold text-gray-900 dark:text-slate-50">Total</span>
+                    <span className="text-3xl font-bold text-emerald-600">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (cart.length === 0) {
+                      toast.error("El carrito está vacío");
+                      return;
+                    }
+                    if (!selectedCustomer) {
+                      toast.error("Selecciona un cliente");
+                      return;
+                    }
+                    setShowPaymentPanel(true);
+                  }}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 text-lg"
+                >
+                  <span>Pagar</span>
+                  <span className="bg-white dark:bg-slate-900/20 px-2 py-0.5 rounded text-sm font-normal">
+                    F12
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -19,7 +19,6 @@ import {
   FaCubes,
   FaChevronLeft,
   FaChevronRight,
-  FaChartBar,
   FaInbox,
   FaFilter,
   FaExclamationTriangle,
@@ -29,9 +28,11 @@ import {
   FaFileExcel,
   FaChevronDown,
   FaChevronUp,
+  FaFilePdf,
 } from "react-icons/fa";
 import MassUpdateModal from "./components/MassUpdateModal";
 import BarcodeModal from "./components/BarcodeModal";
+import CustomPricesModal from "./components/CustomPricesModal";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 const ITEMS_PER_PAGE = 10;
@@ -53,6 +54,7 @@ export default function ProductsPage() {
   });
   const [isMassUpdateModalOpen, setIsMassUpdateModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [isCustomPricesModalOpen, setIsCustomPricesModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [areActionsOpen, setAreActionsOpen] = useState(false);
 
@@ -175,14 +177,12 @@ export default function ProductsPage() {
         .eq("is_active", true)
         .order("name", { ascending: true });
 
-      // Si hay un término de búsqueda, filtrar
       if (searchTerm.trim()) {
         query = query.or(
           `name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`
         );
       }
 
-      // Filtrar por stock
       if (stockFilter === "sin_stock") {
         query = query.eq("stock", 0);
       } else if (stockFilter === "stock_bajo") {
@@ -202,7 +202,6 @@ export default function ProductsPage() {
       setLoading(false);
     };
 
-    // Debounce para la búsqueda
     const timeoutId = setTimeout(() => {
       fetchProducts();
     }, 300);
@@ -210,7 +209,6 @@ export default function ProductsPage() {
     return () => clearTimeout(timeoutId);
   }, [currentPage, searchTerm, stockFilter, refreshKey]);
 
-  // Resetear a página 1 cuando se busca o cambia el filtro
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, stockFilter]);
@@ -280,576 +278,493 @@ export default function ProductsPage() {
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-            <FaBoxes className="text-blue-600" /> Gestión de Productos
-          </h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-1">
-            Administra tu inventario y precios
-          </p>
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+      <div className="max-w-[1250px] mx-auto space-y-6">
+        
+        {/* CABECERA */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div>
+            <h1 className="text-xl font-black text-gray-900 dark:text-slate-55 flex items-center gap-2">
+              <FaBoxes className="text-indigo-600 w-5 h-5" /> Catálogo de Productos
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Administra e inspecciona el inventario, marcas, categorías y listas de precios.
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-2 w-full lg:w-auto">
+            <button
+              onClick={() => setAreActionsOpen((prev) => !prev)}
+              className="lg:hidden w-full px-4 py-2 bg-white dark:bg-slate-900 border rounded-xl shadow-sm flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-205"
+            >
+              <span>Acciones Catálogo</span>
+              {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+            
+            <div
+              className={`${
+                areActionsOpen ? "flex" : "hidden"
+              } flex-col sm:grid sm:grid-cols-2 gap-2 lg:flex lg:flex-row lg:items-center lg:gap-2`}
+            >
+              <button
+                onClick={handleExportCurrentStock}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border transition-colors"
+              >
+                <FaFileExcel className="text-emerald-500 w-3.5 h-3.5" />
+                Exportar Excel
+              </button>
+              
+              <button
+                onClick={() => setIsMassUpdateModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border transition-colors"
+              >
+                <FaPercentage className="text-purple-500 w-3.5 h-3.5" />
+                Ajustar Precios
+              </button>
+              
+              <button
+                onClick={() => setIsBarcodeModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border transition-colors"
+              >
+                <FaBarcode className="text-slate-500 w-3.5 h-3.5" />
+                Etiquetas
+              </button>
+              
+              <Link
+                href="/dashboard/clasificacion"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border transition-colors"
+              >
+                <FaTags className="text-orange-500 w-3.5 h-3.5" />
+                Clasificación
+              </Link>
+              
+              <Link
+                href="/dashboard/products/importar"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border transition-colors"
+              >
+                <FaUpload className="text-green-500 w-3.5 h-3.5" />
+                Importar
+              </Link>
+              
+              <Link
+                href="/dashboard/products/new"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold rounded-xl shadow-sm transition-colors"
+              >
+                <FaPlus className="w-3 h-3" />
+                Agregar Producto
+              </Link>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-3 w-full lg:w-auto">
+
+        {/* METRICAS DE STOCK */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          
+          {/* Total */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+            <div>
+              <span className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider block">Catálogo Total</span>
+              <span className="text-xl font-black text-slate-900 dark:text-white mt-1 block">{stats.total}</span>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-450 dark:text-slate-500 flex items-center justify-center border">
+              <FaBoxes className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Sin Stock */}
           <button
-            onClick={() => setAreActionsOpen((prev) => !prev)}
-            className="lg:hidden w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm flex items-center justify-between text-gray-700 dark:text-slate-200 font-semibold"
+            onClick={() => setStockFilter(stockFilter === "sin_stock" ? "all" : "sin_stock")}
+            className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all text-left group
+              ${stockFilter === "sin_stock" ? "border-rose-300 dark:border-rose-900/60 ring-2 ring-rose-50/80 dark:ring-rose-950/20" : "border-slate-150 dark:border-slate-800/80"}`}
           >
-            Acciones
-            {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
+            <div>
+              <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider block">Sin Stock</span>
+              <span className="text-xl font-black text-rose-600 dark:text-rose-455 mt-1 block">{stats.sinStock}</span>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-rose-50/50 dark:bg-rose-950/15 text-rose-500 flex items-center justify-center border border-rose-100/50 dark:border-rose-900/30">
+              <FaBan className="w-4 h-4 group-hover:scale-105 transition-transform" />
+            </div>
           </button>
-          <div
-            className={`${areActionsOpen ? "grid" : "hidden"} grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:gap-3`}
+
+          {/* Stock Bajo */}
+          <button
+            onClick={() => setStockFilter(stockFilter === "stock_bajo" ? "all" : "stock_bajo")}
+            className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all text-left group
+              ${stockFilter === "stock_bajo" ? "border-amber-300 dark:border-amber-900/60 ring-2 ring-amber-50/80 dark:ring-amber-950/20" : "border-slate-150 dark:border-slate-800/80"}`}
           >
-            <button
-              onClick={handleExportCurrentStock}
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaFileExcel /> Exportar Stock
-            </button>
-            <button
-              onClick={() => setIsMassUpdateModalOpen(true)}
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaPercentage /> Actualización
-            </button>
-            <button
-              onClick={() => setIsBarcodeModalOpen(true)}
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg hover:from-gray-800 hover:to-gray-900 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaBarcode /> Etiquetas
-            </button>
-            <Link
-              href="/dashboard/clasificacion"
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaTags /> Clasificación
-            </Link>
-            <Link
-              href="/dashboard/products/importar"
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaUpload /> Importar Excel
-            </Link>
-            <Link
-              href="/dashboard/products/new"
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaPlus /> Agregar Producto
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ESTADÍSTICAS DE STOCK */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-        {/* Total de productos */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 md:p-5 text-white">
-          <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs md:text-sm font-medium opacity-90">Total Productos</p>
-              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.total}</p>
+              <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider block">Stock Crítico</span>
+              <span className="text-xl font-black text-amber-600 dark:text-amber-455 mt-1 block">{stats.stockBajo}</span>
             </div>
-            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaBoxes className="text-lg md:text-2xl text-blue-600" />
+            <div className="w-8 h-8 rounded-xl bg-amber-50/50 dark:bg-amber-950/15 text-amber-500 flex items-center justify-center border border-amber-100/50 dark:border-amber-900/30">
+              <FaExclamationTriangle className="w-3.5 h-3.5 group-hover:scale-105 transition-transform" />
             </div>
-          </div>
+          </button>
+
+          {/* Con Stock */}
+          <button
+            onClick={() => setStockFilter(stockFilter === "con_stock" ? "all" : "con_stock")}
+            className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all text-left group
+              ${stockFilter === "con_stock" ? "border-emerald-300 dark:border-emerald-900/60 ring-2 ring-emerald-50/80 dark:ring-emerald-950/20" : "border-slate-150 dark:border-slate-800/80"}`}
+          >
+            <div>
+              <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider block">Con Stock</span>
+              <span className="text-xl font-black text-emerald-600 dark:text-emerald-455 mt-1 block">{stats.conStock}</span>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/15 text-emerald-500 flex items-center justify-center border border-emerald-100/50 dark:border-emerald-900/30">
+              <FaCheckCircle className="w-4 h-4 group-hover:scale-105 transition-transform" />
+            </div>
+          </button>
+
         </div>
 
-        {/* Sin stock */}
-        <button
-          onClick={() => setStockFilter("sin_stock")}
-          className={`bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl transition-all ${stockFilter === "sin_stock" ? "ring-4 ring-red-300" : ""
-            }`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs md:text-sm font-medium opacity-90">Sin Stock</p>
-              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.sinStock}</p>
+        {/* BUSCADOR Y FILTROS */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800/80 p-5 space-y-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Input buscar */}
+            <div className="flex-1 relative">
+              <FaSearch className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+              <input
+                type="text"
+                placeholder="Buscar productos por nombre o SKU..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs font-medium bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+              />
             </div>
-            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaBan className="text-lg md:text-2xl text-red-600" />
+
+            {/* Select stock */}
+            <div className="flex items-center gap-2">
+              <FaFilter className="text-slate-400 w-3.5 h-3.5" />
+              <select
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value)}
+                aria-label="Filtrar por stock"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-205"
+              >
+                <option value="all">📦 Todos los productos</option>
+                <option value="sin_stock">❌ Sin stock (0)</option>
+                <option value="stock_bajo">⚠️ Stock crítico (1-10)</option>
+                <option value="con_stock">✅ Con stock (&gt;10)</option>
+              </select>
             </div>
           </div>
-        </button>
 
-        {/* Stock bajo */}
-        <button
-          onClick={() => setStockFilter("stock_bajo")}
-          className={`bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl transition-all ${stockFilter === "stock_bajo" ? "ring-4 ring-yellow-300" : ""
-            }`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs md:text-sm font-medium opacity-90">
-                Stock Bajo (1-10)
-              </p>
-              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.stockBajo}</p>
-            </div>
-            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaExclamationTriangle className="text-lg md:text-2xl text-yellow-600" />
-            </div>
-          </div>
-        </button>
-
-        {/* Con stock */}
-        <button
-          onClick={() => setStockFilter("con_stock")}
-          className={`bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl transition-all ${stockFilter === "con_stock" ? "ring-4 ring-green-300" : ""
-            }`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs md:text-sm font-medium opacity-90">
-                Con Stock (&gt;10)
-              </p>
-              <p className="text-2xl md:text-3xl font-bold mt-1">{stats.conStock}</p>
-            </div>
-            <div className="w-9 h-9 md:w-12 md:h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center">
-              <FaCheckCircle className="text-lg md:text-2xl text-green-600" />
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* BUSCADOR Y FILTROS */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg mb-6 p-6 border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Barra de búsqueda */}
-          <div className="flex-1 relative">
-            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
-            <input
-              type="text"
-              placeholder="Buscar productos por nombre o SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-700 dark:text-slate-200 font-medium bg-white dark:bg-slate-800 placeholder:text-gray-400 dark:placeholder:text-slate-500"
-            />
-          </div>
-
-          {/* Filtro de stock */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <FaFilter className="text-gray-400 text-lg" />
-            <select
-              value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value)}
-              aria-label="Filtrar por stock"
-              className="w-full sm:min-w-[200px] px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-700 dark:text-slate-200 font-medium bg-white dark:bg-slate-800"
-            >
-              <option value="all">📦 Todos los productos</option>
-              <option value="sin_stock">❌ Sin stock (0)</option>
-              <option value="stock_bajo">⚠️ Stock bajo (1-10)</option>
-              <option value="con_stock">✅ Con stock (&gt;10)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Indicadores de búsqueda/filtro activos */}
-        {(searchTerm || stockFilter !== "all") && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {searchTerm && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-900 text-sm font-medium">
-                <FaSearch />
-                <span>Búsqueda: "{searchTerm}"</span>
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-            {stockFilter !== "all" && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg border border-purple-200 dark:border-purple-900 text-sm font-medium">
-                <FaFilter />
-                <span>
-                  Filtro:{" "}
-                  {stockFilter === "sin_stock"
-                    ? "Sin stock"
-                    : stockFilter === "stock_bajo"
-                      ? "Stock bajo"
-                      : "Con stock"}
+          {/* Filtros Activos Badges */}
+          {(searchTerm || stockFilter !== "all") && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-3xs font-extrabold border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/10 dark:text-indigo-400 dark:border-indigo-900/50">
+                  Buscar: "{searchTerm}"
+                  <button onClick={() => setSearchTerm("")} className="hover:text-indigo-900 font-black ml-0.5">×</button>
                 </span>
-                <button
-                  onClick={() => setStockFilter("all")}
-                  className="ml-1 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-            {totalCount > 0 && (
-              <div className="px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-900 text-sm font-semibold">
-                {totalCount} resultado{totalCount !== 1 ? "s" : ""}
-              </div>
-            )}
-          </div>
-        )}
+              )}
+              {stockFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-3xs font-extrabold border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/10 dark:text-purple-400 dark:border-purple-900/50">
+                  Stock: {stockFilter === "sin_stock" ? "Agotados" : stockFilter === "stock_bajo" ? "Crítico" : "En Stock"}
+                  <button onClick={() => setStockFilter("all")} className="hover:text-purple-900 font-black ml-0.5">×</button>
+                </span>
+              )}
+              {totalCount > 0 && (
+                <span className="text-3xs font-bold text-slate-450 dark:text-slate-500">
+                  ({totalCount} coincidencias)
+                </span>
+              )}
+            </div>
+          )}
 
-        <div className="mt-4 flex flex-col lg:flex-row lg:items-center gap-3">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-200">
-            <input
-              type="checkbox"
-              checked={allSelectedOnPage}
-              onChange={toggleSelectAllCurrentPage}
-              disabled={loading || products.length === 0}
-              aria-label="Seleccionar todos los productos de la pagina"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            Seleccionar pagina actual
-          </label>
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-semibold">
-              Seleccionados: {selectedProducts.length}
-            </span>
-            <button
-              onClick={clearSelection}
-              disabled={selectedProducts.length === 0}
-              className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Limpiar seleccion
-            </button>
-            <ProductListDownloadButton
-              products={selectedProducts}
-              disabled={selectedProducts.length === 0}
-              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
-            />
+          {/* Acciones por Lote */}
+          <div className="border-t border-slate-100 dark:border-slate-800/60 pt-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 font-semibold text-slate-650 dark:text-slate-350 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allSelectedOnPage}
+                  onChange={toggleSelectAllCurrentPage}
+                  disabled={loading || products.length === 0}
+                  className="h-4 w-4 rounded border-slate-200 text-indigo-650 focus:ring-indigo-500 dark:bg-slate-950"
+                />
+                Seleccionar página
+              </label>
+
+              <span className="text-[10px] font-extrabold bg-slate-50 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg border">
+                Elegidos: {selectedProducts.length}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={clearSelection}
+                disabled={selectedProducts.length === 0}
+                className="px-3 py-1.5 border rounded-xl text-3xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Limpiar Selección
+              </button>
+              
+              <button
+                onClick={() => setIsCustomPricesModalOpen(true)}
+                disabled={selectedProducts.length === 0}
+                className="px-3.5 py-1.5 bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-xl text-3xs font-black uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
+              >
+                <FaFilePdf /> Personalizar Catálogo PDF
+              </button>
+              
+              <ProductListDownloadButton
+                products={selectedProducts}
+                disabled={selectedProducts.length === 0}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-3xs font-black uppercase tracking-wider shadow-sm transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* TABLA DE PRODUCTOS (Desktop) */}
-      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <label className="inline-flex items-center gap-2">
+        {/* TABLA DE PRODUCTOS (Desktop Layout) */}
+        <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800/80 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800/60">
+              <thead className="bg-slate-50/50 dark:bg-slate-950/20">
+                <tr>
+                  <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[60px]">
                     <input
                       type="checkbox"
                       checked={allSelectedOnPage}
                       onChange={toggleSelectAllCurrentPage}
                       disabled={loading || products.length === 0}
-                      aria-label="Seleccionar todos los productos de la pagina"
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      aria-label="Seleccionar todo"
+                      className="h-4 w-4 rounded border-slate-200 text-indigo-650 focus:ring-indigo-500 dark:bg-slate-950"
                     />
-                    Sel.
-                  </label>
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaBarcode /> SKU
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaTag /> Nombre
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaDollarSign /> Precio Minorista
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaDollarSign /> Precio Mayorista
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaCubes /> Stock
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                      <span className="text-gray-500 dark:text-slate-400 font-medium">
-                        Cargando productos...
-                      </span>
-                    </div>
-                  </td>
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[140px]">
+                    SKU
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider">
+                    Nombre
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[160px]">
+                    P. Minorista
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[160px]">
+                    P. Mayorista
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[140px]">
+                    Inventario
+                  </th>
+                  <th className="px-6 py-3.5 text-right text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[240px]">
+                    Acciones
+                  </th>
                 </tr>
-              ) : products.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-3">
-                      <FaInbox className="text-6xl text-gray-300" />
-                      <span className="text-gray-500 dark:text-slate-400 font-medium">
-                        {searchTerm
-                          ? "No se encontraron productos con ese criterio"
-                          : "No hay productos registrados"}
-                      </span>
-                      {searchTerm && (
-                        <span className="text-gray-400 text-sm">
-                          Intenta con otro término de búsqueda
-                        </span>
-                      )}
-                      {!searchTerm && (
-                        <Link
-                          href="/dashboard/products/new"
-                          className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium flex items-center gap-2"
-                        >
-                          <FaPlus /> Agregar primer producto
-                        </Link>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                products.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={isProductSelected(product.id)}
-                        onChange={() => toggleProductSelection(product)}
-                        aria-label={`Seleccionar ${product.name}`}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <FaBarcode className="text-gray-400" />
-                        <span className="text-sm font-mono text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">
-                          {product.sku}
-                        </span>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 bg-white dark:bg-slate-900">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <span className="text-3xs font-bold text-slate-400 uppercase tracking-wider">Cargando catálogo...</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-slate-50">
-                          {product.name}
-                        </span>
-                        {product.description && (
-                          <span className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 italic">
-                            {product.description.length > 50
-                              ? product.description.substring(0, 50) + "..."
-                              : product.description}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm font-bold text-green-600">
-                        <FaDollarSign />
-                        {product.price_minorista?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm font-bold text-blue-600">
-                        <FaDollarSign />
-                        {product.price_mayorista?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${product.stock === 0
-                          ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-2 border-red-400 dark:border-red-900"
-                          : product.stock <= 10
-                            ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-2 border-yellow-400 dark:border-yellow-900"
-                            : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-2 border-green-400 dark:border-green-900"
-                          }`}
-                      >
-                        {product.stock === 0 ? (
-                          <>
-                            <FaBan /> Sin stock
-                          </>
-                        ) : product.stock <= 10 ? (
-                          <>
-                            <FaExclamationTriangle /> {product.stock} uds
-                          </>
-                        ) : (
-                          <>
-                            <FaCheckCircle /> {product.stock} uds
-                          </>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <ProductActions
-                        productId={product.id}
-                        userRole={userRole}
-                      />
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : products.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
+                        <FaInbox className="text-3xl text-slate-300 dark:text-slate-700" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">
+                          Sin coincidencias en catálogo
+                        </span>
+                        <span className="text-3xs text-slate-500">
+                          {searchTerm
+                            ? "Prueba utilizando otros términos de búsqueda o quitando filtros de stock."
+                            : "Aún no has registrado ningún producto en tu inventario."}
+                        </span>
+                        {!searchTerm && (
+                          <Link
+                            href="/dashboard/products/new"
+                            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                          >
+                            <FaPlus className="w-2.5 h-2.5" /> Agregar primer producto
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  products.map((product) => (
+                    <tr
+                      key={product.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-850/30 transition-colors"
+                    >
+                      <td className="px-6 py-3.5 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={isProductSelected(product.id)}
+                          onChange={() => toggleProductSelection(product)}
+                          aria-label={`Seleccionar ${product.name}`}
+                          className="h-4 w-4 rounded border-slate-200 text-indigo-650 focus:ring-indigo-500 dark:bg-slate-950"
+                        />
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap font-mono text-[11px] text-slate-550 dark:text-slate-350">
+                        <span className="bg-slate-50 dark:bg-slate-950 border px-2 py-0.5 rounded-lg">
+                          {product.sku}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {product.name}
+                          </span>
+                          {product.description && (
+                            <span className="text-[10px] text-slate-450 dark:text-slate-500 truncate max-w-[280px] mt-0.5">
+                              {product.description}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                        {product.price_minorista ? (
+                          <span>$ {product.price_minorista.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        ) : (
+                          <span className="text-slate-400 font-normal italic">Sin precio</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                        {product.price_mayorista ? (
+                          <span>$ {product.price_mayorista.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        ) : (
+                          <span className="text-slate-400 font-normal italic">Sin precio</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-3xs font-extrabold border ${
+                            product.stock === 0
+                              ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/10 dark:text-rose-400 dark:border-rose-900/50"
+                              : product.stock <= 10
+                              ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/10 dark:text-amber-400 dark:border-amber-900/50"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/10 dark:text-emerald-400 dark:border-emerald-900/50"
+                          }`}
+                        >
+                          {product.stock === 0 ? "Agotado" : `${product.stock} unidades`}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap text-right">
+                        <ProductActions
+                          productId={product.id}
+                          userRole={userRole}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* TARJETAS DE PRODUCTOS (Mobile) */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="text-gray-500 dark:text-slate-400 font-medium">
-                Cargando productos...
-              </span>
+        {/* TARJETAS DE PRODUCTOS (Mobile Layout) */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+              <span className="text-3xs font-bold text-slate-400 uppercase tracking-wider block mt-2">Cargando...</span>
             </div>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow p-8 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <FaInbox className="text-6xl text-gray-300" />
-              <span className="text-gray-500 dark:text-slate-400 font-medium">
-                {searchTerm
-                  ? "No se encontraron productos con ese criterio"
-                  : "No hay productos registrados"}
-              </span>
-              {!searchTerm && (
-                <Link
-                  href="/dashboard/products/new"
-                  className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium flex items-center gap-2"
-                >
-                  <FaPlus /> Agregar primer producto
-                </Link>
-              )}
+          ) : products.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border p-6 text-center">
+              <span className="text-xs text-slate-500">Sin productos disponibles.</span>
             </div>
-          </div>
-        ) : (
-          products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 p-4"
-            >
-              {/* Header de la tarjeta */}
-              <div className="flex justify-between items-start mb-3 gap-3">
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-slate-50 text-lg leading-tight mb-1">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <FaBarcode className="text-gray-400 text-xs" />
-                    <span className="text-xs font-mono text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                      {product.sku}
+          ) : (
+            products.map((product) => (
+              <div
+                key={product.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800/80 p-4 space-y-3"
+              >
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1">
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-50 leading-tight">
+                      {product.name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] text-slate-500">
+                      <span>SKU:</span>
+                      <span className="bg-slate-50 dark:bg-slate-950 px-1.5 py-0.5 rounded border">
+                        {product.sku}
+                      </span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isProductSelected(product.id)}
+                    onChange={() => toggleProductSelection(product)}
+                    aria-label={`Seleccionar ${product.name}`}
+                    className="h-4 w-4 rounded border-slate-200 text-indigo-650 focus:ring-indigo-500 dark:bg-slate-950"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-slate-50/50 dark:bg-slate-950 p-2 rounded-xl border">
+                    <span className="text-3xs text-slate-550 block">Minorista</span>
+                    <span className="font-extrabold text-slate-850 dark:text-slate-100 mt-0.5 block">
+                      $ {product.price_minorista?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50/50 dark:bg-slate-950 p-2 rounded-xl border">
+                    <span className="text-3xs text-slate-550 block">Mayorista</span>
+                    <span className="font-extrabold text-slate-850 dark:text-slate-100 mt-0.5 block">
+                      $ {product.price_mayorista?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={isProductSelected(product.id)}
-                  onChange={() => toggleProductSelection(product)}
-                  aria-label={`Seleccionar ${product.name}`}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-              </div>
 
-              {/* Detalles */}
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="bg-gray-50 dark:bg-slate-950 p-2 rounded-lg">
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Minorista</p>
-                  <p className="font-bold text-green-600 flex items-center gap-1">
-                    <FaDollarSign className="text-xs" />
-                    {product.price_minorista?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-slate-950 p-2 rounded-lg">
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Mayorista</p>
-                  <p className="font-bold text-blue-600 flex items-center gap-1">
-                    <FaDollarSign className="text-xs" />
-                    {product.price_mayorista?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-
-              {product.description && (
-                <p className="text-xs text-gray-400 italic truncate">
-                  {product.description}
-                </p>
-              )}
-
-              {/* Footer de la tarjeta */}
-              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${product.stock === 0
-                    ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
-                    : product.stock <= 10
-                      ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
-                      : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-3xs font-extrabold border ${
+                      product.stock === 0
+                        ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/10"
+                        : product.stock <= 10
+                        ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/10"
+                        : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/10"
                     }`}
-                >
-                  {product.stock === 0 ? (
-                    <>
-                      <FaBan /> Sin stock
-                    </>
-                  ) : product.stock <= 10 ? (
-                    <>
-                      <FaExclamationTriangle /> {product.stock} uds
-                    </>
-                  ) : (
-                    <>
-                      <FaCheckCircle /> {product.stock} uds
-                    </>
-                  )}
-                </span>
-                <div className="ml-auto">
+                  >
+                    {product.stock === 0 ? "Agotado" : `Stock: ${product.stock}`}
+                  </span>
+                  
                   <ProductActions productId={product.id} userRole={userRole} />
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
 
-      {/* PAGINACIÓN */}
-      <div className="mt-6 mb-24 lg:mb-0 bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
-          <div className="flex items-center justify-center md:justify-start">
-            <span className="w-full md:w-auto text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-800 px-4 py-2 rounded-lg flex items-center justify-center md:justify-start gap-2">
-              <FaChartBar className="text-blue-600" />
-              Mostrando{" "}
-              <span className="font-bold text-blue-600">
-                {products.length > 0
-                  ? (currentPage - 1) * ITEMS_PER_PAGE + 1
-                  : 0}
-              </span>{" "}
-              -{" "}
-              <span className="font-bold text-blue-600">
-                {(currentPage - 1) * ITEMS_PER_PAGE + products.length}
-              </span>{" "}
-              de <span className="font-bold">{totalCount}</span> productos
+        {/* PAGINACIÓN */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-semibold">
+            <span className="text-slate-500">
+              Mostrando {products.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} a {(currentPage - 1) * ITEMS_PER_PAGE + products.length} de {totalCount} productos
             </span>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <button
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1 || loading}
-              className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 text-gray-700 dark:text-slate-200 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:from-gray-200 hover:to-gray-300 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-            >
-              <FaChevronLeft /> Anterior
-            </button>
-            <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-lg border-2 border-blue-200 dark:border-slate-600">
-              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
-                Página <span className="text-blue-600 text-lg">{currentPage}</span> de{" "}
-                <span className="text-gray-900 dark:text-slate-50">{Math.max(1, totalPages)}</span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1 || loading}
+                className="px-3.5 py-1.5 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 disabled:opacity-40 transition-colors inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-202"
+              >
+                <FaChevronLeft className="w-2.5 h-2.5" /> Anterior
+              </button>
+
+              <span className="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 rounded-xl border text-slate-700 dark:text-slate-250 font-bold">
+                Página {currentPage} de {Math.max(1, totalPages)}
               </span>
+
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= totalPages || loading}
+                className="px-3.5 py-1.5 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 disabled:opacity-40 transition-colors inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-202"
+              >
+                Siguiente <FaChevronRight className="w-2.5 h-2.5" />
+              </button>
             </div>
-            <button
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage >= totalPages || loading}
-              className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 text-gray-700 dark:text-slate-200 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:from-gray-200 hover:to-gray-300 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-            >
-              Siguiente <FaChevronRight />
-            </button>
           </div>
         </div>
+
       </div>
 
       <MassUpdateModal
@@ -861,6 +776,12 @@ export default function ProductsPage() {
       <BarcodeModal
         isOpen={isBarcodeModalOpen}
         onClose={() => setIsBarcodeModalOpen(false)}
+      />
+
+      <CustomPricesModal
+        isOpen={isCustomPricesModalOpen}
+        onClose={() => setIsCustomPricesModalOpen(false)}
+        selectedProducts={selectedProducts}
       />
     </div>
   );

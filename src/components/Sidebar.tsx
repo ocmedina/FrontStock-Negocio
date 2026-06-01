@@ -24,76 +24,109 @@ import {
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-// Organizamos los enlaces por categorías
 const navSections = {
   comercial: [
     {
       href: "/dashboard/ventas/nueva",
       label: "Nueva Venta",
       icon: HiOutlineTicket,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
     },
     {
       href: "/dashboard/presupuestos",
       label: "Presupuestos",
       icon: HiOutlineDocumentText,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
     },
     {
       href: "/dashboard/pedidos",
       label: "Pedidos",
       icon: HiOutlineShoppingCart,
       adminOnly: true,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
     },
-    { href: "/dashboard/clientes", label: "Clientes", icon: HiOutlineUsers },
+    {
+      href: "/dashboard/clientes",
+      label: "Clientes",
+      icon: HiOutlineUsers,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
+    },
     {
       href: "/dashboard/ventas",
       label: "Historial",
       icon: HiOutlineDocumentText,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
     },
   ],
   logistica: [
-    { href: "/dashboard/products", label: "Productos", icon: HiOutlineTag },
+    {
+      href: "/dashboard/products",
+      label: "Productos",
+      icon: HiOutlineTag,
+      colorClass: "text-emerald-500",
+      activeBg: "bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450 border-emerald-550",
+    },
     {
       href: "/dashboard/inventario",
       label: "Inventario",
       icon: HiOutlineClipboardList,
+      colorClass: "text-emerald-500",
+      activeBg: "bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450 border-emerald-550",
     },
     {
       href: "/dashboard/proveedores",
       label: "Proveedores",
       icon: HiOutlineTruck,
       adminOnly: true,
+      colorClass: "text-emerald-500",
+      activeBg: "bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450 border-emerald-550",
     },
   ],
   administracion: [
     {
       href: "/dashboard/finanzas",
       label: "Finanzas",
-      icon: HiOutlineCash, // WARNING: Make sure to import this icon
+      icon: HiOutlineCash,
       adminOnly: true,
+      colorClass: "text-amber-500",
+      activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
     },
     {
       href: "/dashboard/cierre",
       label: "Cierre de Caja",
       icon: HiOutlineDocumentReport,
       adminOnly: true,
+      colorClass: "text-amber-500",
+      activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
     },
     {
       href: "/dashboard/facturas",
       label: "Facturas",
       icon: HiOutlineDocumentText,
       adminOnly: true,
+      colorClass: "text-amber-500",
+      activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
     },
     {
       href: "/dashboard/graficos",
       label: "Gráficos",
       icon: HiOutlineChartPie,
       adminOnly: true,
+      colorClass: "text-amber-500",
+      activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
     },
     {
       href: "/dashboard/usuarios",
       label: "Usuarios",
       icon: HiOutlineUserGroup,
       adminOnly: true,
+      colorClass: "text-amber-500",
+      activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
     },
   ],
 };
@@ -146,13 +179,11 @@ export default function Sidebar({
     router.push("/login");
   };
 
-  // Roles
   const role = userProfile?.role;
   const isAdmin = role === "administrador";
   // @ts-ignore
   const isSuper = role === "supervendedor";
 
-  // Filtro de visibilidad
   const getVisibleLinks = (section: any[]) =>
     section.filter((link) => {
       if (!link.adminOnly) return true;
@@ -191,78 +222,88 @@ export default function Sidebar({
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-screen bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:shadow-none shadow-2xl flex flex-col
+        className={`fixed top-0 left-0 z-50 h-screen bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-r border-slate-100 dark:border-slate-800/80 transform transition-all duration-350 cubic-bezier(0.4, 0, 0.2, 1) lg:translate-x-0 lg:static lg:h-screen lg:shadow-none shadow-2xl flex flex-col
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
-        ${isCollapsed ? "lg:w-20" : "lg:w-72"} w-72`}
+        ${isCollapsed ? "lg:w-[76px]" : "lg:w-64"} w-64`}
       >
         {/* Header (Logo) */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-slate-800 h-20">
+        <div className="flex items-center justify-between px-5 border-b border-slate-100 dark:border-slate-800/60 h-16 flex-shrink-0">
           {!isCollapsed ? (
             <Link
               href="/dashboard"
-              className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-purple-700 transition-all font-outfit tracking-tight whitespace-nowrap overflow-hidden"
+              className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight flex items-center gap-2"
             >
-              FrontStock
+              <img
+                src="/favicon.png"
+                alt="FrontStock Logo"
+                className="w-7 h-7 object-contain rounded-lg shadow-sm"
+              />
+              <span>FrontStock</span>
             </Link>
           ) : (
             <Link
               href="/dashboard"
-              className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-outfit mx-auto"
+              className="flex items-center justify-center mx-auto"
             >
-              FS
+              <img
+                src="/favicon.png"
+                alt="FrontStock Logo"
+                className="w-7 h-7 object-contain rounded-lg shadow-sm"
+              />
             </Link>
           )}
 
           <button
             onClick={onClose}
-            className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <HiX className="w-6 h-6" />
+            <HiX className="w-5 h-5" />
           </button>
         </div>
 
         {/* Scrollable Navigation */}
-        <div className="flex-1 overflow-y-auto py-6 px-3 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-700 overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto py-5 px-3 space-y-5 scrollbar-none overflow-x-hidden">
+          
           {/* Dashboard Link */}
           <div>
             <Link
               href="/dashboard"
               onClick={onClose}
               title={isCollapsed ? "Dashboard" : ""}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group
+              className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border-l-2 group
                 ${
                   pathname === "/dashboard"
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold shadow-sm ring-1 ring-blue-100 dark:ring-blue-800"
-                    : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-200"
-                } ${isCollapsed ? "justify-center" : ""}`}
+                    ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-600 font-bold"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-205 border-transparent"
+                } ${isCollapsed ? "justify-center border-l-0" : ""}`}
             >
               <HiOutlineChartPie
-                className={`w-6 h-6 flex-shrink-0 ${
+                className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-105 ${
                   pathname === "/dashboard"
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-400 group-hover:text-gray-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+                    ? "text-indigo-600 dark:text-indigo-400"
+                    : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-350"
                 }`}
               />
-              {!isCollapsed && <span>Dashboard</span>}
+              {!isCollapsed && <span className="text-xs font-semibold">Dashboard</span>}
             </Link>
           </div>
 
           {/* Comercial */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <h3 className="px-3 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 transition-opacity duration-200">
+              <h3 className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
                 Comercial
               </h3>
             )}
             {isCollapsed && (
-              <div className="h-px bg-gray-100 dark:bg-slate-800 my-2 mx-2"></div>
+              <div className="h-px bg-slate-100 dark:bg-slate-800/80 my-2 mx-1"></div>
             )}
             <div className="space-y-1">
               {getVisibleLinks(navSections.comercial).map((link) => {
@@ -274,22 +315,22 @@ export default function Sidebar({
                     href={link.href}
                     onClick={onClose}
                     title={isCollapsed ? link.label : ""}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border-l-2 group
                     ${
                       isActive
-                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold"
-                        : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-200"
-                    } ${isCollapsed ? "justify-center" : ""}`}
+                        ? link.activeBg + " font-bold"
+                        : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-205 border-transparent"
+                    } ${isCollapsed ? "justify-center border-l-0" : ""}`}
                   >
                     <Icon
-                      className={`w-5 h-5 flex-shrink-0 ${
+                      className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-105 ${
                         isActive
-                          ? "text-blue-600 dark:text-blue-400"
-                          : "text-gray-400 group-hover:text-gray-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+                          ? "text-indigo-600 dark:text-indigo-405"
+                          : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-350"
                       }`}
                     />
                     {!isCollapsed && (
-                      <span className="whitespace-nowrap">{link.label}</span>
+                      <span className="text-xs font-semibold whitespace-nowrap">{link.label}</span>
                     )}
                   </Link>
                 );
@@ -300,12 +341,12 @@ export default function Sidebar({
           {/* Logistica */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <h3 className="px-3 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 transition-opacity duration-200">
+              <h3 className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
                 Logística
               </h3>
             )}
             {isCollapsed && (
-              <div className="h-px bg-gray-100 dark:bg-slate-800 my-2 mx-2"></div>
+              <div className="h-px bg-slate-100 dark:bg-slate-800/80 my-2 mx-1"></div>
             )}
             <div className="space-y-1">
               {getVisibleLinks(navSections.logistica).map((link) => {
@@ -317,22 +358,22 @@ export default function Sidebar({
                     href={link.href}
                     onClick={onClose}
                     title={isCollapsed ? link.label : ""}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border-l-2 group
                     ${
                       isActive
-                        ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold"
-                        : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-200"
-                    } ${isCollapsed ? "justify-center" : ""}`}
+                        ? link.activeBg + " font-bold"
+                        : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-205 border-transparent"
+                    } ${isCollapsed ? "justify-center border-l-0" : ""}`}
                   >
                     <Icon
-                      className={`w-5 h-5 flex-shrink-0 ${
+                      className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-105 ${
                         isActive
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-gray-400 group-hover:text-gray-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-350"
                       }`}
                     />
                     {!isCollapsed && (
-                      <span className="whitespace-nowrap">{link.label}</span>
+                      <span className="text-xs font-semibold whitespace-nowrap">{link.label}</span>
                     )}
                   </Link>
                 );
@@ -344,12 +385,12 @@ export default function Sidebar({
           {getVisibleLinks(navSections.administracion).length > 0 && (
             <div className="space-y-1">
               {!isCollapsed && (
-                <h3 className="px-3 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 transition-opacity duration-200">
+                <h3 className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
                   Administración
                 </h3>
               )}
               {isCollapsed && (
-                <div className="h-px bg-gray-100 dark:bg-slate-800 my-2 mx-2"></div>
+                <div className="h-px bg-slate-100 dark:bg-slate-800/80 my-2 mx-1"></div>
               )}
               <div className="space-y-1">
                 {getVisibleLinks(navSections.administracion).map((link) => {
@@ -361,22 +402,22 @@ export default function Sidebar({
                       href={link.href}
                       onClick={onClose}
                       title={isCollapsed ? link.label : ""}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group
+                      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border-l-2 group
                       ${
                         isActive
-                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-semibold"
-                          : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-200"
-                      } ${isCollapsed ? "justify-center" : ""}`}
+                          ? link.activeBg + " font-bold"
+                          : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-205 border-transparent"
+                      } ${isCollapsed ? "justify-center border-l-0" : ""}`}
                     >
                       <Icon
-                        className={`w-5 h-5 flex-shrink-0 ${
+                        className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-105 ${
                           isActive
-                            ? "text-orange-600 dark:text-orange-400"
-                            : "text-gray-400 group-hover:text-gray-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-350"
                         }`}
                       />
                       {!isCollapsed && (
-                        <span className="whitespace-nowrap">{link.label}</span>
+                        <span className="text-xs font-semibold whitespace-nowrap">{link.label}</span>
                       )}
                     </Link>
                   );
@@ -386,29 +427,36 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* User Footer */}
-        <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
-          <div className="flex flex-col gap-4">
-            {/* User Info */}
+        {/* User Footer Panel */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/30 flex-shrink-0">
+          <div className="flex flex-col gap-3">
+            
+            {/* User Profile Summary */}
             <div
-              className={`flex items-center gap-3 px-2 ${
+              className={`flex items-center gap-2.5 px-1.5 py-1 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
-              <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+              <div className="w-8 h-8 flex-shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100/50 dark:border-indigo-900/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-sm">
                 {userProfile?.full_name?.charAt(0).toUpperCase() || "U"}
               </div>
+              
               {!isCollapsed && (
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <p className="text-sm font-bold text-gray-900 dark:text-slate-100 truncate">
+                  <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200 truncate">
                     {userProfile?.full_name}
                   </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate">
-                    {role === "administrador" ? "Admin" : "Vendedor"}
+                  <p className="text-[10px] text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                    {role === "administrador" ? "Administrador" : "Vendedor"}
                   </p>
                 </div>
               )}
-              {!isCollapsed && <ThemeToggle />}
+              
+              {!isCollapsed && (
+                <div className="flex-shrink-0">
+                  <ThemeToggle />
+                </div>
+              )}
             </div>
 
             {isCollapsed && (
@@ -417,45 +465,55 @@ export default function Sidebar({
               </div>
             )}
 
-            {/* Actions */}
+            {/* Bottom Actions Grid */}
             {!isCollapsed ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <Link
                   href="/dashboard/configuracion"
                   onClick={onClose}
-                  className="flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-medium text-gray-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
+                  className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-850 dark:hover:text-white bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border transition-all"
                 >
-                  <HiOutlineCog className="w-4 h-4" />
-                  Config
+                  <HiOutlineCog className="w-3.5 h-3.5 text-slate-400" />
+                  Ajustes
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50/50 hover:bg-rose-100 dark:bg-rose-950/15 dark:hover:bg-rose-950/30 border border-rose-100/50 dark:border-rose-900/30 transition-all"
                 >
-                  <HiOutlineLogout className="w-4 h-4" />
-                  Salir
+                  <HiOutlineLogout className="w-3.5 h-3.5" />
+                  Cerrar
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleLogout}
-                title="Cerrar Sesión"
-                className="flex items-center justify-center p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-              >
-                <HiOutlineLogout className="w-5 h-5" />
-              </button>
+              <div className="flex flex-col gap-1.5">
+                <Link
+                  href="/dashboard/configuracion"
+                  onClick={onClose}
+                  title="Configuración"
+                  className="flex items-center justify-center p-2 rounded-lg text-slate-450 hover:text-slate-750 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <HiOutlineCog className="w-4 h-4" />
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  title="Cerrar Sesión"
+                  className="flex items-center justify-center p-2 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/10 transition-colors"
+                >
+                  <HiOutlineLogout className="w-4 h-4" />
+                </button>
+              </div>
             )}
 
             {/* Desktop Collapse Toggle */}
             <button
               onClick={toggleCollapse}
-              className="hidden lg:flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors mx-auto"
+              className="hidden lg:flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-205 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl transition-colors mx-auto mt-1"
               title={isCollapsed ? "Expandir" : "Colapsar"}
             >
               {isCollapsed ? (
-                <HiOutlineChevronRight className="w-5 h-5" />
+                <HiOutlineChevronRight className="w-4 h-4" />
               ) : (
-                <HiOutlineChevronLeft className="w-5 h-5" />
+                <HiOutlineChevronLeft className="w-4 h-4" />
               )}
             </button>
           </div>

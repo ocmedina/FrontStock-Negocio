@@ -16,20 +16,44 @@ export default function CartList({
   onRemoveFromCart,
   onUpdateCustomPrice,
 }: CartListProps) {
+  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+
   if (cart.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-gray-50 dark:bg-slate-950 rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700">
-        <div className="text-6xl mb-4 opacity-20">🛒</div>
-        <p className="text-lg font-medium">El carrito está vacío</p>
-        <p className="text-sm">Agrega productos para comenzar la venta</p>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100">
+              Carrito
+            </h3>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              0 items
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white dark:bg-slate-900">
+          <div className="text-5xl mb-4 opacity-20">🛒</div>
+          <p className="text-lg font-medium">El carrito está vacío</p>
+          <p className="text-sm">Agrega productos para comenzar la venta</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100">
+            Carrito
+          </h3>
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            {totalItems} items
+          </span>
+        </div>
+      </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
           <thead className="bg-gray-50 dark:bg-slate-950">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">

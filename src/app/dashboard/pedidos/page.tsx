@@ -6,15 +6,12 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   FaSearch,
   FaPlus,
-  FaFilter,
   FaTimes,
   FaInfoCircle,
   FaUser,
   FaBox,
   FaCalendarAlt,
   FaHashtag,
-  FaPhone,
-  FaMapMarkerAlt,
   FaSpinner,
   FaClock,
   FaCheckCircle,
@@ -27,6 +24,7 @@ import {
   FaMoneyBillWave,
   FaFileInvoice,
   FaBoxOpen,
+  FaExchangeAlt,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import OrderStatusChanger from "@/components/OrderStatusChanger";
@@ -88,33 +86,33 @@ type FullOrderDetails = {
 const STATUS_CONFIG = {
   todos: {
     label: "Todos",
-    color: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300",
-    activeColor: "bg-gray-600 dark:bg-slate-600 text-white",
+    color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-750",
+    activeColor: "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 font-semibold shadow-sm",
   },
   pendiente: {
-    label: "Pendiente",
-    color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300",
-    activeColor: "bg-yellow-600 text-white",
+    label: "Pendientes",
+    color: "bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200/20",
+    activeColor: "bg-amber-600 text-white font-semibold shadow-sm",
   },
   confirmado: {
-    label: "Confirmado",
-    color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-    activeColor: "bg-blue-600 text-white",
+    label: "Confirmados",
+    color: "bg-sky-50 dark:bg-sky-950/20 text-sky-700 dark:text-sky-400 border-sky-200/20",
+    activeColor: "bg-sky-600 text-white font-semibold shadow-sm",
   },
   enviado: {
-    label: "Enviado",
-    color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300",
-    activeColor: "bg-purple-600 text-white",
+    label: "Enviados",
+    color: "bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 border-purple-200/20",
+    activeColor: "bg-purple-600 text-white font-semibold shadow-sm",
   },
   entregado: {
-    label: "Entregado",
-    color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
-    activeColor: "bg-green-600 text-white",
+    label: "Entregados",
+    color: "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200/20",
+    activeColor: "bg-emerald-600 text-white font-semibold shadow-sm",
   },
   cancelado: {
-    label: "Cancelado",
-    color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
-    activeColor: "bg-red-600 text-white",
+    label: "Cancelados",
+    color: "bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-200/20",
+    activeColor: "bg-rose-600 text-white font-semibold shadow-sm",
   },
 } as const;
 
@@ -153,7 +151,6 @@ function OrderDetailsModal({
             .single();
 
           if (error) throw error;
-
           if (order) {
             setOrderData(order as FullOrderDetails);
           }
@@ -178,18 +175,28 @@ function OrderDetailsModal({
     > = {
       pendiente: {
         label: "Pendiente",
-        color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300",
-        icon: <FaClock />,
+        color: "bg-amber-50 text-amber-705 border-amber-200/30 dark:bg-amber-950/20 dark:text-amber-400",
+        icon: <FaClock className="w-2.5 h-2.5" />,
+      },
+      confirmado: {
+        label: "Confirmado",
+        color: "bg-sky-50 text-sky-705 border-sky-200/30 dark:bg-sky-950/20 dark:text-sky-400",
+        icon: <FaCheckCircle className="w-2.5 h-2.5" />,
+      },
+      enviado: {
+        label: "Enviado",
+        color: "bg-purple-50 text-purple-705 border-purple-200/30 dark:bg-purple-950/20 dark:text-purple-400",
+        icon: <FaTruck className="w-2.5 h-2.5" />,
       },
       entregado: {
         label: "Entregado",
-        color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300",
-        icon: <FaCheckCircle />,
+        color: "bg-emerald-50 text-emerald-705 border-emerald-200/30 dark:bg-emerald-950/20 dark:text-emerald-400",
+        icon: <FaCheckCircle className="w-2.5 h-2.5" />,
       },
       cancelado: {
         label: "Cancelado",
-        color: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300",
-        icon: <FaBan />,
+        color: "bg-rose-50 text-rose-705 border-rose-200/30 dark:bg-rose-950/20 dark:text-rose-400",
+        icon: <FaBan className="w-2.5 h-2.5" />,
       },
     };
 
@@ -197,7 +204,7 @@ function OrderDetailsModal({
 
     return (
       <span
-        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${config.color}`}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${config.color}`}
       >
         {config.icon} {config.label}
       </span>
@@ -205,171 +212,123 @@ function OrderDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 rounded-t-3xl flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <FaInfoCircle /> Detalles del Pedido
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg max-w-xl w-full max-h-[85vh] flex flex-col border border-slate-200/20 animate-fadeIn">
+        <div className="bg-slate-900 dark:bg-slate-950 px-5 py-4 rounded-t-xl flex justify-between items-center text-white">
+          <h2 className="text-sm font-bold flex items-center gap-1.5">
+            <FaInfoCircle /> Detalle de Pedido
           </h2>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white dark:bg-slate-900 hover:bg-opacity-20 rounded-full p-2 transition-all"
+            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1 transition-all"
+            id="btn-close-details-modal"
           >
-            <FaTimes size={20} />
+            <FaTimes size={14} />
           </button>
         </div>
 
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-5 flex-1 overflow-y-auto space-y-4">
           {loading || !orderData ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <FaSpinner className="animate-spin text-4xl text-blue-600 mb-4" />
-              <p className="text-gray-600 dark:text-slate-300">Cargando detalles del pedido...</p>
+            <div className="flex flex-col items-center justify-center h-48">
+              <FaSpinner className="animate-spin text-2xl text-slate-500 mb-2" />
+              <p className="text-xs text-slate-500">Cargando...</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Información del Pedido */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                    <FaHashtag className="text-blue-600" /> Información del
+            <div className="space-y-4 text-xs">
+              {/* Info General */}
+              <div className="bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-850">
+                <div className="flex items-center justify-between mb-2 border-b border-slate-250/20 dark:border-slate-800/80 pb-1.5">
+                  <h3 className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
                     Pedido
                   </h3>
                   {getStatusBadge(orderData.status)}
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-gray-600 dark:text-slate-300 mb-1">ID del Pedido:</p>
-                    <p className="font-mono font-semibold text-gray-800 dark:text-slate-100">
-                      {orderData.id.substring(0, 8)}...
+                    <p className="text-slate-400 mb-0.5">ID Interno</p>
+                    <p className="font-mono font-bold text-slate-800 dark:text-slate-250">
+                      #{orderData.id.slice(0, 8)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-slate-300 mb-1 flex items-center gap-1">
-                      <FaCalendarAlt className="text-blue-600" /> Fecha:
-                    </p>
-                    <p className="font-semibold text-gray-800 dark:text-slate-100">
-                      {new Date(orderData.created_at).toLocaleDateString(
-                        "es-AR",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
+                    <p className="text-slate-400 mb-0.5">Fecha Registro</p>
+                    <p className="font-semibold text-slate-800 dark:text-slate-255">
+                      {new Date(orderData.created_at).toLocaleDateString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-gray-600 dark:text-slate-300 mb-1">Método de Pago:</p>
+                    <p className="text-slate-400 mb-1">Medio de Pago</p>
                     {(orderData as any).payment_method === "fiado" ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
-                        📋 Fiado
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200/50 dark:bg-orange-950/20 dark:text-orange-400">
+                        <FaFileInvoice className="w-2.5 h-2.5" /> Fiado / Cta. Cte.
                       </span>
-                    ) : (orderData as any).payment_method ===
-                      "transferencia" ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
-                        🏦 Transferencia
+                    ) : (orderData as any).payment_method === "transferencia" ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400">
+                        <FaDollarSign className="w-2.5 h-2.5" /> Transferencia
                       </span>
                     ) : (orderData as any).payment_method === "mixto" ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
-                        💳 Mixto
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200/50 dark:bg-purple-950/20 dark:text-purple-400">
+                        <FaExchangeAlt className="w-2.5 h-2.5" /> Pago Mixto
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                        💵 Efectivo
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-950/20 dark:text-emerald-400">
+                        <FaMoneyBillWave className="w-2.5 h-2.5" /> Efectivo
                       </span>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Información del Cliente */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-                  <FaUser className="text-purple-600" /> Información del Cliente
+              {/* Cliente */}
+              <div className="bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-850">
+                <h3 className="font-bold text-[10px] uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-250/20 dark:border-slate-800/80 pb-1.5">
+                  Cliente
                 </h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <p className="text-gray-600 dark:text-slate-300 mb-1">Nombre Completo:</p>
-                    <p className="font-semibold text-gray-800 dark:text-slate-100 text-lg">
-                      {orderData.customers.full_name}
-                    </p>
+                <div className="space-y-1">
+                  <p className="font-bold text-slate-850 dark:text-slate-100">
+                    {orderData.customers.full_name}
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-[10px] text-slate-500 pt-0.5">
+                    {orderData.customers.phone && <span>Tel: {orderData.customers.phone}</span>}
+                    {orderData.customers.address && <span>Dirección: {orderData.customers.address}</span>}
+                    {orderData.customers.delivery_day && (
+                      <span className="font-semibold text-indigo-650 dark:text-indigo-400">
+                        Reparto: {orderData.customers.delivery_day}
+                      </span>
+                    )}
                   </div>
-                  {orderData.customers.phone && (
-                    <div className="flex items-center gap-2">
-                      <FaPhone className="text-purple-600" />
-                      <span className="font-medium text-gray-700 dark:text-slate-200">
-                        {orderData.customers.phone}
-                      </span>
-                    </div>
-                  )}
-                  {orderData.customers.address && (
-                    <div className="flex items-start gap-2">
-                      <FaMapMarkerAlt className="text-purple-600 mt-1" />
-                      <span className="font-medium text-gray-700 dark:text-slate-200">
-                        {orderData.customers.address}
-                      </span>
-                    </div>
-                  )}
-                  {orderData.customers.delivery_day && (
-                    <div>
-                      <p className="text-gray-600 dark:text-slate-300 mb-1">Día de Reparto:</p>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        📅 {orderData.customers.delivery_day}
-                      </span>
-                    </div>
-                  )}
-                  {orderData.customers.customer_type && (
-                    <div>
-                      <span
-                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${orderData.customers.customer_type === "mayorista"
-                          ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
-                          : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                          }`}
-                      >
-                        {orderData.customers.customer_type === "mayorista"
-                          ? "🏢 Cliente Mayorista"
-                          : "👤 Cliente Minorista"}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Productos del Pedido */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-                  <FaBox className="text-green-600" /> Productos (
-                  {orderData.order_items.length})
+              {/* Artículos */}
+              <div className="space-y-1.5">
+                <h3 className="font-bold text-[10px] uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <FaBox className="w-2.5 h-2.5" /> Artículos ({orderData.order_items.length})
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {orderData.order_items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border border-green-200"
+                      className="flex justify-between items-center p-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-lg text-2xs"
                     >
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800 dark:text-slate-100">
-                          {item.products?.name || "Producto desconocido"}
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200">
+                          {item.products?.name || "Artículo sin nombre"}
                         </p>
-                        {item.products?.sku && (
-                          <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">
-                            SKU: {item.products.sku}
-                          </p>
-                        )}
-                        <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">
-                          Cantidad:{" "}
-                          <span className="font-bold">{item.quantity}</span>
+                        <p className="text-slate-400 mt-0.5">
+                          Cant: <span className="font-bold text-slate-805 dark:text-slate-205">{item.quantity}</span>
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600 dark:text-slate-300">Precio Unit.</p>
-                        <p className="font-bold text-gray-800 dark:text-slate-100">
-                          ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-xs text-green-600 font-semibold mt-1">
-                          Subtotal: ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <div className="text-right font-semibold">
+                        <p className="text-slate-400">Unit: ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</p>
+                        <p className="font-bold text-slate-850 dark:text-slate-100 mt-0.5">
+                          ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -377,66 +336,42 @@ function OrderDetailsModal({
                 </div>
               </div>
 
-              {/* Total del Pedido */}
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-5 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold">Total del Pedido:</span>
-                  <span className="text-3xl font-bold">
-                    ${orderData.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+              {/* Caja de Totales */}
+              <div className="bg-slate-950 dark:bg-black text-white rounded-xl p-3 space-y-1.5">
+                <div className="flex justify-between items-center text-2xs opacity-80 border-b border-white/10 pb-1">
+                  <span>Importe Facturado:</span>
+                  <span className="font-bold">${orderData.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
                 </div>
-              </div>
-
-              {/* Estado de Pago */}
-              {(orderData as any).amount_paid !== undefined &&
-                (orderData as any).amount_paid !== null && (
-                  <div className="space-y-2">
-                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                      <div className="flex items-center justify-between">
-                        <span className="text-green-700 font-semibold">
-                          Entrega Recibida:
-                        </span>
-                        <span className="text-xl font-bold text-green-700">
-                          ${((orderData as any).amount_paid || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
+                
+                {(orderData as any).amount_paid !== undefined && (
+                  <div className="space-y-1 text-2xs">
+                    <div className="flex justify-between items-center opacity-70">
+                      <span>Monto Entregado:</span>
+                      <span>${((orderData as any).amount_paid || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
                     </div>
-
-                    {((orderData as any).amount_pending || 0) > 0 && (
-                      <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border-2 border-orange-300 dark:border-orange-700">
-                        <div className="flex items-center justify-between">
-                          <span className="text-orange-700 font-bold">
-                            Saldo Pendiente:
-                          </span>
-                          <span className="text-2xl font-bold text-orange-700">
-                            $
-                            {((orderData as any).amount_pending || 0).toFixed(
-                              2
-                            )}
-                          </span>
-                        </div>
+                    {((orderData as any).amount_pending || 0) > 0 ? (
+                      <div className="flex justify-between items-center text-amber-400 font-bold border-t border-white/5 pt-1">
+                        <span>Saldo Pendiente:</span>
+                        <span>${((orderData as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center text-emerald-400 font-semibold border-t border-white/5 pt-1">
+                        <span>Estado de cuenta:</span>
+                        <span>Totalmente Pagado</span>
                       </div>
                     )}
-
-                    {((orderData as any).amount_pending || 0) === 0 &&
-                      (orderData as any).amount_paid > 0 && (
-                        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 border-2 border-green-300 dark:border-green-700 flex items-center justify-center gap-2">
-                          <FaCheckCircle className="text-green-700" />
-                          <span className="text-green-700 font-bold">
-                            Pago Completo
-                          </span>
-                        </div>
-                      )}
                   </div>
                 )}
+              </div>
             </div>
           )}
         </div>
 
-        <div className="p-6 border-t bg-gray-50 dark:bg-slate-950 rounded-b-3xl">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 rounded-b-xl">
           <button
+            id="btn-close-details-modal-footer"
             onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+            className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-bold rounded-lg transition-colors"
           >
             Cerrar
           </button>
@@ -472,7 +407,6 @@ function RemitoModal({
             .single();
 
           if (error) throw error;
-
           if (order) {
             const customerId = order.customer_id;
             let realDebt = 0;
@@ -528,82 +462,73 @@ function RemitoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full">
-        <div className="bg-gradient-to-r from-gray-700 to-gray-900 px-6 py-5 rounded-t-3xl flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <FaPrint /> Generar Remito
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg max-w-sm w-full border border-slate-200/20 animate-fadeIn">
+        <div className="bg-slate-900 dark:bg-slate-950 px-5 py-4 rounded-t-xl flex justify-between items-center text-white">
+          <h2 className="text-xs font-bold flex items-center gap-1.5">
+            <FaPrint /> Generar Remito PDF
           </h2>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white dark:bg-slate-900 hover:bg-opacity-20 rounded-full p-2"
+            className="text-white/80 hover:text-white rounded-lg p-1 hover:bg-white/10"
+            id="btn-close-remito-modal"
           >
-            <FaTimes size={20} />
+            <FaTimes size={14} />
           </button>
         </div>
-        <div className="p-8">
+        <div className="p-5 space-y-4">
           {loading || !orderData ? (
-            <div className="flex flex-col items-center justify-center h-48">
-              <FaSpinner className="animate-spin text-4xl text-blue-600" />
-              <p className="mt-4 text-gray-600 dark:text-slate-300">Cargando datos del pedido...</p>
+            <div className="flex flex-col items-center justify-center h-28">
+              <FaSpinner className="animate-spin text-xl text-slate-500 mb-1" />
+              <p className="text-2xs text-slate-500">Cargando...</p>
             </div>
           ) : (
-            <>
-              <p className="mb-4 text-gray-700 dark:text-slate-200 text-center">
-                El remito para{" "}
-                <span className="font-bold">
-                  {orderData.customers.full_name}
-                </span>{" "}
-                está listo.
+            <div className="space-y-4">
+              <p className="text-2xs text-slate-500 text-center leading-normal">
+                Exporta el remito comercial de <span className="font-bold text-slate-850 dark:text-white">{orderData.customers.full_name}</span>.
               </p>
 
-              {/* Selector de formato */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
-                  Formato de Impresión:
+              {/* Formato */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Formato de Salida
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setPrintFormat("thermal")}
-                    className={`p-3 rounded-lg border-2 transition-all ${printFormat === "thermal"
-                      ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                      : "border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:border-gray-400 dark:hover:border-slate-600"
-                      }`}
+                    className={`p-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-0.5 ${
+                      printFormat === "thermal"
+                        ? "border-blue-500 bg-blue-50/10 text-blue-600 dark:text-blue-400"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500"
+                    }`}
                   >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">🧾</div>
-                      <div className="font-semibold text-sm">80mm</div>
-                      <div className="text-xs">Térmica</div>
-                    </div>
+                    <span className="text-xs font-bold">Ticket Térmico (80mm)</span>
                   </button>
                   <button
                     onClick={() => setPrintFormat("A4")}
-                    className={`p-3 rounded-lg border-2 transition-all ${printFormat === "A4"
-                      ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                      : "border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:border-gray-400 dark:hover:border-slate-600"
-                      }`}
+                    className={`p-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-0.5 ${
+                      printFormat === "A4"
+                        ? "border-blue-500 bg-blue-50/10 text-blue-600 dark:text-blue-400"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500"
+                    }`}
                   >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">📄</div>
-                      <div className="font-semibold text-sm">A4</div>
-                      <div className="text-xs">Estándar</div>
-                    </div>
+                    <span className="text-xs font-bold">Hoja A4 Estándar</span>
                   </button>
                 </div>
               </div>
 
-              <PDFDownloadButton
-                orderData={orderData}
-                printFormat={printFormat}
-              />
-
-              <button
-                onClick={onClose}
-                className="w-full mt-3 py-3 text-gray-600 dark:text-slate-300 font-semibold hover:bg-gray-100 dark:bg-slate-700 dark:hover:bg-slate-800/80 dark:bg-slate-800 rounded-xl"
-              >
-                Cerrar
-              </button>
-            </>
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-850 space-y-1.5">
+                <PDFDownloadButton orderData={orderData} printFormat={printFormat} />
+                
+                <button
+                  id="btn-close-remito-footer"
+                  onClick={onClose}
+                  className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -616,19 +541,12 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [showFilters, setShowFilters] = useState(false);
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
-  const [selectedOrderIdForDetails, setSelectedOrderIdForDetails] = useState<
-    string | null
-  >(null);
+  const [selectedOrderIdForDetails, setSelectedOrderIdForDetails] = useState<string | null>(null);
   const [isRemitoModalOpen, setIsRemitoModalOpen] = useState(false);
-  const [selectedOrderIdForRemito, setSelectedOrderIdForRemito] = useState<
-    string | null
-  >(null);
+  const [selectedOrderIdForRemito, setSelectedOrderIdForRemito] = useState<string | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<
-    "todos" | OrderRow["status"]
-  >("todos");
+  const [statusFilter, setStatusFilter] = useState<"todos" | OrderRow["status"]>("todos");
   const [dateFilter, setDateFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [deliveryDayFilter, setDeliveryDayFilter] = useState("todos");
@@ -667,16 +585,20 @@ export default function OrdersPage() {
       .range(from, to);
 
     if (statusFilter !== "todos") query = query.eq("status", statusFilter);
+    
     if (dateFilter) {
-      // Filtro con zona horaria Argentina (UTC-3)
       const startDate = `${dateFilter}T00:00:00-03:00`;
       const endDate = `${dateFilter}T23:59:59.999-03:00`;
       query = query.gte("created_at", startDate).lte("created_at", endDate);
     }
-    if (searchQuery.length > 2)
+    
+    if (searchQuery.length > 2) {
       query = query.ilike("customers.full_name", `%${searchQuery}%`);
-    if (deliveryDayFilter !== "todos")
+    }
+    
+    if (deliveryDayFilter !== "todos") {
       query = query.eq("customers.delivery_day", deliveryDayFilter);
+    }
 
     const { data, error, count } = await query;
 
@@ -698,27 +620,16 @@ export default function OrdersPage() {
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  const getStatusBadge = (status: OrderRow["status"]) => {
-    const config = STATUS_CONFIG[status];
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}
-      >
-        {config.label}
-      </span>
-    );
-  };
-
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
-      {/* Modal de Detalles */}
+    <div className="p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 transition-colors">
+      
+      {/* Modales */}
       <OrderDetailsModal
         isOpen={isOrderDetailsModalOpen}
         onClose={() => setIsOrderDetailsModalOpen(false)}
         orderId={selectedOrderIdForDetails}
       />
 
-      {/* Modal de Remito */}
       <RemitoModal
         isOpen={isRemitoModalOpen}
         onClose={() => setIsRemitoModalOpen(false)}
@@ -726,235 +637,179 @@ export default function OrdersPage() {
       />
 
       {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-3">
-            <FaBox className="text-purple-600" /> Gestión de Pedidos
-          </h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-1">
-            {totalCount} pedido{totalCount !== 1 ? "s" : ""} registrados
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link
-            href="/dashboard/pedidos/pendientes"
-            className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
-          >
-            <FaClock /> Saldos Pendientes
-          </Link>
-          <Link
-            href="/dashboard/pedidos/nuevo"
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center gap-2"
-          >
-            <FaPlus /> Nuevo Pedido
-          </Link>
-        </div>
-      </div>
-
-      {/* FILTROS POR ESTADO */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-5 border border-gray-200 dark:border-slate-700">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-            <FaFilter className="text-purple-600" /> Filtrar por Estado
-          </h2>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-800 rounded-lg hover:bg-gray-200 dark:bg-slate-700 transition-colors"
-          >
-            <FaFilter />
-            {showFilters ? "Ocultar" : "Más"} Filtros
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {(
-            Object.keys(STATUS_CONFIG) as Array<keyof typeof STATUS_CONFIG>
-          ).map((status) => {
-            const config = STATUS_CONFIG[status];
-            const isActive = statusFilter === status;
-            return (
-              <button
-                key={status}
-                onClick={() => {
-                  setStatusFilter(status as any);
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm ${isActive
-                  ? config.activeColor + " shadow-md"
-                  : `${config.color} hover:opacity-80`
-                  }`}
-              >
-                {config.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* FILTROS AVANZADOS */}
-      {showFilters && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-5 border border-gray-200 dark:border-slate-700 space-y-4 animate-slideDown">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-              <FaSearch className="text-blue-600" /> Filtros Avanzados
-            </h2>
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors border border-red-200"
-              >
-                <FaTimes />
-                Limpiar Filtros
-              </button>
-            )}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm mb-5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-0.5">
+            <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20 dark:text-indigo-400 rounded-md uppercase">
+              Operaciones
+            </span>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mt-1 flex items-center gap-2">
+              <FaBox className="text-slate-600 dark:text-slate-400 w-5 h-5" /> Pedidos Recibidos
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Historial comercial, despacho de mercadería y emisión de remitos.
+            </p>
           </div>
+          
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Link
+              id="btn-pedidos-pendientes"
+              href="/dashboard/pedidos/pendientes"
+              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 text-amber-705 dark:text-amber-400 rounded-lg transition-colors font-semibold text-xs flex items-center gap-1.5 border border-amber-250/20 shadow-2xs"
+            >
+              <FaClock className="w-3 h-3" /> Saldos Pendientes
+            </Link>
+            <Link
+              id="btn-nuevo-pedido-header"
+              href="/dashboard/pedidos/nuevo"
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 rounded-lg transition-colors font-bold text-xs flex items-center gap-1.5"
+            >
+              <FaPlus className="w-3 h-3" /> Registrar Pedido
+            </Link>
+          </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
-                <FaUser className="text-blue-600" /> Buscar Cliente
-              </label>
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
+      {/* FILTROS Y BÚSQUEDAS */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-850 shadow-sm p-5 space-y-4 mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-850/80 pb-3.5">
+          <div className="flex flex-wrap gap-1">
+            {(Object.keys(STATUS_CONFIG) as Array<keyof typeof STATUS_CONFIG>).map((status) => {
+              const config = STATUS_CONFIG[status];
+              const isActive = statusFilter === status;
+              return (
+                <button
+                  key={status}
+                  id={`btn-filter-status-${status}`}
+                  onClick={() => {
+                    setStatusFilter(status as any);
                     setCurrentPage(1);
                   }}
-                  placeholder="Nombre del cliente..."
-                  className="w-full pl-10 pr-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
-                />
-              </div>
-            </div>
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all border duration-150 ${
+                    isActive
+                      ? config.activeColor + " border-transparent"
+                      : `${config.color} hover:bg-slate-50 dark:hover:bg-slate-850`
+                  }`}
+                >
+                  {config.label}
+                </button>
+              );
+            })}
+          </div>
 
-            <div>
-              <label
-                htmlFor="dateFilter"
-                className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-              >
-                <FaCalendarAlt className="text-green-600" /> Fecha del Pedido
-              </label>
-              <input
-                id="dateFilter"
-                type="date"
-                value={dateFilter}
-                onChange={(e) => {
-                  setDateFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
-              />
-            </div>
+          {hasActiveFilters && (
+            <button
+              id="btn-limpiar-filtros"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/20 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/30 border border-rose-250/20"
+            >
+              <FaTimes className="w-2.5 h-2.5" /> Limpiar Filtros
+            </button>
+          )}
+        </div>
 
-            <div>
-              <label
-                htmlFor="deliveryDay"
-                className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-              >
-                <FaClock className="text-orange-600" /> Día de Reparto
-              </label>
-              <select
-                id="deliveryDay"
-                value={deliveryDayFilter}
-                onChange={(e) => {
-                  setDeliveryDayFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
-              >
-                <option value="todos">Todos los Días</option>
-                {DAYS_OF_WEEK.map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Inputs de Filtros */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+            <input
+              id="input-buscar-cliente-pedidos"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por cliente..."
+              className="w-full pl-8.5 pr-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-xs bg-slate-50 dark:bg-slate-950 transition-colors text-slate-805 dark:text-slate-205"
+            />
+          </div>
+
+          <div className="relative">
+            <input
+              id="dateFilter"
+              type="date"
+              value={dateFilter}
+              onChange={(e) => {
+                setDateFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-xs bg-slate-50 dark:bg-slate-950 transition-colors text-slate-805 dark:text-slate-205"
+            />
+          </div>
+
+          <div className="relative">
+            <select
+              id="deliveryDay"
+              value={deliveryDayFilter}
+              onChange={(e) => {
+                setDeliveryDayFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-xs bg-slate-50 dark:bg-slate-950 transition-colors text-slate-805 dark:text-slate-205"
+            >
+              <option value="todos">Todos los días de reparto</option>
+              {DAYS_OF_WEEK.map((day) => (
+                <option key={day} value={day}>
+                  {day}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* TABLA DE PEDIDOS - Desktop */}
-      <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+      {/* RESULTADOS INFO */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-850 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 mb-3.5 shadow-2xs">
+        <span>
+          Registros: <span className="font-bold text-slate-800 dark:text-slate-200">{orders.length}</span> de {totalCount} pedidos.
+        </span>
+      </div>
+
+      {/* TABLA DE PEDIDOS - DESKTOP VIEW */}
+      <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-xl shadow-2xs border border-slate-200/80 dark:border-slate-850 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
+          <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+            <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-400">
               <tr>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaCalendarAlt /> Fecha
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaUser /> Cliente
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaTruck /> Día Reparto
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaDollarSign /> Total
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaMoneyBillWave /> Pago
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaBox /> Estado
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  Acciones
-                </th>
+                <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Fecha</th>
+                <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Cliente</th>
+                <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Día Reparto</th>
+                <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Total Facturado</th>
+                <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Forma de Pago</th>
+                <th className="px-4 py-3 text-left font-bold uppercase tracking-wider">Estado Entrega</th>
+                <th className="px-4 py-3 text-center font-bold uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-                      <span className="text-gray-500 dark:text-slate-400 font-medium">
-                        Cargando pedidos...
-                      </span>
+                  <td colSpan={7} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <FaSpinner className="animate-spin text-xl text-indigo-600" />
+                      <span className="text-slate-500 font-semibold">Cargando...</span>
                     </div>
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <FaInbox className="text-6xl text-gray-300" />
-                      <span className="text-gray-500 dark:text-slate-400 font-medium">
-                        No se encontraron pedidos
-                      </span>
+                  <td colSpan={7} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                      <FaInbox className="text-3xl text-slate-350" />
+                      <span className="text-slate-700 font-bold text-sm">No se encontraron pedidos</span>
                       {hasActiveFilters ? (
-                        <>
-                          <span className="text-gray-400 text-sm">
-                            Intenta con otros filtros
-                          </span>
-                          <button
-                            onClick={clearFilters}
-                            className="mt-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                          >
-                            Limpiar filtros
-                          </button>
-                        </>
+                        <button
+                          onClick={clearFilters}
+                          className="mt-1 px-3 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold"
+                        >
+                          Limpiar filtros
+                        </button>
                       ) : (
                         <Link
                           href="/dashboard/pedidos/nuevo"
-                          className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium flex items-center gap-2"
+                          className="mt-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-bold rounded-lg"
                         >
-                          <FaPlus /> Crear primer pedido
+                          Nuevo Pedido
                         </Link>
                       )}
                     </div>
@@ -964,111 +819,90 @@ export default function OrdersPage() {
                 orders.map((order) => (
                   <tr
                     key={order.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
+                    className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors"
                   >
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                        <FaCalendarAlt className="text-gray-400 text-xs" />
-                        {new Date(order.created_at).toLocaleDateString(
-                          "es-AR",
-                          {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          }
-                        )}
-                      </div>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-slate-650 dark:text-slate-300 font-medium">
+                      {new Date(order.created_at).toLocaleDateString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900 dark:text-slate-50">
-                        {order.customers?.full_name ?? "Sin cliente"}
-                      </div>
+                    <td className="px-4 py-2.5 whitespace-nowrap font-semibold text-slate-850 dark:text-slate-100">
+                      {order.customers?.full_name ?? "Sin cliente"}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                        <FaClock />
-                        {order.customers?.delivery_day ?? "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm font-bold text-green-600">
-                        $
-                        {order.total_amount?.toLocaleString("es-AR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }) ?? "0.00"}
-                      </div>
-                      {((order as any).amount_pending || 0) > 0 && (
-                        <div className="text-xs text-orange-600 font-semibold mt-1 flex items-center gap-1">
-                          <FaInfoCircle className="text-xs" />
-                          Pendiente: $
-                          {((order as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      {order.customers?.delivery_day ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200/20">
+                          {order.customers.delivery_day}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic text-[10px]">Sin reparto</span>
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
-                        {(order as any).payment_method === "fiado" ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-900">
-                            <FaFileInvoice /> Fiado
-                          </span>
-                        ) : (order as any).payment_method ===
-                          "transferencia" ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-900">
-                            <FaDollarSign /> Transferencia
-                          </span>
-                        ) : (order as any).payment_method === "mixto" ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-300">
-                            <FaDollarSign /> Mixto
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-900">
-                            <FaMoneyBillWave /> Efectivo
-                          </span>
-                        )}
-                        {((order as any).amount_pending || 0) === 0 &&
-                          ((order as any).amount_paid || 0) > 0 && (
-                            <div className="text-xs text-green-600 font-semibold flex items-center gap-1">
-                              <FaCheckCircle /> Pagado
-                            </div>
-                          )}
-                      </div>
+                    <td className="px-4 py-2.5 whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                      $
+                      {order.total_amount?.toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                      }) ?? "0.00"}
+                      {((order as any).amount_pending || 0) > 0 && (
+                        <span className="text-[10px] text-amber-600 block font-semibold mt-0.5">
+                          Pendiente: ${((order as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <OrderStatusChanger
-                        order={order}
-                        onStatusUpdate={fetchOrders}
-                      />
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      {(order as any).payment_method === "fiado" ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200/30 dark:bg-orange-950/10 dark:text-orange-400">
+                          Fiado
+                        </span>
+                      ) : (order as any).payment_method === "transferencia" ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/30 dark:bg-blue-950/10 dark:text-blue-400">
+                          Transf
+                        </span>
+                      ) : (order as any).payment_method === "mixto" ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200/30 dark:bg-purple-950/10 dark:text-purple-400">
+                          Mixto
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/30 dark:bg-emerald-950/10 dark:text-emerald-400">
+                          Efectivo
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedOrderIdForDetails(order.id);
-                              setIsOrderDetailsModalOpen(true);
-                            }}
-                            title="Ver detalles del pedido"
-                            className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-1.5 shadow-sm"
-                          >
-                            <FaEye /> Ver
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedOrderIdForRemito(order.id);
-                              setIsRemitoModalOpen(true);
-                            }}
-                            title="Generar remito"
-                            className="px-3 py-1.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-semibold rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all flex items-center gap-1.5 shadow-sm"
-                          >
-                            <FaPrint />
-                          </button>
-                        </div>
-                        <Link
-                          href={`/dashboard/pedidos/${order.id}`}
-                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <OrderStatusChanger order={order} onStatusUpdate={fetchOrders} />
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          id={`btn-ver-pedido-${order.id}`}
+                          onClick={() => {
+                            setSelectedOrderIdForDetails(order.id);
+                            setIsOrderDetailsModalOpen(true);
+                          }}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 rounded border border-slate-200/20"
+                          title="Ver resumen"
                         >
-                          Ver Detalle Completo →
+                          <FaEye className="w-3 h-3" />
+                        </button>
+                        <button
+                          id={`btn-remito-pedido-${order.id}`}
+                          onClick={() => {
+                            setSelectedOrderIdForRemito(order.id);
+                            setIsRemitoModalOpen(true);
+                          }}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-350 rounded border border-slate-200/20"
+                          title="Exportar remito"
+                        >
+                          <FaPrint className="w-3 h-3" />
+                        </button>
+                        <Link
+                          id={`link-detalle-completo-${order.id}`}
+                          href={`/dashboard/pedidos/${order.id}`}
+                          className="px-2 py-1 text-[10px] font-bold text-blue-600 hover:text-white hover:bg-blue-600 rounded border border-blue-500/25 transition-colors"
+                        >
+                          Detalle
                         </Link>
                       </div>
                     </td>
@@ -1080,137 +914,99 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Vista de Tarjetas - Mobile y Tablet */}
+      {/* VISTA MÓVIL: TARJETAS (CARDS) */}
       <div className="lg:hidden space-y-3">
         {loading ? (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">Cargando pedidos...</p>
+          <div className="text-center py-8 bg-white dark:bg-slate-900 rounded-xl border">
+            <FaSpinner className="animate-spin text-lg text-slate-500 mx-auto" />
           </div>
         ) : orders.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm p-6 text-center">
-            <div className="text-gray-400 mb-2">
-              <FaBoxOpen className="w-12 h-12 mx-auto" />
-            </div>
-            <p className="text-gray-600 dark:text-slate-300 mb-4">
-              No se encontraron pedidos con los filtros aplicados.
-            </p>
-            {(searchQuery ||
-              statusFilter !== "todos" ||
-              deliveryDayFilter !== "todos" ||
-              dateFilter) && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-700 underline"
-                >
-                  Limpiar filtros
-                </button>
-              )}
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-6 text-center border">
+            <FaBoxOpen className="w-8 h-8 mx-auto text-slate-300 mb-1" />
+            <p className="text-2xs text-slate-400">Sin pedidos registrados.</p>
           </div>
         ) : (
           orders.map((order) => (
             <div
               key={order.id}
-              className="bg-white dark:bg-slate-900 rounded-lg shadow-sm p-4 space-y-3"
+              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-850 p-4 space-y-3 shadow-2xs"
             >
-              {/* Header con fecha y estado */}
               <div className="flex justify-between items-start gap-2">
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-slate-400 block font-medium">
                     {new Date(order.created_at).toLocaleDateString("es-AR", {
                       day: "2-digit",
                       month: "2-digit",
                       year: "numeric",
                     })}
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900 dark:text-slate-50">
+                  </span>
+                  <h3 className="font-bold text-xs text-slate-850 dark:text-slate-100">
                     {order.customers?.full_name ?? "Sin cliente"}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                    Reparto: {order.customers?.delivery_day ?? "N/A"}
-                  </div>
+                  </h3>
+                  {order.customers?.delivery_day && (
+                    <span className="inline-block text-[9px] font-semibold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400">
+                      📅 {order.customers.delivery_day}
+                    </span>
+                  )}
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <OrderStatusChanger
-                    order={order}
-                    onStatusUpdate={fetchOrders}
-                  />
+                
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <OrderStatusChanger order={order} onStatusUpdate={fetchOrders} />
                   {(order as any).payment_method === "fiado" ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-                      📋 Fiado
-                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-orange-50 text-orange-700 dark:bg-orange-950/20">Fiado</span>
                   ) : (order as any).payment_method === "transferencia" ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                      🏦 Transferencia
-                    </span>
-                  ) : (order as any).payment_method === "mixto" ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                      💳 Mixto
-                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/20">Transf</span>
                   ) : (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                      💵 Efectivo
-                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20">Efectivo</span>
                   )}
                 </div>
               </div>
 
-              {/* Total y pago */}
-              <div className="border-t pt-3 space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-slate-300">Total:</span>
-                  <span className="text-base font-bold text-gray-900 dark:text-slate-50">
-                    $
-                    {order.total_amount?.toLocaleString("es-AR", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }) ?? "0.00"}
-                  </span>
+              <div className="border-t border-slate-100 dark:border-slate-850 pt-2 flex justify-between items-baseline text-2xs">
+                <div>
+                  <p className="text-[9px] text-slate-400">Total Facturado</p>
+                  <p className="font-bold text-slate-850 dark:text-white">
+                    ${order.total_amount?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
                 {((order as any).amount_pending || 0) > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-orange-600">Pendiente:</span>
-                    <span className="text-sm font-semibold text-orange-600">
-                      ${((order as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                  <div className="text-right">
+                    <p className="text-[9px] text-rose-500 font-bold">Pendiente</p>
+                    <p className="font-bold text-rose-500">
+                      ${((order as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </p>
                   </div>
                 )}
-                {((order as any).amount_pending || 0) === 0 &&
-                  ((order as any).amount_paid || 0) > 0 && (
-                    <div className="flex justify-between items-center text-green-600">
-                      <span className="text-xs">Estado:</span>
-                      <span className="text-xs font-semibold flex items-center gap-1">
-                        <FaCheckCircle className="w-3 h-3" /> Pagado
-                      </span>
-                    </div>
-                  )}
               </div>
 
-              {/* Acciones */}
-              <div className="border-t pt-3 flex flex-wrap gap-2">
+              {/* Botones móviles */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-850 grid grid-cols-3 gap-1.5">
                 <button
+                  id={`btn-mobile-ver-${order.id}`}
                   onClick={() => {
                     setSelectedOrderIdForDetails(order.id);
                     setIsOrderDetailsModalOpen(true);
                   }}
-                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-all"
+                  className="py-1 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 rounded border border-slate-200/20 flex items-center justify-center gap-0.5"
                 >
-                  <FaInfoCircle /> Ver Detalles
+                  <FaEye /> Ver
                 </button>
                 <button
+                  id={`btn-mobile-print-${order.id}`}
                   onClick={() => {
                     setSelectedOrderIdForRemito(order.id);
                     setIsRemitoModalOpen(true);
                   }}
-                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1 px-3 py-2 bg-gray-600 text-white text-xs font-semibold rounded-lg hover:bg-gray-700 transition-all"
+                  className="py-1 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-350 rounded border border-slate-200/20 flex items-center justify-center gap-0.5"
                 >
                   <FaPrint /> Remito
                 </button>
                 <Link
+                  id={`btn-mobile-detail-${order.id}`}
                   href={`/dashboard/pedidos/${order.id}`}
-                  className="flex-1 min-w-[120px] inline-flex items-center justify-center px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-xs font-semibold rounded-lg transition-all"
+                  className="py-1 bg-blue-50 text-blue-650 rounded text-[10px] font-bold border border-blue-200/20 text-center block"
                 >
-                  Detalle Completo
+                  Completo
                 </Link>
               </div>
             </div>
@@ -1218,52 +1014,32 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {/* Paginación */}
+      {/* PAGINACIÓN */}
       {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 rounded-lg shadow-sm p-3 sm:p-4 mb-24 lg:mb-0">
-          <span className="text-xs sm:text-sm text-gray-700 dark:text-slate-200 text-center sm:text-left">
-            Mostrando <span className="font-medium">{orders.length}</span> de{" "}
-            <span className="font-medium">{totalCount}</span> pedidos
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-850 p-3 mt-4 mb-20 lg:mb-0 shadow-2xs text-xs">
+          <span className="text-slate-500">
+            Página <span className="font-bold text-slate-800 dark:text-white">{currentPage}</span> de {totalPages}.
           </span>
           <div className="flex items-center gap-2">
             <button
+              id="btn-prev-page"
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1 || loading}
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1 font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg disabled:opacity-40 transition-colors text-xs"
             >
               Anterior
             </button>
-            <span className="text-xs sm:text-sm text-gray-700 dark:text-slate-200 whitespace-nowrap">
-              Pág. <span className="font-medium">{currentPage}</span> /{" "}
-              {totalPages}
-            </span>
             <button
+              id="btn-next-page"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage >= totalPages || loading}
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1 font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg disabled:opacity-40 transition-colors text-xs"
             >
               Siguiente
             </button>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-slideDown {
-          animation: slideDown 0.2s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

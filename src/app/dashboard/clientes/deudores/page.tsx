@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { formatCurrency } from "@/lib/numberFormat";
 import {
   FaArrowLeft,
   FaDollarSign,
@@ -12,6 +11,7 @@ import {
   FaFileInvoiceDollar,
   FaShoppingCart,
   FaExclamationTriangle,
+  FaTimes,
 } from "react-icons/fa";
 import RegisterPayment from "@/components/payments/RegisterPayment";
 
@@ -44,10 +44,16 @@ type PendingDebtRow = {
 export default function DeudoresPage() {
   const [deudores, setDeudores] = useState<DebtDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCustomer, setSelectedCustomer] = useState<DebtDetail | null>(
-    null
-  );
+  const [selectedCustomer, setSelectedCustomer] = useState<DebtDetail | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Helper Currency Formatter
+  const formatCurrency = (val: number) => {
+    return `$${val.toLocaleString("es-AR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   useEffect(() => {
     fetchDeudores();
@@ -55,115 +61,102 @@ export default function DeudoresPage() {
 
   const fetchDeudores = async () => {
     setLoading(true);
+    try {
+      // Carga global para evitar N+1 queries por cliente.
+      const [customersRes, ordersDebtRes, salesDebtRes] = await Promise.all([
+        supabase
+          .from("customers")
+          .select("id, full_name, phone, email, customer_type"),
+        supabase
+          .from("orders")
+          .select("customer_id, amount_pending")
+          .gt("amount_pending", 0)
+          .neq("status", "cancelado"),
+        supabase
+          .from("sales")
+          .select("customer_id, amount_pending")
+          .eq("payment_method", "cuenta_corriente")
+          .eq("is_cancelled", false)
+          .gt("amount_pending", 0),
+      ]);
 
-    // Carga global para evitar N+1 queries por cliente.
-    const [customersRes, ordersDebtRes, salesDebtRes] = await Promise.all([
-      supabase
-        .from("customers")
-        .select("id, full_name, phone, email, customer_type"),
-      supabase
-        .from("orders")
-        .select("customer_id, amount_pending")
-        .gt("amount_pending", 0)
-        .neq("status", "cancelado"),
-      supabase
-        .from("sales")
-        .select("customer_id, amount_pending")
-        .eq("payment_method", "cuenta_corriente")
-        .eq("is_cancelled", false)
-        .gt("amount_pending", 0),
-    ]);
+      if (customersRes.error) throw customersRes.error;
+      if (ordersDebtRes.error) throw ordersDebtRes.error;
+      if (salesDebtRes.error) throw salesDebtRes.error;
 
-    if (customersRes.error) {
-      console.error("Error fetching customers:", customersRes.error);
-      setLoading(false);
-      return;
-    }
+      const debtStatsByCustomer = new Map<
+        string,
+        {
+          ordersDebt: number;
+          salesDebt: number;
+          ordersCount: number;
+          salesCount: number;
+        }
+      >();
 
-    if (ordersDebtRes.error) {
-      console.error("Error fetching orders debt:", ordersDebtRes.error);
-      setLoading(false);
-      return;
-    }
+      const ensureStats = (customerId: string) => {
+        const existing = debtStatsByCustomer.get(customerId);
+        if (existing) return existing;
 
-    if (salesDebtRes.error) {
-      console.error("Error fetching sales debt:", salesDebtRes.error);
-      setLoading(false);
-      return;
-    }
-
-    const debtStatsByCustomer = new Map<
-      string,
-      {
-        ordersDebt: number;
-        salesDebt: number;
-        ordersCount: number;
-        salesCount: number;
-      }
-    >();
-
-    const ensureStats = (customerId: string) => {
-      const existing = debtStatsByCustomer.get(customerId);
-      if (existing) return existing;
-
-      const created = {
-        ordersDebt: 0,
-        salesDebt: 0,
-        ordersCount: 0,
-        salesCount: 0,
-      };
-
-      debtStatsByCustomer.set(customerId, created);
-      return created;
-    };
-
-    for (const row of (ordersDebtRes.data || []) as PendingDebtRow[]) {
-      if (!row.customer_id) continue;
-
-      const stats = ensureStats(row.customer_id);
-      stats.ordersDebt += Number(row.amount_pending || 0);
-      stats.ordersCount += 1;
-    }
-
-    for (const row of (salesDebtRes.data || []) as PendingDebtRow[]) {
-      if (!row.customer_id) continue;
-
-      const stats = ensureStats(row.customer_id);
-      stats.salesDebt += Number(row.amount_pending || 0);
-      stats.salesCount += 1;
-    }
-
-    const deudoresData = ((customersRes.data || []) as CustomerListRow[]).map(
-      (customer) => {
-        const stats = debtStatsByCustomer.get(customer.id) || {
+        const created = {
           ordersDebt: 0,
           salesDebt: 0,
           ordersCount: 0,
           salesCount: 0,
         };
+        debtStatsByCustomer.set(customerId, created);
+        return created;
+      };
 
-        return {
-          id: customer.id,
-          full_name: customer.full_name,
-          phone: customer.phone,
-          email: customer.email,
-          customer_type: customer.customer_type,
-          ordersDebt: stats.ordersDebt,
-          salesDebt: stats.salesDebt,
-          totalDebt: stats.ordersDebt + stats.salesDebt,
-          ordersCount: stats.ordersCount,
-          salesCount: stats.salesCount,
-        };
+      for (const row of (ordersDebtRes.data || []) as PendingDebtRow[]) {
+        if (!row.customer_id) continue;
+        const stats = ensureStats(row.customer_id);
+        stats.ordersDebt += Number(row.amount_pending || 0);
+        stats.ordersCount += 1;
       }
-    );
 
-    // Filtrar solo los que tienen deuda y ordenar por mayor deuda
-    const clientesConDeuda = deudoresData
-      .filter((d) => d.totalDebt > 0)
-      .sort((a, b) => b.totalDebt - a.totalDebt);
+      for (const row of (salesDebtRes.data || []) as PendingDebtRow[]) {
+        if (!row.customer_id) continue;
+        const stats = ensureStats(row.customer_id);
+        stats.salesDebt += Number(row.amount_pending || 0);
+        stats.salesCount += 1;
+      }
 
-    setDeudores(clientesConDeuda);
-    setLoading(false);
+      const deudoresData = ((customersRes.data || []) as CustomerListRow[]).map(
+        (customer) => {
+          const stats = debtStatsByCustomer.get(customer.id) || {
+            ordersDebt: 0,
+            salesDebt: 0,
+            ordersCount: 0,
+            salesCount: 0,
+          };
+
+          return {
+            id: customer.id,
+            full_name: customer.full_name,
+            phone: customer.phone,
+            email: customer.email,
+            customer_type: customer.customer_type,
+            ordersDebt: stats.ordersDebt,
+            salesDebt: stats.salesDebt,
+            totalDebt: stats.ordersDebt + stats.salesDebt,
+            ordersCount: stats.ordersCount,
+            salesCount: stats.salesCount,
+          };
+        }
+      );
+
+      // Filtrar solo los que tienen deuda y ordenar por mayor deuda
+      const clientesConDeuda = deudoresData
+        .filter((d) => d.totalDebt > 0)
+        .sort((a, b) => b.totalDebt - a.totalDebt);
+
+      setDeudores(clientesConDeuda);
+    } catch (e) {
+      console.error("Error fetching deudores data:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenPayment = (customer: DebtDetail) => {
@@ -179,198 +172,226 @@ export default function DeudoresPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-slate-300">Cargando deudores...</p>
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-semibold text-slate-500">Cargando deudores...</span>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 sm:mb-8 gap-4">
-        <div className="w-full lg:w-auto">
-          <Link
-            href="/dashboard/clientes"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-2 text-sm sm:text-base"
-          >
-            <FaArrowLeft /> Volver a Clientes
-          </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2 sm:gap-3">
-            <FaExclamationTriangle className="text-red-600 text-xl sm:text-2xl" />{" "}
-            Clientes Deudores
-          </h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-1 text-sm sm:text-base">
-            Todos los clientes con deudas pendientes ({deudores.length}{" "}
-            clientes)
-          </p>
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-4 border-2 border-red-200 w-full lg:w-auto">
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mb-1">Deuda Total</p>
-          <p className="text-2xl sm:text-3xl font-bold text-red-600">
-            {formatCurrency(deudores.reduce((sum, d) => sum + d.totalDebt, 0))}
-          </p>
-        </div>
-      </div>
+  const totalDebtSum = deudores.reduce((sum, d) => sum + d.totalDebt, 0);
 
-      {/* LISTA DE DEUDORES */}
-      {deudores.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-12 text-center">
-          <FaDollarSign className="text-6xl text-green-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-slate-100 mb-2">
-            ¡No hay deudores!
-          </h3>
-          <p className="text-gray-600 dark:text-slate-300">
-            Todos los clientes tienen sus cuentas al día
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {deudores.map((deudor) => (
-            <div
-              key={deudor.id}
-              className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border-2 border-gray-200 dark:border-slate-700 hover:border-red-300 transition-all overflow-hidden"
+  return (
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+      <div className="max-w-[1250px] mx-auto space-y-6">
+        
+        {/* HEADER */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <Link
+              href="/dashboard/clientes"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-750 dark:text-indigo-400 mb-2 transition-colors"
             >
-              <div className="p-6">
-                <div className="flex flex-col lg:flex-row justify-between gap-4">
+              <FaArrowLeft /> Volver a Clientes
+            </Link>
+            <h1 className="text-xl font-black text-gray-900 dark:text-slate-55 flex items-center gap-2">
+              <FaExclamationTriangle className="text-rose-500 text-lg animate-pulse" /> Cartera de Clientes Deudores
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+              Todos los clientes activos que poseen deudas pendientes en facturación o pedidos fiados ({deudores.length} clientes).
+            </p>
+          </div>
+
+          <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/40 rounded-xl px-5 py-3.5 flex flex-col justify-center min-w-[200px]">
+            <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">Deuda Total Consolidada</span>
+            <span className="text-2xl font-black text-rose-600 dark:text-rose-450 mt-0.5">
+              {formatCurrency(totalDebtSum)}
+            </span>
+          </div>
+        </div>
+
+        {/* LISTA DE DEUDORES */}
+        {deudores.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 py-16 text-center">
+            <FaDollarSign className="text-5xl text-emerald-500 mx-auto mb-4 opacity-80" />
+            <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
+              ¡Sin clientes deudores!
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+              Perfecto. Todos los clientes se encuentran al día con sus cuentas corrientes y pedidos.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {deudores.map((deudor) => (
+              <div
+                key={deudor.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-150 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden p-6"
+              >
+                <div className="flex flex-col lg:flex-row justify-between gap-6">
+                  
                   {/* INFO DEL CLIENTE */}
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="p-3 bg-red-100 rounded-lg">
-                        <FaUser className="text-red-600 text-xl" />
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-rose-50 dark:bg-rose-950/15 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center font-bold text-lg border border-rose-100/50 dark:border-rose-900/30">
+                        {deudor.full_name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-slate-50">
                           {deudor.full_name}
                         </h3>
-                        <div className="flex gap-3 mt-1">
+                        <div className="flex flex-wrap gap-2.5 mt-1.5 items-center">
                           {deudor.phone && (
-                            <p className="text-sm text-gray-600 dark:text-slate-300 flex items-center gap-1">
-                              <FaPhone className="text-xs" /> {deudor.phone}
-                            </p>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <FaPhone className="text-slate-400 w-2.5 h-2.5" /> {deudor.phone}
+                            </span>
                           )}
                           <span
-                            className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                            className={`px-2 py-0.5 rounded-lg text-3xs font-extrabold border ${
                               deudor.customer_type === "mayorista"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-blue-100 text-blue-700"
+                                ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/10 dark:text-purple-400 dark:border-purple-900/50"
+                                : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/10 dark:text-blue-400 dark:border-blue-900/50"
                             }`}
                           >
-                            {deudor.customer_type}
+                            {deudor.customer_type === "mayorista" ? "Mayorista" : "Minorista"}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* DETALLE DE DEUDAS */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      
                       {/* Pedidos */}
-                      {deudor.ordersCount > 0 && (
-                        <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <FaShoppingCart className="text-orange-600 text-sm" />
-                            <p className="text-xs font-semibold text-orange-700">
-                              Pedidos Pendientes
-                            </p>
-                          </div>
-                          <p className="text-lg font-bold text-orange-600">
-                            {formatCurrency(deudor.ordersDebt)}
-                          </p>
-                          <p className="text-xs text-orange-600">
-                            {deudor.ordersCount} pedido(s)
-                          </p>
+                      <div className="bg-amber-50/40 dark:bg-amber-950/10 rounded-xl p-3 border border-amber-100/50 dark:border-amber-900/30">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FaShoppingCart className="text-amber-600 text-xs" />
+                          <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                            En Pedidos Fiados
+                          </span>
                         </div>
-                      )}
+                        <span className="text-base font-extrabold text-amber-600 block">
+                          {formatCurrency(deudor.ordersDebt)}
+                        </span>
+                        <span className="text-3xs text-amber-500 block mt-0.5">
+                          {deudor.ordersCount} pedido(s) cargado(s)
+                        </span>
+                      </div>
 
                       {/* Ventas */}
-                      {deudor.salesCount > 0 && (
-                        <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <FaFileInvoiceDollar className="text-red-600 text-sm" />
-                            <p className="text-xs font-semibold text-red-700">
-                              Cuenta Corriente
-                            </p>
-                          </div>
-                          <p className="text-lg font-bold text-red-600">
-                            {formatCurrency(deudor.salesDebt)}
-                          </p>
-                          <p className="text-xs text-red-600">
-                            {deudor.salesCount} venta(s)
-                          </p>
+                      <div className="bg-rose-50/40 dark:bg-rose-950/10 rounded-xl p-3 border border-rose-100/50 dark:border-rose-900/30">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FaFileInvoiceDollar className="text-rose-600 text-xs" />
+                          <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">
+                            En Cuenta Corriente
+                          </span>
                         </div>
-                      )}
+                        <span className="text-base font-extrabold text-rose-600 block">
+                          {formatCurrency(deudor.salesDebt)}
+                        </span>
+                        <span className="text-3xs text-rose-500 block mt-0.5">
+                          {deudor.salesCount} venta(s) pendiente(s)
+                        </span>
+                      </div>
 
                       {/* Total */}
-                      <div className="bg-red-100 rounded-lg p-3 border-2 border-red-300">
-                        <div className="flex items-center gap-2 mb-1">
-                          <FaDollarSign className="text-red-700 text-sm" />
-                          <p className="text-xs font-bold text-red-700">
-                            DEUDA TOTAL
-                          </p>
+                      <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-3 border border-slate-800 flex flex-col justify-center">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FaDollarSign className="text-rose-400 text-xs" />
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Deuda Total Acumulada
+                          </span>
                         </div>
-                        <p className="text-2xl font-bold text-red-700">
+                        <span className="text-lg font-black text-white block">
                           {formatCurrency(deudor.totalDebt)}
-                        </p>
+                        </span>
                       </div>
+
                     </div>
                   </div>
 
-                  {/* ACCIONES */}
-                  <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:w-48">
+                  {/* ACCIONES DEL CLIENTE */}
+                  <div className="flex flex-row lg:flex-col gap-2.5 items-end justify-end lg:w-48 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800 lg:pl-6">
                     <button
                       onClick={() => handleOpenPayment(deudor)}
-                      className="flex-1 sm:flex-initial lg:flex-auto px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold text-xs sm:text-sm"
+                      className="flex-1 w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
                     >
-                      <FaDollarSign className="inline mr-2" />
-                      Registrar Pago
+                      <FaDollarSign /> Registrar Pago
                     </button>
                     <Link
                       href={`/dashboard/clientes/${deudor.id}`}
-                      className="flex-1 sm:flex-initial lg:flex-auto px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold text-center text-xs sm:text-sm"
+                      className="flex-1 w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 border"
                     >
-                      Ver Detalle
+                      Ver Detalle Ficha
                     </Link>
                   </div>
+
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* MODAL DE PAGO */}
+      </div>
+
+      {/* MODAL DE REGISTRO DE PAGO */}
       {showPaymentModal && selectedCustomer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-slate-100">
-                Registrar Pago
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mt-1">
-                Cliente: {selectedCustomer.full_name}
-              </p>
-              <p className="text-xs sm:text-sm text-red-600 font-semibold mt-1">
-                Deuda actual: {formatCurrency(selectedCustomer.totalDebt)}
-              </p>
+        <div className="fixed inset-0 bg-slate-950/60 dark:bg-slate-950/80 flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 max-w-md w-full overflow-hidden">
+            
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
+              <div>
+                <h3 className="text-sm font-bold text-slate-850 dark:text-slate-100">
+                  Registrar Cobro de Deuda
+                </h3>
+                <p className="text-[10px] text-slate-450 dark:text-slate-400 mt-0.5">
+                  Cliente: {selectedCustomer.full_name}
+                </p>
+              </div>
+              <button
+                onClick={handleClosePayment}
+                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-450 hover:text-slate-750 dark:hover:text-white rounded-lg transition-colors"
+                title="Cerrar modal"
+              >
+                <FaTimes className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="p-4 sm:p-6">
+
+            <div className="p-6 space-y-4">
+              <div className="bg-rose-50/50 dark:bg-rose-950/15 rounded-xl p-4 border border-rose-100 dark:border-rose-900/30 flex justify-between items-center text-xs">
+                <div>
+                  <span className="font-extrabold text-rose-800 dark:text-rose-450 block uppercase tracking-wider text-[9px]">
+                    Deuda Total Pendiente
+                  </span>
+                  <span className="text-2xl font-black text-rose-600 dark:text-rose-450 mt-1 block">
+                    {formatCurrency(selectedCustomer.totalDebt)}
+                  </span>
+                </div>
+                <div className="text-right space-y-0.5 text-slate-450 dark:text-slate-400 text-[10px] font-medium">
+                  <div>En Pedidos: {formatCurrency(selectedCustomer.ordersDebt)}</div>
+                  <div>En Cta. Cte.: {formatCurrency(selectedCustomer.salesDebt)}</div>
+                </div>
+              </div>
+
+              {/* Componente de Registro de Pago de la app */}
               <RegisterPayment
                 customerId={selectedCustomer.id}
                 currentDebt={selectedCustomer.totalDebt}
                 onSuccess={handleClosePayment}
               />
             </div>
-            <div className="p-4 border-t border-gray-200 dark:border-slate-700">
+            
+            <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={handleClosePayment}
-                className="w-full px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-300 transition-colors font-semibold text-sm sm:text-base"
+                className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors border"
               >
-                Cancelar
+                Cerrar y Cancelar
               </button>
             </div>
+
           </div>
         </div>
       )}

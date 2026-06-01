@@ -71,72 +71,93 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all scale-100">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full max-h-[90vh] overflow-y-auto transform transition-all scale-100">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 rounded-t-2xl">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                💳 Finalizar Venta
-              </h2>
-              <div className="flex gap-4 text-green-100 text-sm">
-                <p>
-                  Cliente:{" "}
-                  <span className="font-semibold text-white">
-                    {customerName}
-                  </span>
-                </p>
-                <p>
-                  Items:{" "}
-                  <span className="font-semibold text-white">
-                    {cartItemsCount}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white hover:bg-white dark:bg-slate-900/20 rounded-full p-2 transition-all"
-            >
-              <FaTimes size={24} />
-            </button>
-          </div>
-          <div className="mt-6 bg-white/20 backdrop-blur-md rounded-xl p-4 border border-white/30">
-            <p className="text-green-100 text-sm font-medium uppercase tracking-wider">
-              Total a Pagar
-            </p>
-            <p className="text-5xl font-bold text-white tracking-tight">
-              {formatCurrency(total)}
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">
+              Finalizar Venta
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Confirma el pago y registra la venta.
             </p>
           </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 rounded-full p-2 transition-all"
+          >
+            <FaTimes size={20} />
+          </button>
         </div>
 
         {/* Body */}
-        <div className="p-8 space-y-8">
-          {/* Atajos de teclado */}
-          <div className="bg-gray-50 dark:bg-slate-950 p-3 rounded-lg border border-gray-200 dark:border-slate-700 flex justify-between items-center text-sm text-gray-600 dark:text-slate-300">
-            <span className="font-medium">⌨️ Atajos:</span>
-            <div className="flex gap-4">
-              <span>
-                <kbd className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border shadow-sm font-sans">
-                  F12
-                </kbd>{" "}
-                Cerrar
-              </span>
-              <span>
-                <kbd className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border shadow-sm font-sans">
-                  F2
-                </kbd>{" "}
-                Confirmar
-              </span>
+        <div className="p-6 sm:p-8 grid gap-6 md:grid-cols-[0.9fr_1.1fr]">
+          {/* Summary panel */}
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/60 dark:bg-emerald-950/30 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                Total a pagar
+              </p>
+              <p className="text-4xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
+                {formatCurrency(total)}
+              </p>
+              <div className="mt-4 space-y-2 text-sm text-emerald-800/80 dark:text-emerald-200/80">
+                <p>
+                  Cliente: <span className="font-semibold text-emerald-900 dark:text-emerald-100">{customerName}</span>
+                </p>
+                <p>
+                  Items: <span className="font-semibold text-emerald-900 dark:text-emerald-100">{cartItemsCount}</span>
+                </p>
+              </div>
             </div>
+
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+              <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+                <span>Atajos</span>
+                <div className="flex gap-3">
+                  <span>
+                    <kbd className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border font-sans">
+                      F12
+                    </kbd>{" "}
+                    Cerrar
+                  </span>
+                  <span>
+                    <kbd className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border font-sans">
+                      F2
+                    </kbd>{" "}
+                    Confirmar
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {debtDifference > 0 && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-700">Saldo pendiente</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">
+                  {formatCurrency(debtDifference)}
+                </p>
+              </div>
+            )}
+
+            {debtDifference < 0 && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-700">Cambio a devolver</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {formatCurrency(Math.abs(debtDifference))}
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Form panel */}
+          <div className="space-y-6">
 
           {!useMixedPayment ? (
             <div className="space-y-6">
               {/* Método de pago simple */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-200 mb-2 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-2 uppercase tracking-wide">
                   Método de Pago
                 </label>
                 <select
@@ -152,7 +173,7 @@ export default function PaymentModal({
                       setAmountPaid(total.toFixed(2));
                     }
                   }}
-                  className="w-full p-4 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg bg-white dark:bg-slate-900 shadow-sm transition-all hover:border-green-400"
+                  className="w-full p-4 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base bg-white dark:bg-slate-900 shadow-sm transition-all hover:border-emerald-400"
                 >
                   <option value="efectivo">💵 Efectivo</option>
                   <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
@@ -167,7 +188,7 @@ export default function PaymentModal({
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-200 mb-2 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-2 uppercase tracking-wide">
                   Monto Pagado
                 </label>
                 <div className="relative">
@@ -181,7 +202,7 @@ export default function PaymentModal({
                     onChange={(e) => setAmountPaid(e.target.value)}
                     step="0.01"
                     min="0"
-                    className="w-full pl-16 p-4 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-2xl font-bold text-gray-800 dark:text-slate-100 shadow-sm"
+                    className="w-full pl-16 p-4 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-2xl font-bold text-gray-800 dark:text-slate-100 shadow-sm"
                     placeholder="0.00"
                   />
                 </div>
@@ -190,10 +211,10 @@ export default function PaymentModal({
           ) : (
             <div className="space-y-6 animate-fadeIn">
               {/* Pagos mixtos */}
-              <div className="bg-blue-50 p-5 rounded-xl border border-blue-100">
+              <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-blue-900 text-lg flex items-center gap-2">
-                    🔀 Pagos Mixtos
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">
+                    Pagos Mixtos
                   </h3>
                   <button
                     onClick={() => {
@@ -219,7 +240,7 @@ export default function PaymentModal({
                             e.target.value
                           )
                         }
-                        className="flex-1 p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm"
+                        className="flex-1 p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900"
                       >
                         <option value="efectivo">Efectivo</option>
                         <option value="tarjeta_debito">Débito</option>
@@ -241,7 +262,7 @@ export default function PaymentModal({
                               e.target.value
                             )
                           }
-                          className="w-full pl-7 p-3 border border-gray-300 dark:border-slate-600 rounded-lg font-medium"
+                          className="w-full pl-7 p-3 border border-gray-300 dark:border-slate-600 rounded-lg font-medium bg-white dark:bg-slate-900"
                           placeholder="0.00"
                         />
                       </div>
@@ -256,17 +277,17 @@ export default function PaymentModal({
                   ))}
                   <button
                     onClick={handleAddPaymentMethod}
-                    className="w-full py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-colors"
+                    className="w-full py-2 border-2 border-dashed border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100 font-medium transition-colors"
                   >
                     + Agregar otro método
                   </button>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-blue-200 flex justify-between items-center">
-                  <span className="text-blue-800 font-medium">
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">
                     Total Acumulado:
                   </span>
-                  <span className="text-xl font-bold text-blue-900">
+                  <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                     {formatCurrency(getTotalPaidFromMixed())}
                   </span>
                 </div>
@@ -280,7 +301,7 @@ export default function PaymentModal({
               <div
                 className={`transition-all duration-300 ${payToSupplier
                   ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-700/30"
-                  : "bg-gray-50 border-gray-200 dark:bg-slate-800 dark:border-slate-700"
+                  : "bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800"
                   } p-5 rounded-xl border`}
               >
                 <div className="flex items-center gap-3 mb-3">
@@ -336,52 +357,31 @@ export default function PaymentModal({
           )}
 
           {/* Indicadores de deuda/cambio */}
-          {debtDifference > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex justify-between items-center animate-pulse-slow">
-              <span className="font-bold text-red-800 flex items-center gap-2">
-                ⚠️ Saldo Pendiente
-              </span>
-              <span className="text-3xl font-bold text-red-600">
-                {formatCurrency(debtDifference)}
-              </span>
-            </div>
-          )}
-
-          {debtDifference < 0 && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex justify-between items-center">
-              <span className="font-bold text-green-800 flex items-center gap-2">
-                💰 Cambio a Devolver
-              </span>
-              <span className="text-3xl font-bold text-green-600">
-                {formatCurrency(Math.abs(debtDifference))}
-              </span>
-            </div>
-          )}
-
           {/* Botones */}
-          <div className="flex gap-4 pt-4">
+          <div className="flex gap-4 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 py-4 px-6 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 font-bold rounded-xl hover:bg-gray-200 dark:bg-slate-700 transition-colors"
+              className="flex-1 py-4 px-6 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-200 dark:bg-slate-700 transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={onConfirm}
               disabled={loading}
-              className="flex-[2] py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg"
+              className="flex-[2] py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg"
             >
               {loading ? (
-                <>⏳ Procesando...</>
+                <>Procesando...</>
               ) : (
                 <>
-                  ✅ Confirmar Venta
-                  <span className="text-xs bg-green-500/30 px-2 py-1 rounded border border-green-400/30">
+                  Confirmar Venta
+                  <span className="text-xs bg-white/20 px-2 py-1 rounded border border-white/30">
                     F2
                   </span>
                 </>
               )}
             </button>
+          </div>
           </div>
         </div>
       </div>

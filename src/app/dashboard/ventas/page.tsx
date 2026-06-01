@@ -260,28 +260,54 @@ export default function SalesHistoryPage() {
 
   return (
     <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-screen">
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-            <FaChartLine className="text-blue-600" /> Historial de Ventas
-          </h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-1">
-            Gestiona y revisa todas las ventas realizadas
-          </p>
+      {/* HEADER CARD */}
+      <div className="group relative overflow-hidden rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-5 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-indigo-50/50 dark:bg-indigo-950/20" />
+        <div className="flex items-center gap-4 text-left">
+          <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-3xs flex-shrink-0 text-base">
+            <FaChartLine />
+          </span>
+          <div className="relative">
+            <h1 className="text-lg font-black text-slate-900 dark:text-slate-50 leading-none">
+              Historial de Ventas
+            </h1>
+            <p className="text-xs text-slate-500 mt-1.5">
+              Gestiona y revisa todas las ventas realizadas
+            </p>
+          </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 relative z-10">
           <Link
             href="/dashboard/ventas/pendientes"
-            className="px-6 py-3 text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg hover:from-purple-700 hover:to-purple-800 shadow-lg hover:shadow-xl transition-all duration-200 font-semibold flex items-center gap-2"
+            className="group relative overflow-hidden rounded-xl border border-purple-200 dark:border-purple-900/60 bg-white dark:bg-slate-900 p-2.5 shadow-2xs hover:shadow-sm hover:scale-[1.02] transition-all flex items-center gap-2.5 text-left w-[160px]"
           >
-            <FaClock /> Ventas Pendientes
+            <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-3xs flex-shrink-0 text-xs">
+              <FaClock />
+            </span>
+            <div>
+              <p className="text-2xs font-extrabold text-purple-700 dark:text-purple-305 leading-none">
+                Pendientes
+              </p>
+              <p className="text-[9px] text-slate-500 mt-1 font-medium leading-none">
+                Ver facturas fiadas
+              </p>
+            </div>
           </Link>
           <Link
             href="/dashboard/ventas/nueva"
-            className="px-6 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200 font-semibold flex items-center gap-2"
+            className="group relative overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-white dark:bg-slate-900 p-2.5 shadow-2xs hover:shadow-sm hover:scale-[1.02] transition-all flex items-center gap-2.5 text-left w-[160px]"
           >
-            <FaPlus /> Nueva Venta
+            <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-3xs flex-shrink-0 text-xs">
+              <FaPlus />
+            </span>
+            <div>
+              <p className="text-2xs font-extrabold text-emerald-700 dark:text-emerald-305 leading-none">
+                Nueva Venta
+              </p>
+              <p className="text-[9px] text-slate-500 mt-1 font-medium leading-none">
+                Registrar operación
+              </p>
+            </div>
           </Link>
         </div>
       </div>
@@ -391,7 +417,7 @@ export default function SalesHistoryPage() {
                     <FaChartBar /> Estado
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider w-[320px]">
                   Acciones
                 </th>
               </tr>
@@ -509,30 +535,71 @@ export default function SalesHistoryPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 justify-end">
                         <button
                           onClick={() => {
                             setSelectedSaleId(sale.id);
                             setIsTicketModalOpen(true);
                           }}
-                          className="px-3 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2"
+                          className="group relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-3xs hover:shadow-2xs hover:scale-[1.02] transition-all flex items-center gap-1.5 text-left w-[95px]"
                           title="Imprimir Ticket"
                         >
-                          <FaPrint />
+                          <div className="absolute -right-6 -top-6 h-10 w-10 rounded-full bg-slate-50/50 dark:bg-slate-950/20" />
+                          <span className="relative flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-slate-500 to-slate-600 text-white shadow-3xs flex-shrink-0 text-[9px]">
+                            <FaPrint />
+                          </span>
+                          <div className="relative">
+                            <p className="text-[9px] font-black text-slate-700 dark:text-slate-400 leading-none">
+                              Ticket
+                            </p>
+                            <p className="text-[7.5px] text-slate-450 dark:text-slate-500 mt-0.5 font-medium leading-none">
+                              Imprimir
+                            </p>
+                          </div>
                         </button>
+
                         <Link
                           href={`/dashboard/ventas/${sale.id}`}
-                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2"
+                          className="group relative overflow-hidden rounded-lg border border-blue-100 dark:border-blue-900/40 bg-white dark:bg-slate-900 p-1 shadow-3xs hover:shadow-2xs hover:scale-[1.02] transition-all flex items-center gap-1.5 text-left w-[95px]"
                         >
-                          <FaEye /> Ver
+                          <div className="absolute -right-6 -top-6 h-10 w-10 rounded-full bg-blue-50/50 dark:bg-blue-950/20" />
+                          <span className="relative flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-3xs flex-shrink-0 text-[9px]">
+                            <FaEye />
+                          </span>
+                          <div className="relative">
+                            <p className="text-[9px] font-black text-blue-700 dark:text-blue-450 leading-none">
+                              Detalles
+                            </p>
+                            <p className="text-[7.5px] text-slate-450 dark:text-slate-500 mt-0.5 font-medium leading-none">
+                              Ver venta
+                            </p>
+                          </div>
                         </Link>
-                        {!sale.is_cancelled && (
+
+                        {!sale.is_cancelled ? (
                           <button
                             onClick={() => handleCancelSale(sale.id)}
-                            className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2"
+                            className="group relative overflow-hidden rounded-lg border border-rose-100 dark:border-rose-900/40 bg-white dark:bg-slate-900 p-1 shadow-3xs hover:shadow-2xs hover:scale-[1.02] transition-all flex items-center gap-1.5 text-left w-[95px]"
                           >
-                            <FaTrash /> Anular
+                            <div className="absolute -right-6 -top-6 h-10 w-10 rounded-full bg-rose-50/50 dark:bg-rose-950/20" />
+                            <span className="relative flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-3xs flex-shrink-0 text-[9px]">
+                              <FaTrash />
+                            </span>
+                            <div className="relative">
+                              <p className="text-[9px] font-black text-rose-700 dark:text-rose-455 leading-none">
+                                Anular
+                              </p>
+                              <p className="text-[7.5px] text-slate-450 dark:text-slate-500 mt-0.5 font-medium leading-none">
+                                Revertir
+                              </p>
+                            </div>
                           </button>
+                        ) : (
+                          <div className="w-[95px] flex items-center justify-center">
+                            <span className="text-[9px] font-bold text-red-500 uppercase tracking-wider">
+                              Anulada
+                            </span>
+                          </div>
                         )}
                       </div>
                     </td>

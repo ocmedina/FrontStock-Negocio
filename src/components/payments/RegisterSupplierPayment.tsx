@@ -51,14 +51,14 @@ export default function RegisterSupplierPayment({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Registrar Pago a Proveedor</h2>
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-xs">
+      <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-4">Registrar Pago a Proveedor</h2>
       <form
         onSubmit={handleRegisterPayment}
         className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
       >
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">
+          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Monto Pagado
           </label>
           <input
@@ -66,27 +66,27 @@ export default function RegisterSupplierPayment({
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
+            className="mt-1.5 block w-full px-4 py-2.5 border-2 border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50 transition-all text-sm font-medium"
             placeholder="0.00"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">
+          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Comentario
           </label>
           <input
             type="text"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            className="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
+            className="mt-1.5 block w-full px-4 py-2.5 border-2 border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50 transition-all text-sm font-medium"
             placeholder="Ej: Pago factura #123"
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+          className="w-full px-5 py-3.5 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-500/10 transition-all hover:scale-[1.01] active:scale-95 text-center"
         >
           {loading ? "Registrando..." : "Registrar Pago"}
         </button>

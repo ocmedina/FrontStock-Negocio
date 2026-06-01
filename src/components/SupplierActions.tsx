@@ -3,7 +3,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaClipboardList } from "react-icons/fa";
 
 interface SupplierActionsProps {
   supplierId: string;
@@ -36,24 +36,45 @@ export default function SupplierActions({
     }
   };
 
-  // Si no es administrador, mostrar mensaje o nada
+  // Si no es administrador, mostrar nada o sin permisos
   if (userRole !== "administrador") {
-    return <span className="text-gray-400 text-xs">Sin permisos</span>;
+    return (
+      <div className="flex items-center gap-1.5">
+        <Link
+          href={`/dashboard/proveedores/${supplierId}`}
+          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl transition-all"
+          title="Ver Ficha de Cuenta"
+        >
+          <FaClipboardList className="w-4 h-4" />
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
+      <Link
+        href={`/dashboard/proveedores/${supplierId}`}
+        className="p-2 text-slate-400 hover:text-indigo-650 dark:hover:text-indigo-405 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl transition-all"
+        title="Ver Ficha de Cuenta"
+      >
+        <FaClipboardList className="w-4 h-4" />
+      </Link>
+      
       <Link
         href={`/dashboard/proveedores/edit/${supplierId}`}
-        className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium text-xs flex items-center gap-1.5 shadow-sm"
+        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-all"
+        title="Editar Proveedor"
       >
-        <FaEdit /> Editar
+        <FaEdit className="w-4 h-4" />
       </Link>
+      
       <button
         onClick={handleDeactivate}
-        className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium text-xs flex items-center gap-1.5 shadow-sm"
+        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all"
+        title="Desactivar Proveedor"
       >
-        <FaTrash /> Desactivar
+        <FaTrash className="w-4 h-4" />
       </button>
     </div>
   );

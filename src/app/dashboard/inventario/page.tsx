@@ -36,6 +36,8 @@ type StockMovement = {
   } | null;
 };
 
+const ITEMS_PER_PAGE = 20;
+
 export default function InventoryKardexPage() {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ export default function InventoryKardexPage() {
   );
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [areActionsOpen, setAreActionsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchMovements();
@@ -107,6 +110,10 @@ export default function InventoryKardexPage() {
       fetchMovements();
     }
   }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate, typeFilter]);
 
   const getMovementIcon = (type: string) => {
     switch (type) {
@@ -200,6 +207,12 @@ export default function InventoryKardexPage() {
     .filter((m) => m.quantity < 0)
     .reduce((acc, m) => acc + Math.abs(m.quantity), 0);
   const netChange = totalEntries - totalExits;
+
+  const totalPages = Math.max(1, Math.ceil(movements.length / ITEMS_PER_PAGE));
+  const paginatedMovements = movements.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="p-6 bg-gray-50 dark:bg-slate-950 min-h-screen">
@@ -376,7 +389,7 @@ export default function InventoryKardexPage() {
                   </td>
                 </tr>
               ) : (
-                movements.map((movement) => (
+                paginatedMovements.map((movement) => (
                   <tr key={movement.id} className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
                       {new Date(movement.created_at).toLocaleString("es-AR")}
@@ -441,7 +454,7 @@ export default function InventoryKardexPage() {
             No se encontraron movimientos en este período.
           </div>
         ) : (
-          movements.map((movement) => (
+          paginatedMovements.map((movement) => (
             <div
               key={movement.id}
               className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border border-gray-100"
@@ -504,6 +517,44 @@ export default function InventoryKardexPage() {
           ))
         )}
       </div>
+
+      {movements.length > 0 && totalPages > 1 && (
+        <div className="mt-6 mb-24 lg:mb-0 bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span className="text-sm text-gray-600 dark:text-slate-300">
+              Mostrando{" "}
+              <span className="font-semibold">
+                {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+              </span>
+              {" "}-{" "}
+              <span className="font-semibold">
+                {Math.min(currentPage * ITEMS_PER_PAGE, movements.length)}
+              </span>
+              {" "}de{" "}
+              <span className="font-semibold">{movements.length}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-gray-700 dark:text-slate-200">
+                Pagina <span className="font-semibold">{currentPage}</span> / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AdjustmentModal
         isOpen={isAdjustmentModalOpen}

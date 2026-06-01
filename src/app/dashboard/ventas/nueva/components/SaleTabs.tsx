@@ -31,16 +31,16 @@ export default function SaleTabs({
   setEditingTabName,
 }: SaleTabsProps) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
       {tabs.map((tab) => (
         <div
           key={tab.id}
           className={`
-            group relative flex items-center gap-2 px-4 py-2.5 rounded-t-xl cursor-pointer transition-all duration-200 border-b-2
+            group relative flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 border
             ${
               tab.id === activeTabId
-                ? "bg-white border-blue-600 text-blue-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-                : "bg-gray-100 border-transparent text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                ? "bg-blue-50 border-blue-200 text-blue-700"
+                : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200 hover:text-gray-700"
             }
           `}
           onClick={() => onTabClick(tab.id)}
@@ -76,7 +76,7 @@ export default function SaleTabs({
                 <span
                   className={`px-2 py-0.5 rounded-full text-xs font-bold transition-colors ${
                     tab.id === activeTabId
-                      ? "bg-blue-100 text-blue-700"
+                      ? "bg-blue-600 text-white"
                       : "bg-gray-300 text-gray-600"
                   }`}
                 >
@@ -109,7 +109,7 @@ export default function SaleTabs({
 
       <button
         onClick={onNewTab}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-all border border-transparent hover:border-blue-200 ml-1"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-all border border-gray-200 dark:border-slate-700 ml-1"
         title="Nueva venta (F9)"
       >
         <FaPlus size={12} />

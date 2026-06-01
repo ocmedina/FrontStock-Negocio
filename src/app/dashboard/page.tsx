@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import QuickActionsHeader from "@/components/QuickActionsHeader";
 import ChristmasCountdown from "@/components/ChristmasCountdown";
+import WelcomeModal from "@/components/WelcomeModal";
 
 // --- Tipos ---
 type CustomerRow = {
@@ -50,14 +51,23 @@ function DashboardCard({
   note: string;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">{title}</p>
-          <p className="text-2xl font-semibold text-gray-900 dark:text-slate-50">{value}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-slate-400 mt-1">{note}</p>
+    <div className="relative overflow-hidden bg-white dark:bg-slate-900 p-5 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500" />
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+            {title}
+          </p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-slate-50 mt-1">
+            {value}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">
+            {note}
+          </p>
         </div>
-        <div className="text-gray-300 dark:text-gray-600 dark:text-slate-300 text-2xl">{icon}</div>
+        <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 text-white flex items-center justify-center text-xl shadow-sm">
+          {icon}
+        </div>
       </div>
     </div>
   );
@@ -66,6 +76,21 @@ function DashboardCard({
 // --- Obtener datos del dashboard ---
 async function getDashboardData() {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let displayName = "";
+  if (user?.id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    displayName = profile?.full_name?.trim() || "";
+  }
 
   // Obtener fecha en zona horaria Argentina
   const now = new Date();
@@ -213,6 +238,7 @@ async function getDashboardData() {
     pendingOrders: pendingOrdersRes.data ?? [],
     criticalStockProducts: criticalStockProductsRes.data ?? [],
     recentSales: recentSalesRes.data ?? [],
+    displayName,
   };
 }
 
@@ -229,55 +255,90 @@ export default async function DashboardPage() {
     pendingOrders,
     criticalStockProducts,
     recentSales,
+    displayName,
   } = await getDashboardData();
 
   const currentMonth = new Date().toLocaleDateString("es-ES", {
     month: "long",
     year: "numeric",
   });
+  const fullDate = new Date().toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Modal de Bienvenida */}
+      <WelcomeModal />
+
       {/* Cuenta regresiva navideña */}
       <ChristmasCountdown />
 
-      {/* Acciones Rápidas como Header */}
-      <QuickActionsHeader />
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-white via-white to-emerald-50/60 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/20 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80">
+              Panel principal
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-slate-50 mt-1">
+              {displayName ? `Hola, ${displayName} 👋` : "Hola 👋"}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+              {fullDate}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              Resumen {currentMonth}
+            </span>
+            {totalDebt > 0 && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
+                Deuda pendiente: ${totalDebt.toLocaleString("es-AR")}
+              </span>
+            )}
+          </div>
+        </div>
 
-
-      {/* Tarjetas principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DashboardCard
-          title="Ventas del Mes"
-          value={`$${totalSales.toLocaleString("es-AR", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`}
-          icon={<FaCashRegister />}
-          note={currentMonth}
-        />
-        <DashboardCard
-          title="Pedidos Totales"
-          value={totalOrders}
-          icon={<FaDolly />}
-          note="Históricos"
-        />
-        <DashboardCard
-          title="Productos Activos"
-          value={productCount}
-          icon={<FaBoxes />}
-          note="En catálogo"
-        />
-        <DashboardCard
-          title="Clientes Activos"
-          value={clientCount}
-          icon={<FaUsers />}
-          note="Registrados"
-        />
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <DashboardCard
+            title="Ventas del Mes"
+            value={`$${totalSales.toLocaleString("es-AR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
+            icon={<FaCashRegister />}
+            note={currentMonth}
+          />
+          <DashboardCard
+            title="Pedidos Totales"
+            value={totalOrders}
+            icon={<FaDolly />}
+            note="Históricos"
+          />
+          <DashboardCard
+            title="Productos Activos"
+            value={productCount}
+            icon={<FaBoxes />}
+            note="En catálogo"
+          />
+          <DashboardCard
+            title="Clientes Activos"
+            value={clientCount}
+            icon={<FaUsers />}
+            note="Registrados"
+          />
+        </div>
       </div>
 
+      {/* Acciones Rápidas */}
+      <QuickActionsHeader />
+
       {/* Balance: Ventas Local vs Reparto */}
-      <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-purple-950/30 dark:via-blue-950/30 dark:to-cyan-950/30 p-6 rounded-xl shadow-lg border-2 border-purple-200 dark:border-purple-900">
+      <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-purple-950/30 dark:via-blue-950/30 dark:to-cyan-950/30 p-6 rounded-2xl shadow-lg border border-purple-200 dark:border-purple-900">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
             <FaBalanceScale className="text-white text-xl" />
@@ -411,7 +472,7 @@ export default async function DashboardPage() {
 
         {/* Indicador de dominancia */}
         {totalSales + totalOrderSales > 0 && (
-          <div className="mt-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-purple-200 dark:border-purple-900">
+          <div className="mt-4 p-4 bg-white dark:bg-slate-900 rounded-xl border border-purple-200 dark:border-purple-900">
             <p className="text-sm text-gray-700 dark:text-slate-300">
               <span className="font-bold">
                 {totalSales > totalOrderSales ? (
@@ -441,7 +502,7 @@ export default async function DashboardPage() {
 
       {/* Tarjeta de Cuenta Corriente */}
       {totalDebt > 0 && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 p-6 rounded-lg shadow-sm border-2 border-orange-200 dark:border-orange-900">
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 p-6 rounded-2xl shadow-sm border border-orange-200 dark:border-orange-900">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
@@ -465,7 +526,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/dashboard/clientes?filter=with_debt"
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-medium text-sm transition-colors flex items-center gap-2"
             >
               Ver Clientes <FaArrowRight />
             </Link>
@@ -476,11 +537,21 @@ export default async function DashboardPage() {
       {/* Grid de información */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pedidos Pendientes */}
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-          <div className="p-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
-              Pedidos Pendientes
-            </h2>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+          <div className="p-4 border-b border-orange-100 dark:border-orange-900/40 bg-gradient-to-r from-orange-50 to-white dark:from-orange-950/30 dark:to-slate-900 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center">
+                <FaDolly />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100">
+                  Pedidos Pendientes
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Seguimiento del reparto
+                </p>
+              </div>
+            </div>
             {pendingOrders.length > 0 && (
               <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-semibold px-2 py-1 rounded-full">
                 {pendingOrders.length}
@@ -516,7 +587,7 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <div className="text-center text-gray-400 py-8">
+              <div className="text-center text-gray-400 py-8 rounded-xl bg-orange-50/40 dark:bg-orange-950/20">
                 <p className="text-sm">No hay pedidos pendientes</p>
               </div>
             )}
@@ -524,11 +595,21 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stock Crítico */}
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-          <div className="p-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
-              Stock Crítico
-            </h2>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+          <div className="p-4 border-b border-red-100 dark:border-red-900/40 bg-gradient-to-r from-red-50 to-white dark:from-red-950/30 dark:to-slate-900 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 text-white flex items-center justify-center">
+                <FaBoxes />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100">
+                  Stock Crítico
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Productos por reponer
+                </p>
+              </div>
+            </div>
             {criticalStockProducts.length > 0 && (
               <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold px-2 py-1 rounded-full">
                 {criticalStockProducts.length}
@@ -560,7 +641,7 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <div className="text-center text-gray-400 py-8">
+              <div className="text-center text-gray-400 py-8 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20">
                 <p className="text-sm">Stock en buen estado</p>
               </div>
             )}
@@ -568,11 +649,21 @@ export default async function DashboardPage() {
         </div>
 
         {/* Últimas Ventas */}
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-          <div className="p-4 border-b border-gray-100 dark:border-slate-700">
-            <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
-              Últimas Ventas
-            </h2>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+          <div className="p-4 border-b border-blue-100 dark:border-blue-900/40 bg-gradient-to-r from-blue-50 to-white dark:from-blue-950/30 dark:to-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center">
+                <FaCashRegister />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100">
+                  Últimas Ventas
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Movimientos recientes
+                </p>
+              </div>
+            </div>
           </div>
           <div className="p-4">
             {recentSales.length > 0 ? (
@@ -609,7 +700,7 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <div className="text-center text-gray-400 py-8">
+              <div className="text-center text-gray-400 py-8 rounded-xl bg-blue-50/40 dark:bg-blue-950/20">
                 <p className="text-sm">No hay ventas recientes</p>
               </div>
             )}

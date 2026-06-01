@@ -113,141 +113,187 @@ export default function SuppliersPage() {
   }, [suppliers, searchTerm, debtFilter]);
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent flex items-center gap-3">
-            <FaTruck className="text-orange-600" /> Gestión de Proveedores
-          </h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-1">
-            Administra tus proveedores y compras
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 w-full lg:w-auto">
-          <button
-            onClick={() => setAreActionsOpen((prev) => !prev)}
-            className="lg:hidden w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm flex items-center justify-between text-gray-700 dark:text-slate-200 font-semibold"
-          >
-            Acciones
-            {areActionsOpen ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
-          <div
-            className={`${areActionsOpen ? "grid" : "hidden"} grid-cols-2 gap-2 lg:flex lg:gap-2`}
-          >
-            <Link
-              href="/dashboard/compras/nueva"
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaShoppingCart /> Registrar Compra
-            </Link>
-            <Link
-              href="/dashboard/compras/generar"
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaShoppingCart /> Generar Orden
-            </Link>
-            <Link
-              href="/dashboard/proveedores/nuevo"
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <FaPlus /> Agregar Proveedor
-            </Link>
+    <div className="p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* HEADER AREA */}
+        <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-6 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+          
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0">
+              <FaTruck className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                Gestión de Proveedores
+              </h1>
+              <p className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                Administración operativa, compras y estados de cuentas corrientes
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* BÚSQUEDA Y FILTROS */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg mb-6 p-4 border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col lg:flex-row gap-3">
-          {/* Barra de búsqueda */}
-          <div className="flex-1 relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, contacto o teléfono..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-24 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
-            />
-            {searchTerm && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
-                  {filteredSuppliers.length}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Filtro de deuda */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <FaFilter className="text-gray-400 text-sm" />
-            <select
-              value={debtFilter}
-              onChange={(e) => setDebtFilter(e.target.value)}
-              aria-label="Filtrar por estado de deuda"
-              className="w-full sm:min-w-[180px] px-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
+          
+          <div className="flex flex-col gap-3 w-full lg:w-auto relative z-10">
+            <button
+              onClick={() => setAreActionsOpen((prev) => !prev)}
+              className="lg:hidden w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-between text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-wider transition-all"
             >
-              <option value="all">Todos</option>
-              <option value="with_debt">Con deudas</option>
-              <option value="no_debt">Sin deudas</option>
-              <option value="with_credit">Créditos a favor</option>
-            </select>
-            {(debtFilter === "with_debt" || debtFilter === "with_credit") && (
-              <div
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${debtFilter === "with_debt"
-                  ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 border-red-200 dark:border-red-900"
-                  : "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 border-green-200 dark:border-green-900"
-                  }`}
+              <span>Acciones Rápidas</span>
+              {areActionsOpen ? <FaChevronUp className="w-3.5 h-3.5" /> : <FaChevronDown className="w-3.5 h-3.5" />}
+            </button>
+            <div
+              className={`${areActionsOpen ? "grid" : "hidden"} lg:grid grid-cols-1 sm:grid-cols-3 gap-4`}
+            >
+              {/* Registrar Compra */}
+              <Link
+                href="/dashboard/compras/nueva"
+                className="group relative overflow-hidden rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-white dark:bg-slate-900 p-4 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
               >
-                <FaExclamationTriangle className="text-xs" />
-                <span className="text-xs font-semibold whitespace-nowrap">
-                  Filtrado activo
-                </span>
-              </div>
-            )}
+                <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-emerald-500/5 dark:bg-emerald-500/10 transition-transform group-hover:scale-125 duration-500" />
+                <div className="relative flex items-center gap-3.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <FaShoppingCart className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                      Registrar Compra
+                    </p>
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Ingreso de stock y facturación
+                    </p>
+                  </div>
+                </div>
+              </Link>
+              
+              {/* Generar Orden */}
+              <Link
+                href="/dashboard/proveedores/ordenes"
+                className="group relative overflow-hidden rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-white dark:bg-slate-900 p-4 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+              >
+                <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-indigo-500/5 dark:bg-indigo-500/10 transition-transform group-hover:scale-125 duration-500" />
+                <div className="relative flex items-center gap-3.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    <FaPlus className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
+                      Generar Orden
+                    </p>
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Crear orden de compra en PDF
+                    </p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Nuevo Proveedor */}
+              <Link
+                href="/dashboard/proveedores/nuevo"
+                className="group relative overflow-hidden rounded-2xl border border-orange-100 dark:border-orange-900/40 bg-white dark:bg-slate-900 p-4 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+              >
+                <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-orange-500/5 dark:bg-orange-500/10 transition-transform group-hover:scale-125 duration-500" />
+                <div className="relative flex items-center gap-3.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20">
+                    <FaPlus className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-orange-700 dark:text-orange-400 uppercase tracking-wider">
+                      Nuevo Proveedor
+                    </p>
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Alta rápida en base de datos
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* TABLA DE PROVEEDORES */}
-      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
+        {/* SEARCH AND FILTERS */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs">
+          <div className="flex flex-col lg:flex-row gap-4 items-center">
+            {/* Search */}
+            <div className="flex-1 w-full relative">
+              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, contacto o teléfono del proveedor..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-24 py-3 border-2 border-slate-200 dark:border-slate-700/80 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition-all text-sm font-semibold placeholder-slate-400"
+              />
+              {searchTerm && (
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                  <span className="text-xs font-extrabold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-full border border-orange-500/20">
+                    {filteredSuppliers.length} encontrados
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Filter */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+              <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-850 rounded-2xl px-3 py-2 bg-slate-50 dark:bg-slate-950">
+                <FaFilter className="text-slate-400 w-3.5 h-3.5" />
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">Filtro:</span>
+              </div>
+              <select
+                value={debtFilter}
+                onChange={(e) => setDebtFilter(e.target.value)}
+                aria-label="Filtrar por estado de deuda"
+                className="w-full lg:min-w-[200px] px-4 py-3 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition-all text-sm font-bold"
+              >
+                <option value="all">Ver Todos</option>
+                <option value="with_debt">Con Deudas</option>
+                <option value="no_debt">Sin Deudas</option>
+                <option value="with_credit">Créditos a Favor</option>
+              </select>
+              {(debtFilter === "with_debt" || debtFilter === "with_credit") && (
+                <div
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl border text-xs font-bold whitespace-nowrap ${
+                    debtFilter === "with_debt"
+                      ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  }`}
+                >
+                  <FaExclamationTriangle className="w-3.5 h-3.5" />
+                  <span>Filtrado Activo</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* SUPPLIERS TABLE (DESKTOP) */}
+        <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-xs overflow-hidden">
+          <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
+            <thead className="bg-slate-50/60 dark:bg-slate-900/60">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaBuilding /> Nombre
-                  </div>
+                <th className="px-6 py-4 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Proveedor
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaUserTie /> Contacto
-                  </div>
+                <th className="px-6 py-4 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Contacto
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaPhone /> Teléfono
-                  </div>
+                <th className="px-6 py-4 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Teléfono
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <FaDollarSign /> Deuda Actual
-                  </div>
+                <th className="px-6 py-4 text-left text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Estado de Cuenta
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider w-[200px]">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+            <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12">
+                  <td colSpan={5} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-                      <span className="text-gray-500 dark:text-slate-400 font-medium">
+                      <div className="animate-spin rounded-full h-10 w-10 border-2 border-orange-500 border-t-transparent"></div>
+                      <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
                         Cargando proveedores...
                       </span>
                     </div>
@@ -255,25 +301,25 @@ export default function SuppliersPage() {
                 </tr>
               ) : filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-3">
-                      <FaInbox className="text-6xl text-gray-300" />
-                      <span className="text-gray-500 dark:text-slate-400 font-medium">
+                  <td colSpan={5} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
+                      <FaInbox className="text-5xl text-slate-300 dark:text-slate-600 animate-bounce" />
+                      <span className="text-sm font-bold text-slate-600 dark:text-slate-300 mt-2">
                         {searchTerm
-                          ? "No se encontraron proveedores con ese criterio"
+                          ? "No se encontraron proveedores"
                           : "No hay proveedores registrados"}
                       </span>
-                      {searchTerm && (
-                        <span className="text-gray-400 text-sm">
-                          Intenta con otro término de búsqueda
-                        </span>
-                      )}
+                      <p className="text-xs text-slate-450 dark:text-slate-400 text-center">
+                        {searchTerm
+                          ? "Prueba modificando los filtros de búsqueda o el tipo de cuenta corriente."
+                          : "Comienza dando de alta un nuevo proveedor para poder registrar compras."}
+                      </p>
                       {!searchTerm && suppliers.length === 0 && (
                         <Link
                           href="/dashboard/proveedores/nuevo"
-                          className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium flex items-center gap-2"
+                          className="mt-3 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md text-xs font-black uppercase tracking-wider"
                         >
-                          <FaPlus /> Agregar primer proveedor
+                          Agregar Proveedor
                         </Link>
                       )}
                     </div>
@@ -285,63 +331,62 @@ export default function SuppliersPage() {
                   return (
                     <tr
                       key={supplier.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${debt > 0
-                        ? "bg-red-50/30 dark:bg-red-950/20 border-l-4 border-red-400"
-                        : debt < 0
-                          ? "bg-green-50/30 dark:bg-green-950/20 border-l-4 border-green-400"
-                          : ""
-                        }`}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Link
                           href={`/dashboard/proveedores/${supplier.id}`}
-                          className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-2"
+                          className="flex items-center gap-3.5 group"
                         >
-                          <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-150 dark:border-slate-750 flex items-center justify-center text-slate-700 dark:text-slate-250 font-black text-base shadow-2xs group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-all duration-300 shrink-0">
                             {supplier.name?.charAt(0).toUpperCase()}
                           </div>
-                          {supplier.name}
+                          <div>
+                            <span className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              {supplier.name}
+                            </span>
+                            <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-0.5 tracking-wider">
+                              {supplier.cuit ? `CUIT: ${supplier.cuit}` : "Sin CUIT registrado"}
+                            </span>
+                          </div>
                         </Link>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <FaUser className="text-gray-400" />
-                          {supplier.contact_person || "—"}
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {supplier.contact_person || (
+                          <span className="text-slate-405 dark:text-slate-500 italic font-medium">Sin contacto</span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <FaPhone className="text-gray-400" />
-                          {supplier.phone || "—"}
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-400 font-mono">
+                        {supplier.phone || (
+                          <span className="text-slate-405 dark:text-slate-500 italic font-sans">Sin teléfono</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {debt > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-2 border-red-400">
-                              <FaExclamationTriangle />
-                              Deuda: {formatCurrency(debt)}
-                            </span>
-                          </div>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse"></span>
+                            Debe: {formatCurrency(debt)}
+                          </span>
                         ) : debt < 0 ? (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-2 border-green-400">
-                              <FaDollarSign />A favor: {formatCurrency(Math.abs(debt))}
-                            </span>
-                          </div>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
+                            A favor: {formatCurrency(Math.abs(debt))}
+                          </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-sm font-bold text-gray-600 dark:text-slate-300">
-                            <FaDollarSign />
-                            {formatCurrency(0)}
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-450 border border-slate-200/50 dark:border-slate-800/80">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-350 dark:bg-slate-600"></span>
+                            Al día: {formatCurrency(0)}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <SupplierActions
-                          supplierId={supplier.id}
-                          onUpdate={fetchSuppliers}
-                          userRole={userRole}
-                        />
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end">
+                          <SupplierActions
+                            supplierId={supplier.id}
+                            onUpdate={fetchSuppliers}
+                            userRole={userRole}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -350,82 +395,103 @@ export default function SuppliersPage() {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* TARJETAS DE PROVEEDORES (Mobile) */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="text-center py-10 text-gray-500 dark:text-slate-400">
-            Cargando proveedores...
-          </div>
-        ) : filteredSuppliers.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
-            {searchTerm
-              ? "No se encontraron proveedores con ese criterio"
-              : "No hay proveedores registrados"}
-          </div>
-        ) : (
-          filteredSuppliers.map((supplier) => {
-            const debt = supplier.debt || 0;
-            return (
-              <div
-                key={supplier.id}
-                className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border border-gray-100"
-              >
-                <div className="flex justify-between items-start gap-3 mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+        {/* MOBILE CARDS VIEW */}
+        <div className="md:hidden space-y-4">
+          {loading ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-10 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mx-auto"></div>
+              <span className="text-xs font-bold text-slate-500 mt-2 block">
+                Cargando proveedores...
+              </span>
+            </div>
+          ) : filteredSuppliers.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-10 text-center space-y-3">
+              <FaInbox className="text-4xl text-slate-300 dark:text-slate-600 mx-auto" />
+              <p className="text-xs font-bold text-slate-500">No se encontraron resultados.</p>
+            </div>
+          ) : (
+            filteredSuppliers.map((supplier) => {
+              const debt = supplier.debt || 0;
+              return (
+                <div
+                  key={supplier.id}
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-150 dark:border-slate-800/80 p-5 shadow-2xs space-y-4"
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <Link
+                      href={`/dashboard/proveedores/${supplier.id}`}
+                      className="flex items-center gap-3 flex-1 group"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-slate-55 dark:bg-slate-800/85 border border-slate-150 dark:border-slate-750 flex items-center justify-center text-slate-705 dark:text-slate-250 font-black text-sm shrink-0">
                         {supplier.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-slate-50">
+                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-650 transition-colors">
                           {supplier.name}
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">
-                          {supplier.contact_person || "Sin contacto"}
-                        </p>
+                        </h4>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5">
+                          {supplier.cuit ? `CUIT: ${supplier.cuit}` : "Sin CUIT registrado"}
+                        </span>
                       </div>
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 dark:bg-slate-955/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Contacto</span>
+                      <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 truncate block mt-0.5">
+                        {supplier.contact_person || (
+                          <span className="text-slate-400 dark:text-slate-500 font-medium italic">Sin contacto</span>
+                        )}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Teléfono</span>
+                      <span className="text-xs font-extrabold text-slate-700 dark:text-slate-350 truncate block mt-0.5 font-mono">
+                        {supplier.phone || (
+                          <span className="text-slate-400 dark:text-slate-550 font-medium italic font-sans">Sin teléfono</span>
+                        )}
+                      </span>
                     </div>
                   </div>
-                  <SupplierActions
-                    supplierId={supplier.id}
-                    onUpdate={fetchSuppliers}
-                    userRole={userRole}
-                  />
-                </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-300 mb-2">
-                  <FaPhone className="text-gray-400" />
-                  {supplier.phone || "—"}
-                </div>
+                  <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-850">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Saldo Actual</span>
+                      <div className="mt-1">
+                        {debt > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <span className="w-1 h-1 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse"></span>
+                            Debe: {formatCurrency(debt)}
+                          </span>
+                        ) : debt < 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="w-1 h-1 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
+                            A favor: {formatCurrency(Math.abs(debt))}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800/80">
+                            <span className="w-1 h-1 rounded-full bg-slate-350 dark:bg-slate-600"></span>
+                            Al día: {formatCurrency(0)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  {debt > 0 ? (
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300">
-                      <FaExclamationTriangle /> Deuda: {formatCurrency(debt)}
-                    </span>
-                  ) : debt < 0 ? (
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300">
-                      <FaDollarSign /> A favor: {formatCurrency(Math.abs(debt))}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 dark:text-slate-300">
-                      <FaDollarSign /> {formatCurrency(0)}
-                    </span>
-                  )}
-
-                  <Link
-                    href={`/dashboard/proveedores/${supplier.id}`}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800"
-                  >
-                    Ver detalle
-                  </Link>
+                    <div className="shrink-0 scale-95 origin-right">
+                      <SupplierActions
+                        supplierId={supplier.id}
+                        onUpdate={fetchSuppliers}
+                        userRole={userRole}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

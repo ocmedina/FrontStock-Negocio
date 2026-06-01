@@ -8,15 +8,20 @@ import {
   FaReceipt,
   FaArrowLeft,
   FaMapMarkerAlt,
-} from "react-icons/fa"; // Importa el ícono de dirección
+  FaUser,
+  FaPhone,
+  FaEnvelope,
+  FaCalendarAlt,
+  FaExclamationTriangle,
+  FaShoppingCart,
+  FaFileInvoiceDollar,
+} from "react-icons/fa";
 import RegisterPayment from "@/components/payments/RegisterPayment";
 import PaymentHistoryList from "@/components/payments/PaymentHistoryList";
 import ExportCustomerMovementsButton from "@/components/exports/ExportCustomerMovementsButton";
 
-// Desactivar cache de Next.js
 export const dynamic = "force-dynamic";
 
-// Usamos los tipos generados de Supabase en lugar de manuales
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 type PaymentHistoryEntry = {
   id: number | string;
@@ -39,10 +44,8 @@ const PAYMENTS_SELECT_BASE =
 
 function isMissingSaleIdColumnError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
-
   const message = String((error as { message?: string }).message || "").toLowerCase();
   const details = String((error as { details?: string }).details || "").toLowerCase();
-
   return message.includes("sale_id") || details.includes("sale_id");
 }
 
@@ -191,20 +194,17 @@ function buildSyntheticMovements(
   return synthetic;
 }
 
-// Esta es la forma estándar de definir props en una página dinámica de Next.js
 interface CustomerDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function CustomerDetailPage(
-  props: CustomerDetailPageProps
-) {
+export default async function CustomerDetailPage(props: CustomerDetailPageProps) {
   const params = await props.params;
   const normalizedId = decodeURIComponent(params.id).trim();
   const supabase = await createClient();
   const adminClient = createLooseAdminClient();
 
-  // Obtenemos los datos del cliente
+  // Fetch Customer Row
   const { data: customerData } = await supabase
     .from("customers")
     .select("*")
@@ -223,7 +223,29 @@ export default async function CustomerDetailPage(
       ).data as CustomerRow | null
     );
 
-  // Obtenemos movimientos base (payments); hay fallback si la DB aun no tiene sale_id.
+  if (!customer) {
+    return (
+      <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 text-center space-y-4 max-w-sm">
+          <FaExclamationTriangle className="text-4xl text-rose-500 mx-auto" />
+          <h1 className="text-base font-bold text-gray-900 dark:text-slate-100">
+            Cliente no encontrado
+          </h1>
+          <p className="text-xs text-slate-500">
+            No pudimos ubicar la ficha del cliente solicitado en la base de datos.
+          </p>
+          <Link
+            href="/dashboard/clientes"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border transition-colors"
+          >
+            <FaArrowLeft /> Volver al listado
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Fetch payments
   const primaryPayments = await fetchPaymentRows(supabase, normalizedId);
   let basePayments: PaymentHistoryRaw[] = primaryPayments.rows;
 
@@ -234,6 +256,7 @@ export default async function CustomerDetailPage(
     }
   }
 
+  // Fetch orders
   const { data: ordersHistoryData, error: ordersHistoryError } = await supabase
     .from("orders")
     .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
@@ -252,6 +275,7 @@ export default async function CustomerDetailPage(
       ).data as OrderHistoryRow[] | null)
     : (ordersHistoryData as unknown as OrderHistoryRow[] | null);
 
+  // Fetch sales
   const { data: salesHistoryData, error: salesHistoryError } = await supabase
     .from("sales")
     .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending, is_cancelled")
@@ -269,22 +293,6 @@ export default async function CustomerDetailPage(
           .order("created_at", { ascending: false })
       ).data as SaleHistoryRow[] | null)
     : (salesHistoryData as unknown as SaleHistoryRow[] | null);
-
-  if (!customer) {
-    return (
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-red-600">
-          Cliente no encontrado
-        </h1>
-        <Link
-          href="/dashboard/clientes"
-          className="text-blue-600 mt-4 inline-flex items-center gap-2 hover:underline"
-        >
-          <FaArrowLeft /> Volver al listado
-        </Link>
-      </div>
-    );
-  }
 
   const customerReference = (customer as any).reference as string | null;
 
@@ -322,177 +330,204 @@ export default async function CustomerDetailPage(
     ...basePayments,
     ...syntheticMovements,
   ].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-md">
-        <Link
-          href="/dashboard/clientes"
-          className="text-blue-600 mb-4 inline-flex items-center gap-2 hover:underline text-sm"
-        >
-          <FaArrowLeft /> Volver a clientes
-        </Link>
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+      <div className="max-w-[1250px] mx-auto space-y-6">
+        
+        {/* BOTÓN VOLVER */}
+        <div>
+          <Link
+            href="/dashboard/clientes"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-750 dark:text-indigo-400 transition-colors"
+          >
+            <FaArrowLeft /> Volver a Clientes
+          </Link>
+        </div>
 
-        <div className="flex justify-between items-start mt-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-100">
-              {customer.full_name}
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400 capitalize mt-1">
-              Tipo: {customer.customer_type}
-            </p>
-            {customer.email && (
-              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                <span className="text-gray-400">📧</span> {customer.email}
-              </p>
-            )}
-            {customer.phone && (
-              <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-2">
-                <span className="text-gray-400">📱</span> {customer.phone}
-              </p>
-            )}
-            {customer.address && (
-              <div className="mt-2 p-3 bg-gray-50 dark:bg-slate-950 rounded-lg border border-gray-200 dark:border-slate-700">
-                <p className="text-sm text-gray-700 dark:text-slate-200 flex items-center gap-2 font-medium">
-                  <FaMapMarkerAlt className="text-blue-500" />
-                  <span>Dirección:</span>
-                </p>
-                <p className="text-sm text-gray-600 dark:text-slate-300 ml-6 mt-1">
-                  {customer.address}
-                </p>
-                {customerReference && (
-                  <p className="text-xs text-gray-500 dark:text-slate-400 ml-6 mt-1 italic">
-                    Ref: {customerReference}
-                  </p>
-                )}
+        {/* DETALLE PRINCIPAL DEL CLIENTE */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-full flex items-center justify-center font-black text-base border border-indigo-100/50 dark:border-indigo-900/30">
+                {customer.full_name?.charAt(0).toUpperCase()}
               </div>
-            )}
+              <div>
+                <h1 className="text-xl font-black text-gray-900 dark:text-slate-50">
+                  {customer.full_name}
+                </h1>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-3xs font-extrabold border mt-1 ${
+                    customer.customer_type === "mayorista"
+                      ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/10 dark:text-purple-400 dark:border-purple-900/50"
+                      : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/10 dark:text-blue-400 dark:border-blue-900/50"
+                  }`}
+                >
+                  {customer.customer_type === "mayorista" ? "Categoría: Mayorista" : "Categoría: Minorista"}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 text-xs text-slate-600 dark:text-slate-300">
+              {customer.email && (
+                <div className="flex items-center gap-2">
+                  <FaEnvelope className="text-slate-400 w-3.5 h-3.5" />
+                  <span>{customer.email}</span>
+                </div>
+              )}
+              {customer.phone && (
+                <div className="flex items-center gap-2">
+                  <FaPhone className="text-slate-400 w-3.5 h-3.5" />
+                  <span>{customer.phone}</span>
+                </div>
+              )}
+              {customer.address && (
+                <div className="flex items-start gap-2">
+                  <FaMapMarkerAlt className="text-slate-400 w-3.5 h-3.5 mt-0.5" />
+                  <div>
+                    <span>{customer.address}</span>
+                    {customerReference && (
+                      <span className="block text-[10px] text-slate-450 italic mt-0.5">Ref: {customerReference}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="text-right bg-gray-50 dark:bg-slate-950 px-6 py-4 rounded-lg border-2 border-gray-200 dark:border-slate-700">
-            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium uppercase">
-              Deuda Pendiente
-            </p>
-            <p
-              className={`text-4xl font-bold mt-2 ${currentDebt > 0 ? "text-red-600" : "text-green-600"
-                }`}
+
+          {/* DEUDA ACUMULADA */}
+          <div className="bg-slate-50/60 dark:bg-slate-950/20 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-center min-w-[220px] w-full md:w-auto">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Saldo Pendiente Cuenta</span>
+            <span
+              className={`text-2xl font-black mt-1 block ${
+                currentDebt > 0 ? "text-rose-600" : "text-emerald-600"
+              }`}
             >
               {formatCurrency(currentDebt)}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {currentDebt > 0
-                ? "Pedidos y ventas pendientes"
-                : "Sin deuda pendiente"}
-            </p>
+            </span>
+            <span className="text-3xs text-slate-450 dark:text-slate-500 block mt-1">
+              {currentDebt > 0 ? "Posee facturación o pedidos impagos" : "Cuenta corriente al día"}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Solo mostramos el formulario de pago si el cliente debe dinero */}
-      {currentDebt > 0 && (
-        <RegisterPayment customerId={customer.id} currentDebt={currentDebt} />
-      )}
+        {/* REGISTRAR COBRO (Solo si debe) */}
+        {currentDebt > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <FaMoneyBillWave className="text-emerald-500" /> Registrar Entrega de Pago
+            </h2>
+            <RegisterPayment customerId={customer.id} currentDebt={currentDebt} />
+          </div>
+        )}
 
-      {/* Pedidos y Ventas con saldo pendiente */}
-      {currentDebt > 0 && (ordersData?.length || salesData?.length) && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span className="text-orange-600">📋</span> Fiados Pendientes
-          </h2>
+        {/* PEDIDOS / VENTAS FIADAS (Solo si debe) */}
+        {currentDebt > 0 && (ordersData?.length > 0 || salesData?.length > 0) && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <FaExclamationTriangle className="text-amber-500" /> Comprobantes con Saldo Pendiente
+            </h2>
 
-          <div className="space-y-4">
-            {/* Pedidos Fiados */}
-            {ordersData && ordersData.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-600 dark:text-slate-300 uppercase mb-2">
-                  Pedidos
-                </h3>
-                <div className="space-y-2">
-                  {ordersData
-                    .filter((order: any) => (order.amount_pending || 0) > 0)
-                    .map((order: any) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Pedidos con Deuda */}
+              {ordersData && ordersData.length > 0 && (
+                <div className="space-y-2.5">
+                  <span className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block flex items-center gap-1">
+                    <FaShoppingCart className="text-amber-550 w-3 h-3" /> Pedidos Pendientes
+                  </span>
+                  
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                    {ordersData.map((order: any) => (
                       <div
                         key={order.id}
-                        className="flex justify-between items-center p-4 border-2 border-orange-200 bg-orange-50 rounded-lg"
+                        className="bg-amber-50/30 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/30 rounded-xl p-3.5 flex justify-between items-center text-xs"
                       >
                         <div>
-                          <p className="font-semibold text-gray-800 dark:text-slate-100">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
                             Pedido #{order.id?.substring(0, 8)}
-                          </p>
+                          </span>
+                          <span className="text-3xs text-slate-500 block mt-0.5">
+                            Fecha: {new Date(order.created_at).toLocaleDateString("es-AR")}
+                          </span>
                           <Link
                             href={`/dashboard/pedidos/${order.id}`}
-                            className="text-sm text-blue-600 hover:underline"
+                            className="text-3xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline block mt-1.5"
                           >
-                            Ver detalles →
+                            Ver Detalles Pedido →
                           </Link>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-gray-600 dark:text-slate-300">
-                            Saldo Pendiente
-                          </p>
-                          <p className="text-2xl font-bold text-orange-600">
+                          <span className="text-[10px] text-slate-500 block">Saldo</span>
+                          <span className="font-extrabold text-amber-600 block mt-0.5">
                             {formatCurrency(order.amount_pending)}
-                          </p>
+                          </span>
                         </div>
                       </div>
                     ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Ventas en Cuenta Corriente */}
-            {salesData && salesData.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-600 dark:text-slate-300 uppercase mb-2">
-                  Ventas
-                </h3>
-                <div className="space-y-2">
-                  {salesData
-                    .filter((sale: any) => (sale.amount_pending || 0) > 0)
-                    .map((sale: any) => (
+              {/* Ventas con Deuda */}
+              {salesData && salesData.length > 0 && (
+                <div className="space-y-2.5">
+                  <span className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block flex items-center gap-1">
+                    <FaFileInvoiceDollar className="text-rose-550 w-3 h-3" /> Cuenta Corriente (Ventas)
+                  </span>
+
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                    {salesData.map((sale: any) => (
                       <div
                         key={sale.id}
-                        className="flex justify-between items-center p-4 border-2 border-red-200 bg-red-50 rounded-lg"
+                        className="bg-rose-50/30 dark:bg-rose-950/10 border border-rose-100/50 dark:border-rose-900/30 rounded-xl p-3.5 flex justify-between items-center text-xs"
                       >
                         <div>
-                          <p className="font-semibold text-gray-800 dark:text-slate-100">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
                             Venta #{sale.id?.substring(0, 8)}
-                          </p>
+                          </span>
+                          <span className="text-3xs text-slate-500 block mt-0.5">
+                            Fecha: {new Date(sale.created_at).toLocaleDateString("es-AR")}
+                          </span>
                           <Link
                             href={`/dashboard/ventas/${sale.id}`}
-                            className="text-sm text-blue-600 hover:underline"
+                            className="text-3xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline block mt-1.5"
                           >
-                            Ver detalles →
+                            Ver Comprobante Venta →
                           </Link>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-gray-600 dark:text-slate-300">
-                            Saldo Pendiente
-                          </p>
-                          <p className="text-2xl font-bold text-red-600">
+                          <span className="text-[10px] text-slate-500 block">Saldo</span>
+                          <span className="font-extrabold text-rose-600 block mt-0.5">
                             {formatCurrency(sale.amount_pending)}
-                          </p>
+                          </span>
                         </div>
                       </div>
                     ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
 
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-md">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-          <h2 className="text-xl font-bold">Historial de Movimientos</h2>
-          <ExportCustomerMovementsButton
-            customerName={customer.full_name}
-            payments={historyMovements}
-          />
+            </div>
+          </div>
+        )}
+
+        {/* HISTORIAL COMPLETO DE MOVIMIENTOS */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+              <FaCalendarAlt className="text-indigo-500" /> Historial de Movimientos de Cuenta
+            </h2>
+            <ExportCustomerMovementsButton
+              customerName={customer.full_name}
+              payments={historyMovements}
+            />
+          </div>
+          <PaymentHistoryList initialPayments={historyMovements} />
         </div>
-        <PaymentHistoryList initialPayments={historyMovements} />
+
       </div>
     </div>
   );

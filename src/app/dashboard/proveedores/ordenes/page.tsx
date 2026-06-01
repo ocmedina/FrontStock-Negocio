@@ -272,86 +272,135 @@ export default function PurchaseOrdersPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                      Número
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                      Proveedor
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                      Total
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
-                  {filteredOrders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-mono font-bold text-blue-600">
-                          {order.order_number}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-slate-50">
-                          {order.brands?.name || "Sin proveedor"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(order.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <span className="text-sm font-bold text-gray-900 dark:text-slate-50">
-                          ${order.total_amount.toLocaleString("es-AR")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600 dark:text-slate-300">
-                          {new Date(order.created_at).toLocaleDateString(
-                            "es-AR"
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Link
-                            href={`/dashboard/proveedores/ordenes/${order.id}`}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Ver detalles"
-                          >
-                            <FaEye />
-                          </Link>
-                          {order.status === "draft" && (
-                            <Link
-                              href={`/dashboard/proveedores/ordenes/${order.id}/editar`}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Editar"
-                            >
-                              <FaEdit />
-                            </Link>
-                          )}
-                        </div>
-                      </td>
+            <>
+              {/* Desktop view */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                        Número
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                        Proveedor
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                        Total
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                        Fecha
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                        Acciones
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                    {filteredOrders.map((order) => (
+                      <tr
+                        key={order.id}
+                        className="hover:bg-gray-55 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-mono font-bold text-blue-600">
+                            {order.order_number}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-slate-50">
+                            {order.brands?.name || "Sin proveedor"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(order.status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className="text-sm font-bold text-gray-900 dark:text-slate-50">
+                            ${order.total_amount.toLocaleString("es-AR")}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-600 dark:text-slate-300">
+                            {new Date(order.created_at).toLocaleDateString(
+                              "es-AR"
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Link
+                              href={`/dashboard/proveedores/ordenes/${order.id}`}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Ver detalles"
+                            >
+                              <FaEye />
+                            </Link>
+                            {order.status === "draft" && (
+                              <Link
+                                href={`/dashboard/proveedores/ordenes/${order.id}/editar`}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Editar"
+                              >
+                                <FaEdit />
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile card view */}
+              <div className="md:hidden divide-y divide-gray-150 dark:divide-slate-800">
+                {filteredOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="p-4 space-y-3 bg-white dark:bg-slate-900 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
+                        {order.order_number}
+                      </span>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-slate-50">
+                        {order.brands?.name || "Sin proveedor"}
+                      </h4>
+                      <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5">
+                        Fecha: {new Date(order.created_at).toLocaleDateString("es-AR")}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center pt-2.5">
+                      <span className="text-sm font-bold text-gray-900 dark:text-slate-50">
+                        ${order.total_amount.toLocaleString("es-AR")}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/dashboard/proveedores/ordenes/${order.id}`}
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-all"
+                        >
+                          <FaEye className="w-3 h-3" /> Ver
+                        </Link>
+                        {order.status === "draft" && (
+                          <Link
+                            href={`/dashboard/proveedores/ordenes/${order.id}/editar`}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-slate-800 rounded-lg transition-all"
+                          >
+                            <FaEdit className="w-3 h-3" /> Editar
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

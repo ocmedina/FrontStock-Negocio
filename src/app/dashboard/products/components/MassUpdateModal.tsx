@@ -89,7 +89,6 @@ export default function MassUpdateModal({
     }
   }, [isOpen]);
 
-  // Calcular productos afectados cuando cambian los filtros
   useEffect(() => {
     if (isOpen) {
       calculateAffectedProducts();
@@ -107,7 +106,6 @@ export default function MassUpdateModal({
     const toastId = toast.loading("Actualizando precios...");
 
     try {
-      // 1. Obtener productos a actualizar
       let query = supabase
         .from("products")
         .select("id, price_minorista, price_mayorista")
@@ -125,12 +123,7 @@ export default function MassUpdateModal({
         return;
       }
 
-      // 2. Calcular nuevos precios y actualizar
       const factor = 1 + parseFloat(percentage) / 100;
-
-      // Supabase no soporta update masivo con valores calculados diferentes por fila fácilmente en una query simple
-      // sin usar funciones RPC. Haremos un loop o promesas paralelas.
-      // Para < 1000 productos, promesas paralelas está bien.
 
       const updates = productsToUpdate.map((product) => {
         const updates: any = {};
@@ -167,30 +160,32 @@ export default function MassUpdateModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slideUp">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-100 dark:border-slate-800">
+        
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <FaPercentage /> Actualización Masiva de Precios
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-850 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/20">
+          <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <FaPercentage className="text-indigo-600" /> Ajustar Precios por Lote
           </h2>
           <button
             onClick={onClose}
-            className="text-white/80 hover:text-white transition-colors"
+            className="text-slate-400 hover:text-slate-650 dark:hover:text-white transition-colors"
           >
-            <FaTimes size={24} />
+            <FaTimes className="w-4 h-4" />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-            <div className="flex items-start gap-3">
-              <FaExclamationTriangle className="text-yellow-600 mt-1" />
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          
+          {/* Warning */}
+          <div className="bg-amber-50/60 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/40 p-4 rounded-xl">
+            <div className="flex items-start gap-2.5">
+              <FaExclamationTriangle className="text-amber-550 mt-0.5 w-4 h-4 flex-shrink-0" />
               <div>
-                <p className="text-sm text-yellow-800 font-bold">¡Atención!</p>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Esta acción modificará los precios permanentemente. Asegúrese
-                  de filtrar correctamente.
+                <p className="text-xs text-amber-800 dark:text-amber-400 font-bold">¡Atención!</p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-500 mt-1 leading-relaxed">
+                  Esta acción modificará los precios permanentemente en la base de datos para todos los productos que cumplan las condiciones. Asegúrese de aplicar los filtros correctos antes de continuar.
                 </p>
               </div>
             </div>
@@ -199,22 +194,15 @@ export default function MassUpdateModal({
           <div className="grid grid-cols-2 gap-4">
             {/* Filtro Marca/Proveedor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
                 Marca / Proveedor
               </label>
               <select
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 text-slate-750 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">Todas las marcas</option>
-                {/* Usamos la lista de proveedores como marcas por ahora, o deberíamos cargar marcas reales */}
-                {/* En el código original se cargaban 'suppliers' pero se usaban como marcas en algunos contextos? */}
-                {/* Vamos a cargar 'brands' mejor si existen, pero el usuario pidió Proveedor. */}
-                {/* Asumiremos que suppliers se mapean a brands o viceversa. */}
-                {/* Por ahora mostramos lo que cargamos en fetchFilters (suppliers) pero lo usamos como brand_id */}
-                {/* Esto es un riesgo, pero necesario sin schema claro. */}
-                {/* CORRECCIÓN: Usaré 'brands' en fetchFilters para ser consistente con database.types */}
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -225,13 +213,13 @@ export default function MassUpdateModal({
 
             {/* Filtro Categoría */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
                 Categoría
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 text-slate-750 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">Todas las categorías</option>
                 {categories.map((c) => (
@@ -246,19 +234,19 @@ export default function MassUpdateModal({
           <div className="grid grid-cols-2 gap-4">
             {/* Porcentaje */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
-                Porcentaje de Aumento
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
+                Porcentaje de Variación
               </label>
               <div className="relative">
                 <input
                   type="number"
                   value={percentage}
                   onChange={(e) => setPercentage(e.target.value)}
-                  className="w-full pl-4 pr-8 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg"
-                  placeholder="0"
+                  className="w-full pl-3.5 pr-7 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                  placeholder="Ej: 15 o -5"
                   step="0.01"
                 />
-                <span className="absolute right-3 top-3 text-gray-400 font-bold">
+                <span className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-slate-450 dark:text-slate-500 font-bold text-xs">
                   %
                 </span>
               </div>
@@ -266,13 +254,13 @@ export default function MassUpdateModal({
 
             {/* Tipo de Precio */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
-                Precio a Actualizar
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                Precios a Modificar
               </label>
               <select
                 value={priceType}
                 onChange={(e) => setPriceType(e.target.value as any)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 text-slate-750 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="both">Ambos Precios</option>
                 <option value="minorista">Solo Minorista</option>
@@ -282,36 +270,32 @@ export default function MassUpdateModal({
           </div>
 
           {/* Preview */}
-          <div className="bg-gray-50 dark:bg-slate-950 p-4 rounded-xl text-center">
-            <p className="text-sm text-gray-600 dark:text-slate-300">Productos afectados:</p>
-            <p className="text-3xl font-bold text-blue-600">
+          <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-xl border text-center">
+            <span className="text-[10px] font-bold text-slate-455 dark:text-slate-500 block uppercase tracking-wider">Productos a modificar</span>
+            <p className="text-2xl font-black text-indigo-600 mt-1">
               {previewCount !== null ? previewCount : "..."}
             </p>
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-slate-200 font-medium hover:bg-gray-200 dark:bg-slate-700 rounded-lg transition-colors"
+              className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || !percentage || previewCount === 0}
-              className={`px-6 py-2 text-white font-bold rounded-lg shadow-lg transition-all flex items-center gap-2 ${
-                loading || !percentage || previewCount === 0
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:shadow-xl transform hover:-translate-y-0.5"
-              }`}
+              className="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-755 disabled:bg-slate-150 disabled:text-slate-400 disabled:dark:bg-slate-805 text-white text-xs font-extrabold rounded-xl shadow-sm transition-colors"
             >
               {loading ? (
-                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
               ) : (
                 <>
-                  <FaSave /> Aplicar Aumento
+                  <FaSave className="w-3.5 h-3.5" /> Aplicar Variación
                 </>
               )}
             </button>

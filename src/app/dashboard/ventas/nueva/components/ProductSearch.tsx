@@ -174,7 +174,7 @@ export default function ProductSearch({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleInputKeyDown}
           placeholder="Buscar producto o escanear..."
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all text-lg"
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all text-base bg-white dark:bg-slate-900"
         />
         {isLoading && (
           <div className="absolute right-3 top-3">

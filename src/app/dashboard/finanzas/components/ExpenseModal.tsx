@@ -58,20 +58,28 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData, sav
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800">
-                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                        {initialData ? "Editar Gasto" : "Registrar Nuevo Gasto"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-250">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200/50 dark:border-slate-800/80">
+                
+                {/* Header */}
+                <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                        {initialData ? "Editar Gasto Operativo" : "Registrar Nuevo Gasto"}
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <FaTimes />
+                    <button 
+                        onClick={onClose} 
+                        className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors"
+                    >
+                        <FaTimes className="w-3.5 h-3.5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    
+                    {/* Descripcion */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                        <label className="block text-2xs font-extrabold text-slate-450 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                             Descripción
                         </label>
                         <input
@@ -79,37 +87,40 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData, sav
                             required
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-                            placeholder="Ej: Pago de Luz"
+                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-650 bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-semibold transition-all"
+                            placeholder="Ej: Pago de Luz y Gas sucursal"
                         />
                     </div>
 
+                    {/* Monto */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                            Monto
+                        <label className="block text-2xs font-extrabold text-slate-450 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                            Monto del Egreso
                         </label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2 text-gray-500">$</span>
+                            <span className="absolute left-4 top-3 text-slate-450 dark:text-slate-500 text-sm font-bold">$</span>
                             <input
                                 type="number"
                                 required
                                 min="0"
                                 step="0.01"
-                                value={formData.amount}
-                                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-                                className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                                value={formData.amount || ""}
+                                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                                className="w-full pl-8 pr-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-650 bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-black transition-all"
+                                placeholder="0"
                             />
                         </div>
                     </div>
 
+                    {/* Categoria */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                        <label className="block text-2xs font-extrabold text-slate-450 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                             Categoría
                         </label>
                         <select
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-650 bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-semibold transition-all"
                         >
                             {CATEGORIES.map((cat) => (
                                 <option key={cat} value={cat}>
@@ -119,33 +130,45 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData, sav
                         </select>
                     </div>
 
+                    {/* Fecha */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                            Fecha
+                        <label className="block text-2xs font-extrabold text-slate-450 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                            Fecha de Registro
                         </label>
                         <input
                             type="date"
                             required
                             value={formData.date}
                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-650 bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-semibold transition-all"
                         />
                     </div>
 
-                    <div className="pt-4 flex justify-end gap-3">
+                    {/* Actions */}
+                    <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800/80">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700"
+                            className="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30"
+                            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-500/10 transition-all hover:scale-[1.02]"
                         >
-                            {saving ? "Guardando..." : <><FaSave /> Guardar</>}
+                            {saving ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+                                    <span>Guardando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <FaSave />
+                                    <span>Guardar Gasto</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

@@ -1,9 +1,9 @@
-// src/app/dashboard/products/edit/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { Database } from "@/lib/database.types";
 import {
   FaBarcode,
@@ -11,25 +11,23 @@ import {
   FaDollarSign,
   FaCubes,
   FaSave,
-  FaTimes,
   FaEdit,
   FaStoreAlt,
   FaWarehouse,
   FaLayerGroup,
+  FaArrowLeft,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
-// Se eliminan los props de la función
 export default function EditProductPage() {
   const router = useRouter();
-  const params = useParams(); // <-- Se usa el hook para obtener los params
+  const params = useParams();
   const id = params.id as string;
 
   const [product, setProduct] = useState<Product | null>(null);
 
-  // Estados para cada campo del formulario
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
   const [costPrice, setCostPrice] = useState("");
@@ -70,7 +68,6 @@ export default function EditProductPage() {
 
       if (data) {
         setProduct(data);
-        // Llenamos los estados del formulario con los datos del producto
         setSku(data.sku);
         setName(data.name);
         setCostPrice(data.cost_price?.toString() || "");
@@ -99,7 +96,6 @@ export default function EditProductPage() {
     const loadingToast = toast.loading("Actualizando producto...");
 
     try {
-      // 1. Actualizar datos básicos (excluyendo stock si cambió)
       const currentStock = product?.stock || 0;
       const newStock = parseInt(stock, 10);
       const stockDiff = newStock - currentStock;
@@ -114,8 +110,6 @@ export default function EditProductPage() {
         category_id: selectedCategory ? parseInt(selectedCategory) : null,
       };
 
-      // Si el stock NO cambió, lo incluimos en el update normal para asegurarnos (aunque sea redundante)
-      // Si SÍ cambió, lo manejamos con el RPC
       if (stockDiff === 0) {
         updateData.stock = newStock;
       }
@@ -127,7 +121,6 @@ export default function EditProductPage() {
 
       if (updateError) throw updateError;
 
-      // 2. Si hubo cambio de stock, registrar el movimiento
       if (stockDiff !== 0) {
         const {
           data: { user },
@@ -162,93 +155,140 @@ export default function EditProductPage() {
 
   if (!product) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <span className="text-gray-500 dark:text-slate-400 font-medium">
-            Cargando producto...
-          </span>
+      <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <span className="text-3xs font-bold text-slate-400 uppercase tracking-wider">Cargando producto...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        {/* HEADER */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-            <FaEdit className="text-blue-600" /> Editar Producto
-          </h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-2">
-            Actualiza la información de:{" "}
-            <span className="font-semibold text-gray-800 dark:text-slate-100">{product.name}</span>
-          </p>
+    <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+      <div className="max-w-[850px] mx-auto space-y-6">
+        
+        {/* BOTÓN VOLVER */}
+        <div>
+          <Link
+            href="/dashboard/products"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-755 dark:text-indigo-400 transition-colors"
+          >
+            <FaArrowLeft /> Volver al Catálogo
+          </Link>
         </div>
 
-        {/* FORMULARIO */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* SECCIÓN: INFORMACIÓN BÁSICA */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <FaTag className="text-blue-600" /> Información Básica
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* SKU */}
-              <div>
-                <label
-                  htmlFor="sku"
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-                >
-                  <FaBarcode className="text-blue-500" /> SKU (Código)
-                </label>
-                <input
-                  type="text"
-                  id="sku"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  required
-                  placeholder="Ej: PROD-001"
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
-                />
-              </div>
+        {/* CABECERA */}
+        <div className="group relative overflow-hidden rounded-2xl border border-indigo-150 dark:border-indigo-900/40 bg-white dark:bg-slate-900 p-5 shadow-2xs flex items-center gap-4 text-left">
+          <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-indigo-50/50 dark:bg-indigo-950/20" />
+          <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-3xs flex-shrink-0 text-base">
+            <FaEdit />
+          </span>
+          <div className="relative">
+            <h1 className="text-lg font-black text-slate-900 dark:text-slate-50 leading-none">
+              Editar Producto
+            </h1>
+            <p className="text-xs text-slate-500 mt-2">
+              Editando la información de: <span className="font-bold text-slate-850 dark:text-slate-100">{product.name}</span>
+            </p>
+          </div>
+        </div>
 
-              {/* Nombre */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* SECCIÓN 1: IDENTIFICACIÓN Y DETALLES */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-3xs flex-shrink-0 text-sm">
+                <FaTag />
+              </span>
               <div>
-                <label
-                  htmlFor="name"
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-                >
-                  <FaTag className="text-green-500" /> Nombre del Producto
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="Ej: Alimento para perros 15kg"
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-350">
+                  Información del Producto
+                </h2>
+                <p className="text-[10px] text-slate-450 dark:text-slate-500 font-medium">
+                  Identificación general, SKU y código de barras
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nombre */}
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                  Nombre del Producto *
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="Ej: Alimento Balanceado Perros Adultos 15kg"
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* SKU */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                  SKU (Código) *
+                </label>
+                <input
+                  type="text"
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  required
+                  placeholder="Ej: ALIM-PERR-001"
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Código de barras read-only or customizable */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                  Código de Barras
+                </label>
+                <input
+                  type="text"
+                  value={product.barcode || "Sin registrar"}
+                  disabled
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono font-semibold bg-slate-100 dark:bg-slate-950/40 text-slate-450 dark:text-slate-500 cursor-not-allowed"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 2: CLASIFICACIÓN */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-3xs flex-shrink-0 text-sm">
+                <FaLayerGroup />
+              </span>
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-350">
+                  Clasificación y Filtros
+                </h2>
+                <p className="text-[10px] text-slate-450 dark:text-slate-500 font-medium">
+                  Asigna marcas y categorías para organizar el catálogo
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Marca */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
-                  <FaTag className="text-purple-500" /> Marca
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                  Marca
                 </label>
                 <select
                   value={selectedBrand}
                   onChange={(e) => setSelectedBrand(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950"
                 >
-                  <option value="">Seleccionar Marca</option>
-                  {brands.map((brand) => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.name}
+                  <option value="">Seleccionar Marca...</option>
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
                     </option>
                   ))}
                 </select>
@@ -256,18 +296,18 @@ export default function EditProductPage() {
 
               {/* Categoría */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
-                  <FaLayerGroup className="text-indigo-500" /> Categoría
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
+                  Categoría
                 </label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950"
                 >
-                  <option value="">Seleccionar Categoría</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+                  <option value="">Seleccionar Categoría...</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -275,138 +315,114 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* SECCIÓN: PRECIOS Y STOCK */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <FaDollarSign className="text-green-600" /> Precios y Stock
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* SECCIÓN 3: PRECIOS Y STOCK */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-3xs flex-shrink-0 text-sm">
+                <FaDollarSign />
+              </span>
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-350">
+                  Lista de Precios y Stock
+                </h2>
+                <p className="text-[10px] text-slate-450 dark:text-slate-500 font-medium">
+                  Costos de adquisición, precios de venta y control de stock
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {/* Costo */}
               <div>
-                <label
-                  htmlFor="costPrice"
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-                >
-                  <FaDollarSign className="text-gray-500" /> Costo
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                  Costo de Adquisición
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 font-bold">
-                    $
-                  </span>
+                  <span className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-450 dark:text-slate-500 font-bold text-xs">$</span>
                   <input
                     type="number"
-                    id="costPrice"
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value)}
                     step="0.01"
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full pl-7 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                  Costo de adquisición
-                </p>
               </div>
 
               {/* Precio Minorista */}
               <div>
-                <label
-                  htmlFor="priceMinorista"
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-                >
-                  <FaStoreAlt className="text-orange-500" /> Precio Minorista
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
+                  Precio Minorista *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 font-bold">
-                    $
-                  </span>
+                  <span className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-450 dark:text-slate-500 font-bold text-xs">$</span>
                   <input
                     type="number"
-                    id="priceMinorista"
                     value={priceMinorista}
                     onChange={(e) => setPriceMinorista(e.target.value)}
                     required
                     step="0.01"
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full pl-7 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                  Precio para clientes minoristas
-                </p>
               </div>
 
               {/* Precio Mayorista */}
               <div>
-                <label
-                  htmlFor="priceMayorista"
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-                >
-                  <FaWarehouse className="text-purple-500" /> Precio Mayorista
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
+                  Precio Mayorista *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 font-bold">
-                    $
-                  </span>
+                  <span className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-450 dark:text-slate-500 font-bold text-xs">$</span>
                   <input
                     type="number"
-                    id="priceMayorista"
                     value={priceMayorista}
                     onChange={(e) => setPriceMayorista(e.target.value)}
                     required
                     step="0.01"
                     placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full pl-7 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                  Precio para clientes mayoristas
-                </p>
               </div>
 
               {/* Stock */}
               <div>
-                <label
-                  htmlFor="stock"
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2"
-                >
-                  <FaCubes className="text-blue-500" /> Stock Actual
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
+                  Stock Actual *
                 </label>
                 <input
                   type="number"
-                  id="stock"
                   value={stock}
                   onChange={(e) => setStock(e.target.value)}
                   required
                   placeholder="0"
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
                 />
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                  Cantidad de unidades disponibles
-                </p>
               </div>
             </div>
           </div>
 
           {/* BOTONES DE ACCIÓN */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-            <div className="flex flex-col sm:flex-row justify-end gap-4">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 dark:text-slate-200 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all shadow-sm hover:shadow-md font-semibold flex items-center justify-center gap-2"
-              >
-                <FaTimes /> Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all font-semibold flex items-center justify-center gap-2"
-              >
-                <FaSave /> Actualizar Producto
-              </button>
-            </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-755 text-white text-xs font-extrabold rounded-xl shadow-sm transition-colors"
+            >
+              <FaSave className="w-3.5 h-3.5" /> Actualizar Producto
+            </button>
           </div>
         </form>
+
       </div>
     </div>
   );

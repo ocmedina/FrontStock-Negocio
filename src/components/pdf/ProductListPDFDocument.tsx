@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Document,
   Page,
@@ -10,7 +9,6 @@ import {
   Font,
   Image,
 } from "@react-pdf/renderer";
-import { supabase } from "@/lib/supabaseClient";
 
 Font.register({
   family: "Roboto",
@@ -29,71 +27,177 @@ Font.register({
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Roboto",
-    fontSize: 10,
-    padding: 36,
+    fontSize: 9,
+    paddingTop: 45,
+    paddingBottom: 55,
+    paddingHorizontal: 40,
     backgroundColor: "#ffffff",
+  },
+  accentBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "#4f46e5", // Indigo accent line at the very top
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
+    alignItems: "center",
+    marginBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingBottom: 12,
+    borderBottomColor: "#f1f5f9",
+    paddingBottom: 16,
   },
-  brand: { flexDirection: "row", alignItems: "center", gap: 10 },
-  logo: { width: 46, height: 46, objectFit: "contain" },
-  logoPlaceholder: {
-    width: 46,
-    height: 46,
+  brand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logo: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    objectFit: "cover",
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#cbd5f5",
-    borderRadius: 6,
+    borderColor: "#e2e8f0",
+  },
+  logoPlaceholder: {
+    width: 48,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
   },
-  logoPlaceholderText: { fontSize: 8, color: "#64748b" },
-  businessName: { fontSize: 14, fontWeight: "bold", color: "#0f172a" },
-  businessMeta: { fontSize: 9, color: "#64748b" },
-  headerRight: { alignItems: "flex-end" },
-  title: { fontSize: 16, fontWeight: "bold", color: "#0f172a" },
-  subtitle: { fontSize: 9, color: "#475569", marginTop: 2 },
+  logoPlaceholderText: {
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#64748b",
+  },
+  businessInfo: {
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  businessName: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#1e293b",
+    marginBottom: 2,
+  },
+  businessMeta: {
+    fontSize: 8,
+    color: "#64748b",
+    marginTop: 1,
+  },
+  headerRight: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#4f46e5", // Indigo title
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 8,
+    color: "#475569",
+    marginTop: 1,
+  },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#0f172a",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    backgroundColor: "#f8fafc",
+    borderBottomWidth: 2,
+    borderBottomColor: "#e2e8f0",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
   },
   tableHeaderText: {
-    color: "#ffffff",
+    color: "#475569",
     fontSize: 8,
     fontWeight: "bold",
     textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    borderBottomColor: "#f1f5f9",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  rowAlt: { backgroundColor: "#f8fafc" },
-  colName: { width: "58%" },
-  colMinorista: { width: "21%", textAlign: "right" },
-  colMayorista: { width: "21%", textAlign: "right" },
-  cell: { fontSize: 9, color: "#0f172a" },
-  emptyState: {
-    padding: 16,
-    textAlign: "center",
+  rowAlt: {
+    backgroundColor: "#fafafa",
+  },
+  colSku: {
+    width: "18%",
+  },
+  colName: {
+    width: "46%",
+  },
+  colMinorista: {
+    width: "18%",
+    textAlign: "right",
+  },
+  colMayorista: {
+    width: "18%",
+    textAlign: "right",
+  },
+  cellSku: {
+    fontSize: 8,
     color: "#64748b",
-    fontSize: 10,
+    fontFamily: "Roboto",
+  },
+  cellName: {
+    fontSize: 9,
+    fontWeight: "normal",
+    color: "#1e293b",
+  },
+  cellPrice: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  emptyState: {
+    padding: 24,
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: 9,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    left: 40,
+    right: 40,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    paddingTop: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 7.5,
+    color: "#94a3b8",
+  },
+  pageNumber: {
+    fontSize: 7.5,
+    color: "#94a3b8",
+    textAlign: "right",
   },
 });
 
 type Product = {
   id: string;
+  sku?: string | null;
   name?: string | null;
   price_minorista?: number | null;
   price_mayorista?: number | null;
@@ -101,32 +205,11 @@ type Product = {
 
 export default function ProductListPDFDocument({
   products,
+  settings = {},
 }: {
   products: Product[];
+  settings?: Record<string, string>;
 }) {
-  const [settings, setSettings] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("key, value");
-      if (error) {
-        console.error("Error cargando settings:", error);
-        return;
-      }
-      const mapped = Object.fromEntries(
-        data.map((item: { key: string; value: string }) => [
-          item.key,
-          item.value,
-        ])
-      );
-      setSettings(mapped);
-    };
-
-    fetchSettings();
-  }, []);
-
   const logoUrl = settings["logo_url"] || "";
   const businessName = settings["business_name"] || "FrontStock";
   const businessAddress = settings["business_address"] || "";
@@ -142,45 +225,48 @@ export default function ProductListPDFDocument({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Accent Top Border */}
+        <View style={styles.accentBar} />
+
+        {/* Brand Header */}
         <View style={styles.header}>
           <View style={styles.brand}>
             {logoUrl ? (
               <Image style={styles.logo} src={logoUrl} />
             ) : (
               <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoPlaceholderText}>LOGO</Text>
+                <Text style={styles.logoPlaceholderText}>FS</Text>
               </View>
             )}
-            <View>
+            <View style={styles.businessInfo}>
               <Text style={styles.businessName}>{businessName}</Text>
               {businessAddress ? (
                 <Text style={styles.businessMeta}>{businessAddress}</Text>
               ) : null}
               {businessPhone ? (
-                <Text style={styles.businessMeta}>{businessPhone}</Text>
+                <Text style={styles.businessMeta}>Tel: {businessPhone}</Text>
               ) : null}
             </View>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.title}>Lista de productos</Text>
-            <Text style={styles.subtitle}>Generado: {formattedDate}</Text>
-            <Text style={styles.subtitle}>Total: {products.length}</Text>
+            <Text style={styles.title}>Catálogo de Productos</Text>
+            <Text style={styles.subtitle}>Fecha: {formattedDate}</Text>
+            <Text style={styles.subtitle}>Items: {products.length}</Text>
           </View>
         </View>
 
+        {/* Products Table Header */}
         <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderText, styles.colName]}>Producto</Text>
-          <Text style={[styles.tableHeaderText, styles.colMinorista]}>
-            Minorista
-          </Text>
-          <Text style={[styles.tableHeaderText, styles.colMayorista]}>
-            Mayorista
-          </Text>
+          <Text style={[styles.tableHeaderText, styles.colSku]}>SKU / Código</Text>
+          <Text style={[styles.tableHeaderText, styles.colName]}>Descripción del Producto</Text>
+          <Text style={[styles.tableHeaderText, styles.colMinorista]}>P. Minorista</Text>
+          <Text style={[styles.tableHeaderText, styles.colMayorista]}>P. Mayorista</Text>
         </View>
 
+        {/* Table Rows */}
         {products.length === 0 ? (
           <Text style={styles.emptyState}>
-            No hay productos seleccionados para imprimir.
+            No hay productos seleccionados en este catálogo.
           </Text>
         ) : (
           products.map((product, index) => (
@@ -188,18 +274,34 @@ export default function ProductListPDFDocument({
               key={product.id}
               style={[styles.row, index % 2 === 1 ? styles.rowAlt : null]}
             >
-              <Text style={[styles.cell, styles.colName]}>
+              <Text style={[styles.cellSku, styles.colSku]}>
+                {product.sku || "-"}
+              </Text>
+              <Text style={[styles.cellName, styles.colName]}>
                 {product.name || "Producto sin nombre"}
               </Text>
-              <Text style={[styles.cell, styles.colMinorista]}>
+              <Text style={[styles.cellPrice, styles.colMinorista]}>
                 ${formatMoney(product.price_minorista)}
               </Text>
-              <Text style={[styles.cell, styles.colMayorista]}>
+              <Text style={[styles.cellPrice, styles.colMayorista]}>
                 ${formatMoney(product.price_mayorista)}
               </Text>
             </View>
           ))
         )}
+
+        {/* Footer */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>
+            {businessName} | Catálogo Oficial de Precios
+          </Text>
+          <Text
+            style={styles.pageNumber}
+            render={({ pageNumber, totalPages }) =>
+              `Página ${pageNumber} de ${totalPages}`
+            }
+          />
+        </View>
       </Page>
     </Document>
   );
