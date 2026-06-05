@@ -439,6 +439,131 @@ export default function NewOrderPage() {
           </div>
         </div>
 
+        {/* SECCIÓN CLIENTE (ALTO DE LA PÁGINA) */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 overflow-visible">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            
+            {/* Buscador de Cliente */}
+            <div className="md:col-span-5 space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <FaUser className="text-indigo-500" /> Cliente Destinatario
+              </label>
+              
+              <div className="relative" ref={customerMenuRef}>
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={customerQuery}
+                    onChange={(e) => {
+                      setCustomerQuery(e.target.value);
+                      if (!isCustomerMenuOpen) setIsCustomerMenuOpen(true);
+                    }}
+                    onFocus={() => {
+                      setIsCustomerMenuOpen(true);
+                      if (!customerQuery && selectedCustomer) {
+                        setCustomerQuery(selectedCustomer.full_name || "");
+                      }
+                    }}
+                    placeholder="Buscar cliente por nombre..."
+                    className="w-full pl-9 pr-8 py-2.5 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 transition-colors text-xs"
+                  />
+                  <FaChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3 cursor-pointer pointer-events-none" />
+                </div>
+
+                {isCustomerMenuOpen && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl divide-y divide-slate-100 dark:divide-slate-850">
+                    {filteredCustomers.length === 0 ? (
+                      <div className="px-4 py-2.5 text-xs text-gray-500 dark:text-slate-400">
+                        No hay clientes con ese nombre
+                      </div>
+                    ) : (
+                      filteredCustomers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setDeliveryDay(customer.delivery_day || "Sin reparto");
+                            setCustomerQuery("");
+                            setIsCustomerMenuOpen(false);
+                            toast.success(`Cliente: ${customer.full_name}`);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-xs transition-colors ${
+                            selectedCustomer?.id === customer.id
+                              ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-200"
+                          }`}
+                        >
+                          {customer.full_name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Detalles del Cliente Seleccionado */}
+            <div className="md:col-span-7">
+              {selectedCustomer ? (
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-emerald-50/60 dark:bg-emerald-950/15 rounded-xl border border-emerald-100 dark:border-emerald-900/30 text-xs animate-fadeIn">
+                  
+                  {/* Tipo Cliente */}
+                  <div className="flex flex-col justify-center">
+                    <span className="text-slate-400 dark:text-slate-500 font-medium">Tipo de Cliente</span>
+                    <span className="capitalize font-bold text-emerald-800 dark:text-emerald-350 text-sm mt-0.5">
+                      {selectedCustomer.customer_type}
+                    </span>
+                  </div>
+
+                  {/* Día Reparto */}
+                  <div className="flex flex-col justify-center">
+                    <span className="text-slate-400 dark:text-slate-500 font-medium mb-1">Día de Reparto</span>
+                    <select
+                      value={deliveryDay}
+                      onChange={(e) => setDeliveryDay(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-250 dark:border-emerald-800 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                      title="Seleccionar día de reparto"
+                    >
+                      <option value="Sin reparto">Sin reparto</option>
+                      {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day) => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Fecha Entrega */}
+                  <div className="flex flex-col justify-center">
+                    <span className="text-slate-400 dark:text-slate-500 font-medium mb-1">Fecha Entrega</span>
+                    <input
+                      type="date"
+                      value={deliveryDate}
+                      onChange={(e) => setDeliveryDate(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-250 dark:border-emerald-800 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                      title="Seleccionar fecha de entrega del pedido"
+                    />
+                  </div>
+
+                  {/* Deuda Corriente */}
+                  <div className="flex flex-col justify-center bg-amber-500/10 dark:bg-amber-500/5 p-2 rounded-lg border border-amber-500/20">
+                    <span className="text-amber-850 dark:text-amber-500 font-medium">Deuda Corriente</span>
+                    <span className="font-extrabold text-amber-700 dark:text-amber-400 text-sm mt-0.5">
+                      {formatCurrency(selectedCustomer.debt || 0)}
+                    </span>
+                  </div>
+
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center p-4 bg-slate-100/50 dark:bg-slate-950/40 rounded-xl border border-slate-200/50 dark:border-slate-800/80 text-xs text-slate-400 dark:text-slate-500 italic">
+                  ⚠️ Debes seleccionar un cliente para habilitar la búsqueda de productos y el pedido
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* COLUMNA IZQUIERDA: PRODUCTOS Y CARRO (col-span-8) */}
@@ -495,11 +620,11 @@ export default function NewOrderPage() {
                             className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors flex justify-between items-center text-xs"
                           >
                             <div className="space-y-0.5">
-                              <span className="font-bold text-slate-800 dark:text-slate-105 block">
+                              <span className="font-bold text-slate-800 dark:text-slate-100 block">
                                 {product.name}
                               </span>
                               {product.sku && (
-                                <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded font-mono">
+                                <span className="text-[10px] text-slate-450 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded font-mono">
                                   SKU: {product.sku}
                                 </span>
                               )}
@@ -539,226 +664,196 @@ export default function NewOrderPage() {
                   <p className="text-xs text-slate-400 mt-1">Busca y añade items usando el buscador superior.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-850">
-                    <thead className="bg-slate-50 dark:bg-slate-950">
-                      <tr>
-                        <th className="px-6 py-3.5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          Producto
-                        </th>
-                        <th className="px-6 py-3.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
-                          Cantidad
-                        </th>
-                        <th className="px-6 py-3.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
-                          Precio Unitario ($)
-                        </th>
-                        <th className="px-6 py-3.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
-                          Subtotal
-                        </th>
-                        <th className="px-6 py-3.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-16">
-                          Quitar
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800 bg-white dark:bg-slate-900 text-xs">
-                      {cart.map((item) => {
-                        const price = item.customPrice !== undefined ? item.customPrice : getProductPrice(item);
-                        const subtotal = price * item.quantity;
-                        const stockLimit = item.stock || 0;
+                <>
+                  {/* Vista para Tablet/Desktop (Tabla) */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-850">
+                      <thead className="bg-slate-50 dark:bg-slate-950">
+                        <tr>
+                          <th className="px-6 py-3.5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Producto
+                          </th>
+                          <th className="px-6 py-3.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
+                            Cantidad
+                          </th>
+                          <th className="px-6 py-3.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
+                            Precio Unitario ($)
+                          </th>
+                          <th className="px-6 py-3.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
+                            Subtotal
+                          </th>
+                          <th className="px-6 py-3.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-16">
+                            Quitar
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800 bg-white dark:bg-slate-900 text-xs">
+                        {cart.map((item) => {
+                          const price = item.customPrice !== undefined ? item.customPrice : getProductPrice(item);
+                          const subtotal = price * item.quantity;
+                          const stockLimit = item.stock || 0;
 
-                        return (
-                          <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/30 transition-colors">
-                            <td className="px-6 py-3 whitespace-nowrap">
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-slate-800 dark:text-slate-100">
-                                  {item.name}
-                                </span>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  {item.sku && (
-                                    <span className="text-[10px] text-slate-450 dark:text-slate-500 font-mono">
-                                      SKU: {item.sku}
-                                    </span>
-                                  )}
-                                  <span className={`text-[10px] font-bold ${stockLimit < 10 ? "text-amber-600" : "text-emerald-600"}`}>
-                                    • Stock disponible: {stockLimit} u.
+                          return (
+                            <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/30 transition-colors">
+                              <td className="px-6 py-3 whitespace-nowrap">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-slate-800 dark:text-slate-100">
+                                    {item.name}
                                   </span>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    {item.sku && (
+                                      <span className="text-[10px] text-slate-450 dark:text-slate-500 font-mono">
+                                        SKU: {item.sku}
+                                      </span>
+                                    )}
+                                    <span className={`text-[10px] font-bold ${stockLimit < 10 ? "text-amber-600" : "text-emerald-600"}`}>
+                                      • Stock disponible: {stockLimit} u.
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-2">
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdateQuantity(item.id, -1)}
+                                    className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors"
+                                  >
+                                    <FaMinus className="w-2 h-2" />
+                                  </button>
+                                  <span className="w-8 text-center font-bold text-slate-800 dark:text-white">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => handleUpdateQuantity(item.id, 1)}
+                                    disabled={item.quantity >= stockLimit}
+                                    className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    <FaPlus className="w-2 h-2" />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="text-slate-400 font-bold">$</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={item.customPrice === 0 ? "" : item.customPrice}
+                                    onChange={(e) => handleUpdateCustomPrice(item.id, e.target.value)}
+                                    className="w-24 px-2 py-1 text-right border border-slate-250 dark:border-slate-750 focus:border-indigo-500 rounded bg-slate-50 dark:bg-slate-950 font-bold focus:outline-none"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-right font-extrabold text-slate-850 dark:text-slate-50">
+                                {formatCurrency(subtotal)}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-center">
                                 <button
-                                  onClick={() => handleUpdateQuantity(item.id, -1)}
-                                  className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 flex items-center justify-center transition-colors"
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-full transition-colors"
+                                  title="Quitar del pedido"
                                 >
-                                  <FaMinus className="w-2 h-2" />
+                                  <FaTrash className="w-3.5 h-3.5" />
                                 </button>
-                                <span className="w-8 text-center font-bold text-slate-800 dark:text-white">
-                                  {item.quantity}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Vista para Móviles (Cards) */}
+                  <div className="block sm:hidden divide-y divide-gray-100 dark:divide-slate-800">
+                    {cart.map((item) => {
+                      const price = item.customPrice !== undefined ? item.customPrice : getProductPrice(item);
+                      const subtotal = price * item.quantity;
+                      const stockLimit = item.stock || 0;
+
+                      return (
+                        <div key={item.id} className="p-4 space-y-3 bg-white dark:bg-slate-900">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-0.5 pr-2">
+                              <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm block">
+                                {item.name}
+                              </span>
+                              {item.sku && (
+                                <span className="text-[10px] text-slate-450 dark:text-slate-500 font-mono inline-block">
+                                  SKU: {item.sku}
                                 </span>
-                                <button
-                                  onClick={() => handleUpdateQuantity(item.id, 1)}
-                                  disabled={item.quantity >= stockLimit}
-                                  className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                  <FaPlus className="w-2 h-2" />
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 whitespace-nowrap text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <span className="text-slate-400 font-bold">$</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={item.customPrice === 0 ? "" : item.customPrice}
-                                  onChange={(e) => handleUpdateCustomPrice(item.id, e.target.value)}
-                                  className="w-24 px-2 py-1 text-right border border-slate-250 dark:border-slate-750 focus:border-indigo-500 rounded bg-slate-50 dark:bg-slate-950 font-bold focus:outline-none"
-                                  placeholder="0.00"
-                                />
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 whitespace-nowrap text-right font-extrabold text-slate-850 dark:text-slate-50">
-                              {formatCurrency(subtotal)}
-                            </td>
-                            <td className="px-6 py-3 whitespace-nowrap text-center">
+                              )}
+                              <span className={`text-[10px] font-bold block ${stockLimit < 10 ? "text-amber-600" : "text-emerald-600"}`}>
+                                Stock: {stockLimit} u.
+                              </span>
+                            </div>
+                            
+                            <button
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-full transition-colors"
+                              title="Quitar del pedido"
+                            >
+                              <FaTrash className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-4 pt-1 border-t border-slate-50 dark:border-slate-850/50">
+                            {/* Control de cantidad */}
+                            <div className="flex items-center gap-1.5">
                               <button
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-full transition-colors"
-                                title="Quitar del pedido"
+                                onClick={() => handleUpdateQuantity(item.id, -1)}
+                                className="w-7 h-7 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors"
                               >
-                                <FaTrash className="w-3.5 h-3.5" />
+                                <FaMinus className="w-2.5 h-2.5" />
                               </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              <span className="w-6 text-center font-extrabold text-slate-800 dark:text-white text-xs">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, 1)}
+                                disabled={item.quantity >= stockLimit}
+                                className="w-7 h-7 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <FaPlus className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+
+                            {/* Precio unitario */}
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400 font-bold">$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.customPrice === 0 ? "" : item.customPrice}
+                                onChange={(e) => handleUpdateCustomPrice(item.id, e.target.value)}
+                                className="w-20 px-1.5 py-1 text-right border border-slate-250 dark:border-slate-750 focus:border-indigo-500 rounded bg-slate-50 dark:bg-slate-950 font-bold focus:outline-none text-xs"
+                                placeholder="0.00"
+                              />
+                            </div>
+
+                            {/* Subtotal */}
+                            <div className="text-right">
+                              <span className="text-[10px] text-slate-400 block">Subtotal</span>
+                              <span className="font-extrabold text-slate-900 dark:text-slate-50 text-xs">
+                                {formatCurrency(subtotal)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
 
           </div>
 
-          {/* COLUMNA DERECHA: CLIENTE Y FACTURACIÓN / RESUMEN (col-span-4) */}
+          {/* COLUMNA DERECHA: FACTURACIÓN / RESUMEN (col-span-4) */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
             
-            {/* SECCIÓN CLIENTE */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-visible">
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
-                <h2 className="text-sm font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                  <FaUser className="text-indigo-500" /> Cliente Destinatario
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                  Selecciona a quién registrarás este pedido.
-                </p>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="relative" ref={customerMenuRef}>
-                  <div className="relative">
-                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={customerQuery}
-                      onChange={(e) => {
-                        setCustomerQuery(e.target.value);
-                        if (!isCustomerMenuOpen) setIsCustomerMenuOpen(true);
-                      }}
-                      onFocus={() => {
-                        setIsCustomerMenuOpen(true);
-                        if (!customerQuery && selectedCustomer) {
-                          setCustomerQuery(selectedCustomer.full_name || "");
-                        }
-                      }}
-                      placeholder="Escribe el nombre del cliente..."
-                      className="w-full pl-9 pr-8 py-2.5 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 transition-colors text-xs"
-                    />
-                    <FaChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3 cursor-pointer pointer-events-none" />
-                  </div>
-
-                  {isCustomerMenuOpen && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl divide-y divide-slate-100 dark:divide-slate-850">
-                      {filteredCustomers.length === 0 ? (
-                        <div className="px-4 py-2.5 text-xs text-gray-500 dark:text-slate-400">
-                          No hay clientes con ese nombre
-                        </div>
-                      ) : (
-                        filteredCustomers.map((customer) => (
-                          <button
-                            key={customer.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedCustomer(customer);
-                              setDeliveryDay(customer.delivery_day || "Sin reparto");
-                              setCustomerQuery("");
-                              setIsCustomerMenuOpen(false);
-                              toast.success(`Cliente: ${customer.full_name}`);
-                            }}
-                            className={`w-full text-left px-4 py-2.5 text-xs transition-colors ${
-                              selectedCustomer?.id === customer.id
-                                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold"
-                                : "hover:bg-slate-50 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-200"
-                            }`}
-                          >
-                            {customer.full_name}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {selectedCustomer && (
-                  <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/15 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-3 animate-fadeIn text-xs">
-                    <div className="flex justify-between items-center border-b border-emerald-100/50 dark:border-emerald-900/20 pb-2">
-                      <span className="font-bold text-emerald-800 dark:text-emerald-350">Tipo de Cliente:</span>
-                      <span className="capitalize font-bold text-emerald-700 dark:text-emerald-305">
-                        {selectedCustomer.customer_type}
-                      </span>
-                    </div>
-
-                    {/* Selector de Día de Reparto / Entrega */}
-                    <div className="space-y-1">
-                      <label className="font-bold text-emerald-850 dark:text-emerald-350 block">Día de Reparto Habitual:</label>
-                      <select
-                        value={deliveryDay}
-                        onChange={(e) => setDeliveryDay(e.target.value)}
-                        className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-850 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        title="Seleccionar día de reparto"
-                      >
-                        <option value="Sin reparto">Sin reparto (No organizar)</option>
-                        {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day) => (
-                          <option key={day} value={day}>{day}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Fecha Específica de Entrega para este Pedido */}
-                    <div className="space-y-1">
-                      <label className="font-bold text-emerald-855 dark:text-emerald-350 block">Fecha de Entrega de este Pedido:</label>
-                      <input
-                        type="date"
-                        value={deliveryDate}
-                        onChange={(e) => setDeliveryDate(e.target.value)}
-                        className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-850 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
-                        title="Seleccionar fecha de entrega del pedido"
-                      />
-                    </div>
-
-                    <div className="flex justify-between items-center pt-1 border-t border-emerald-100/50 dark:border-emerald-900/10">
-                      <span className="font-bold text-amber-800 dark:text-amber-450">Deuda Corriente:</span>
-                      <span className="font-bold text-amber-700 dark:text-amber-400">
-                        {formatCurrency(selectedCustomer.debt || 0)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* RESUMEN DE COBROS Y REGISTRO */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-800 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
