@@ -230,17 +230,17 @@ export default function SuppliersPage() {
 
         {/* DEBT SUMMARY PANEL */}
         {!loading && suppliers.length > 0 && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Deuda */}
             <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-rose-200/60 dark:border-rose-900/40 rounded-3xl p-5 shadow-xs">
               <div className="absolute -right-4 -top-4 w-20 h-20 bg-rose-500/5 dark:bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-start justify-between gap-3 relative z-10">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Deuda Total</p>
-                  <p className="text-xl md:text-2xl font-black text-rose-600 dark:text-rose-400 leading-none">
+                  <p className="text-xl md:text-2xl font-black text-rose-600 dark:text-rose-400 leading-none truncate">
                     {formatCurrency(debtSummary.totalDebt)}
                   </p>
-                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 truncate">
                     {debtSummary.suppliersWithDebt === 0
                       ? "Sin deudas pendientes"
                       : `${debtSummary.suppliersWithDebt} proveedor${debtSummary.suppliersWithDebt !== 1 ? "es" : ""} con deuda`}
@@ -258,7 +258,7 @@ export default function SuppliersPage() {
                       .sort((a, b) => (b.debt || 0) - (a.debt || 0))
                       .slice(0, 3)
                       .map((s) => (
-                        <span key={s.id} className="inline-flex items-center gap-1 text-[9px] font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/40 truncate max-w-[110px]">
+                        <span key={s.id} className="inline-flex items-center gap-1 text-[9px] font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/40 truncate max-w-[110px] sm:max-w-none">
                           <span className="w-1 h-1 rounded-full bg-rose-400 shrink-0" />
                           {s.name}: {formatCurrency(s.debt)}
                         </span>
@@ -275,12 +275,12 @@ export default function SuppliersPage() {
             <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-emerald-200/60 dark:border-emerald-900/40 rounded-3xl p-5 shadow-xs">
               <div className="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-start justify-between gap-3 relative z-10">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Créditos a Favor</p>
-                  <p className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-none">
+                  <p className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-none truncate">
                     {formatCurrency(debtSummary.totalCredit)}
                   </p>
-                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 truncate">
                     {debtSummary.suppliersWithCredit === 0
                       ? "Sin créditos activos"
                       : `${debtSummary.suppliersWithCredit} proveedor${debtSummary.suppliersWithCredit !== 1 ? "es" : ""} con crédito`}
@@ -296,9 +296,9 @@ export default function SuppliersPage() {
             <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-indigo-200/60 dark:border-indigo-900/40 rounded-3xl p-5 shadow-xs">
               <div className="absolute -right-4 -top-4 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-start justify-between gap-3 relative z-10">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Saldo Neto</p>
-                  <p className={`text-xl md:text-2xl font-black leading-none ${
+                  <p className={`text-xl md:text-2xl font-black leading-none truncate ${
                     debtSummary.netBalance > 0
                       ? "text-rose-600 dark:text-rose-400"
                       : debtSummary.netBalance < 0
@@ -307,7 +307,7 @@ export default function SuppliersPage() {
                   }`}>
                     {formatCurrency(Math.abs(debtSummary.netBalance))}
                   </p>
-                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 truncate">
                     {debtSummary.netBalance > 0
                       ? "Debes más de lo que te deben"
                       : debtSummary.netBalance < 0
@@ -325,12 +325,12 @@ export default function SuppliersPage() {
             <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-orange-200/60 dark:border-orange-900/40 rounded-3xl p-5 shadow-xs">
               <div className="absolute -right-4 -top-4 w-20 h-20 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-start justify-between gap-3 relative z-10">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Proveedores</p>
-                  <p className="text-xl md:text-2xl font-black text-orange-600 dark:text-orange-400 leading-none">
+                  <p className="text-xl md:text-2xl font-black text-orange-600 dark:text-orange-400 leading-none truncate">
                     {suppliers.length}
                   </p>
-                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5 truncate">
                     {suppliers.length - debtSummary.suppliersWithDebt - debtSummary.suppliersWithCredit} al día
                     {debtSummary.suppliersWithDebt > 0 && ` · ${debtSummary.suppliersWithDebt} con deuda`}
                   </p>
@@ -390,9 +390,9 @@ export default function SuppliersPage() {
 
             {/* Filter */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-              <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-850 rounded-2xl px-3 py-2 bg-slate-50 dark:bg-slate-950">
+              <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2 bg-slate-50 dark:bg-slate-900">
                 <FaFilter className="text-slate-400 w-3.5 h-3.5" />
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">Filtro:</span>
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Filtro:</span>
               </div>
               <select
                 value={debtFilter}
@@ -465,7 +465,7 @@ export default function SuppliersPage() {
                           ? "No se encontraron proveedores"
                           : "No hay proveedores registrados"}
                       </span>
-                      <p className="text-xs text-slate-450 dark:text-slate-400 text-center">
+                      <p className="text-xs text-slate-400 dark:text-slate-400 text-center">
                         {searchTerm
                           ? "Prueba modificando los filtros de búsqueda o el tipo de cuenta corriente."
                           : "Comienza dando de alta un nuevo proveedor para poder registrar compras."}
@@ -489,12 +489,12 @@ export default function SuppliersPage() {
                       key={supplier.id}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <Link
                           href={`/dashboard/proveedores/${supplier.id}`}
                           className="flex items-center gap-3.5 group"
                         >
-                          <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-150 dark:border-slate-750 flex items-center justify-center text-slate-700 dark:text-slate-250 font-black text-base shadow-2xs group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-all duration-300 shrink-0">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-black text-base shadow-2xs group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-all duration-300 shrink-0">
                             {supplier.name?.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -509,12 +509,12 @@ export default function SuppliersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700 dark:text-slate-300">
                         {supplier.contact_person || (
-                          <span className="text-slate-405 dark:text-slate-500 italic font-medium">Sin contacto</span>
+                          <span className="text-slate-400 dark:text-slate-500 italic font-medium">Sin contacto</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-400 font-mono">
                         {supplier.phone || (
-                          <span className="text-slate-405 dark:text-slate-500 italic font-sans">Sin teléfono</span>
+                          <span className="text-slate-400 dark:text-slate-500 italic font-sans">Sin teléfono</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -529,7 +529,7 @@ export default function SuppliersPage() {
                             A favor: {formatCurrency(Math.abs(debt))}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-450 border border-slate-200/50 dark:border-slate-800/80">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800/80">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-350 dark:bg-slate-600"></span>
                             Al día: {formatCurrency(0)}
                           </span>
@@ -572,18 +572,18 @@ export default function SuppliersPage() {
               return (
                 <div
                   key={supplier.id}
-                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-150 dark:border-slate-800/80 p-5 shadow-2xs space-y-4"
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-5 shadow-2xs space-y-4"
                 >
                   <div className="flex justify-between items-start gap-4">
                     <Link
                       href={`/dashboard/proveedores/${supplier.id}`}
                       className="flex items-center gap-3 flex-1 group"
                     >
-                      <div className="w-10 h-10 rounded-2xl bg-slate-55 dark:bg-slate-800/85 border border-slate-150 dark:border-slate-750 flex items-center justify-center text-slate-705 dark:text-slate-250 font-black text-sm shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-black text-sm shrink-0">
                         {supplier.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-650 transition-colors">
+                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
                           {supplier.name}
                         </h4>
                         <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5">
@@ -593,7 +593,7 @@ export default function SuppliersPage() {
                     </Link>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 dark:bg-slate-955/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-850">
+                  <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 dark:bg-slate-900/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Contacto</span>
                       <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 truncate block mt-0.5">
@@ -604,31 +604,31 @@ export default function SuppliersPage() {
                     </div>
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Teléfono</span>
-                      <span className="text-xs font-extrabold text-slate-700 dark:text-slate-350 truncate block mt-0.5 font-mono">
+                      <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 truncate block mt-0.5 font-mono">
                         {supplier.phone || (
-                          <span className="text-slate-400 dark:text-slate-550 font-medium italic font-sans">Sin teléfono</span>
+                          <span className="text-slate-400 dark:text-slate-500 font-medium italic font-sans">Sin teléfono</span>
                         )}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-850">
+                  <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Saldo Actual</span>
                       <div className="mt-1">
                         {debt > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                            <span className="w-1 h-1 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse"></span>
                             Debe: {formatCurrency(debt)}
                           </span>
                         ) : debt < 0 ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            <span className="w-1 h-1 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
                             A favor: {formatCurrency(Math.abs(debt))}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800/80">
-                            <span className="w-1 h-1 rounded-full bg-slate-350 dark:bg-slate-600"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-350 dark:bg-slate-600"></span>
                             Al día: {formatCurrency(0)}
                           </span>
                         )}

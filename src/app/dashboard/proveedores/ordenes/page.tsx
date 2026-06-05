@@ -302,7 +302,7 @@ export default function PurchaseOrdersPage() {
                     {filteredOrders.map((order) => (
                       <tr
                         key={order.id}
-                        className="hover:bg-gray-55 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
+                        className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-mono font-bold text-blue-600">
@@ -356,7 +356,7 @@ export default function PurchaseOrdersPage() {
               </div>
 
               {/* Mobile card view */}
-              <div className="md:hidden divide-y divide-gray-150 dark:divide-slate-800">
+              <div className="md:hidden divide-y divide-gray-200 dark:divide-slate-800">
                 {filteredOrders.map((order) => (
                   <div
                     key={order.id}

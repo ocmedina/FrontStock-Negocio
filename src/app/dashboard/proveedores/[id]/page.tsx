@@ -105,7 +105,7 @@ export default async function SupplierDetailPage(props: {
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-xs">
         <Link
           href="/dashboard/proveedores"
-          className="text-indigo-650 dark:text-indigo-400 mb-6 inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider hover:text-indigo-750 dark:hover:text-indigo-300 transition-colors"
+          className="text-indigo-600 dark:text-indigo-400 mb-6 inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
         >
           <FaArrowLeft /> Volver a Proveedores
         </Link>
@@ -118,12 +118,12 @@ export default async function SupplierDetailPage(props: {
             <div className="mt-3 space-y-1">
               {supplier.contact_person && (
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Contacto: <span className="font-bold text-slate-850 dark:text-slate-200">{supplier.contact_person}</span>
+                  Contacto: <span className="font-bold text-slate-800 dark:text-slate-200">{supplier.contact_person}</span>
                 </p>
               )}
               {supplier.phone && (
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Teléfono: <span className="font-bold text-slate-850 dark:text-slate-200">{supplier.phone}</span>
+                  Teléfono: <span className="font-bold text-slate-800 dark:text-slate-200">{supplier.phone}</span>
                 </p>
               )}
             </div>
@@ -135,7 +135,7 @@ export default async function SupplierDetailPage(props: {
                 ? "bg-rose-50/50 dark:bg-rose-950/15 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400"
                 : (supplier.debt || 0) < 0
                 ? "bg-emerald-50/50 dark:bg-emerald-950/15 border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400"
-                : "bg-slate-50 dark:bg-slate-850/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400"
+                : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400"
             }`}
           >
             <p className="text-[10px] font-black uppercase tracking-wider flex items-center md:justify-end gap-1.5">
@@ -226,7 +226,7 @@ export default async function SupplierDetailPage(props: {
                   </div>
                   <p
                     className={`font-black text-lg ${
-                      isCompra ? "text-rose-600 dark:text-rose-455" : "text-emerald-600 dark:text-emerald-455"
+                      isCompra ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
                     } sm:text-right`}
                   >
                     {isCompra ? "+" : "-"}{formatCurrency(item.amount)}
