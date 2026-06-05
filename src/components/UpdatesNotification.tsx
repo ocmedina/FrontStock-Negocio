@@ -17,6 +17,16 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-06-05-delivery-dates-pagination",
+    date: "5 Jun 2026",
+    title: "🗓️ Fechas de Entrega, Paginación y Control de Pedidos",
+    description:
+      "Ahora puedes programar la fecha de entrega al crear pedidos. Añadimos paginación en deudores e historial para optimizar el rendimiento móvil, y un menú de control en pedidos para anular o eliminar depurando saldos.",
+    icon: "🗓️",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2026-06-01-supplier-accounts-redesign",
     date: "1 Jun 2026",
     title: "📋 Rediseño de Cuentas y Deudas de Proveedores",

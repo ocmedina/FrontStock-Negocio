@@ -344,28 +344,28 @@ export default function PedidosPendientesPage() {
                 <table className="min-w-full divide-y divide-slate-150 dark:divide-slate-850">
                   <thead className="bg-slate-50 dark:bg-slate-950">
                     <tr>
-                      <th className="px-6 py-4.5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        <span className="flex items-center gap-1.5"><FaCalendarAlt /> Fecha</span>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5"><FaCalendarAlt /> Fecha Entrega</span>
                       </th>
-                      <th className="px-6 py-4.5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         <span className="flex items-center gap-1.5"><FaUser /> Cliente</span>
                       </th>
-                      <th className="px-6 py-4.5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         <span className="flex items-center gap-1.5"><FaClipboardList /> Vendedor</span>
                       </th>
-                      <th className="px-6 py-4.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
+                      <th className="px-6 py-5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
                         Estado
                       </th>
-                      <th className="px-6 py-4.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
+                      <th className="px-6 py-5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
                         Total Pedido
                       </th>
-                      <th className="px-6 py-4.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
+                      <th className="px-6 py-5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
                         Pagado
                       </th>
-                      <th className="px-6 py-4.5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
+                      <th className="px-6 py-5 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-36">
                         <span className="flex items-center justify-end gap-1.5"><FaDollarSign /> Pendiente</span>
                       </th>
-                      <th className="px-6 py-4.5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-48">
+                      <th className="px-6 py-5 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-48">
                         Acciones
                       </th>
                     </tr>
@@ -444,11 +444,11 @@ export default function PedidosPendientesPage() {
                     <tr className="border-t border-slate-200 dark:border-slate-800">
                       <td
                         colSpan={6}
-                        className="px-6 py-4.5 text-right font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                        className="px-6 py-5 text-right font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider"
                       >
                         Total Deuda Pendiente:
                       </td>
-                      <td className="px-6 py-4.5 text-right font-black text-amber-600 dark:text-amber-450">
+                      <td className="px-6 py-5 text-right font-black text-amber-600 dark:text-amber-450">
                         {formatCurrency(totalPendiente)}
                       </td>
                       <td></td>

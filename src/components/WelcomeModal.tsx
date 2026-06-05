@@ -218,7 +218,19 @@ export default function WelcomeModal() {
                     <FaCheckCircle className="text-emerald-500 shrink-0 w-4 h-4" />
                     <span className="font-bold">Diseño Móvil 100% Responsivo en todo el sistema</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-450 italic pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-350">
+                    <FaCheckCircle className="text-emerald-500 shrink-0 w-4 h-4" />
+                    <span className="font-bold">Planificación de Fecha de Entrega en Pedidos</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-350">
+                    <FaCheckCircle className="text-emerald-500 shrink-0 w-4 h-4" />
+                    <span className="font-bold">Opciones para Anular o Eliminar Pedidos Directamente</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-350">
+                    <FaCheckCircle className="text-emerald-500 shrink-0 w-4 h-4" />
+                    <span className="font-bold">Paginación de Deudores e Historial de Reparto</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-550 dark:text-slate-450 italic pt-1 border-t border-slate-100 dark:border-slate-800">
                     <span className="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center text-[8px] font-black not-italic text-slate-400 shrink-0">
                       💡
                     </span>

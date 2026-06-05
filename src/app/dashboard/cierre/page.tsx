@@ -289,7 +289,7 @@ function RepartoTab() {
 
           {/* Detalle de pedidos */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xs overflow-hidden">
-            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-850">
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-850">
               <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider">Historial de Pedidos del Canal</h3>
             </div>
             
@@ -506,7 +506,7 @@ function MostradorTab() {
 
           {/* Detalle de ventas */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xs overflow-hidden">
-            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-850">
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-850">
               <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider">Historial de Ventas del Canal</h3>
             </div>
 

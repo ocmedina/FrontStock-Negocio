@@ -11,6 +11,7 @@ import {
   FaTruck,
   FaChartPie,
   FaBalanceScale,
+  FaTruckLoading,
 } from "react-icons/fa";
 import QuickActionsHeader from "@/components/QuickActionsHeader";
 import ChristmasCountdown from "@/components/ChristmasCountdown";
@@ -126,6 +127,7 @@ async function getDashboardData() {
     recentSalesRes,
     ordersWithDebtRes,
     salesWithDebtRes,
+    suppliersDebtRes,
   ] = await Promise.all([
     supabase
       .from("products")
@@ -178,6 +180,10 @@ async function getDashboardData() {
       .eq("payment_method", "cuenta_corriente")
       .gt("amount_pending", 0)
       .eq("is_cancelled", false),
+    supabase
+      .from("suppliers")
+      .select("id, name, debt")
+      .eq("is_active", true),
   ]);
 
   const salesThisMonth = salesThisMonthRes.data;
@@ -227,6 +233,24 @@ async function getDashboardData() {
   });
   const customersWithDebtCount = customersWithDebtSet.size;
 
+  // Calcular deuda con proveedores
+  const suppliersData = suppliersDebtRes.data ?? [];
+  const totalSupplierDebt = suppliersData
+    .filter((s: any) => (s.debt || 0) > 0)
+    .reduce((sum: number, s: any) => sum + (s.debt || 0), 0);
+  const totalSupplierCredit = suppliersData
+    .filter((s: any) => (s.debt || 0) < 0)
+    .reduce((sum: number, s: any) => sum + Math.abs(s.debt || 0), 0);
+  const suppliersWithDebtCount = suppliersData.filter(
+    (s: any) => (s.debt || 0) > 0
+  ).length;
+  const netSupplierBalance = totalSupplierDebt - totalSupplierCredit;
+  // Top 3 proveedores con mayor deuda para mostrar en el dashboard
+  const topSuppliersWithDebt = suppliersData
+    .filter((s: any) => (s.debt || 0) > 0)
+    .sort((a: any, b: any) => (b.debt || 0) - (a.debt || 0))
+    .slice(0, 3);
+
   return {
     productCount: productCountRes.count ?? 0,
     clientCount: clientCountRes.count ?? 0,
@@ -235,6 +259,11 @@ async function getDashboardData() {
     totalOrderSales,
     totalDebt,
     customersWithDebtCount,
+    totalSupplierDebt,
+    totalSupplierCredit,
+    suppliersWithDebtCount,
+    netSupplierBalance,
+    topSuppliersWithDebt,
     pendingOrders: pendingOrdersRes.data ?? [],
     criticalStockProducts: criticalStockProductsRes.data ?? [],
     recentSales: recentSalesRes.data ?? [],
@@ -252,6 +281,11 @@ export default async function DashboardPage() {
     totalOrderSales,
     totalDebt,
     customersWithDebtCount,
+    totalSupplierDebt,
+    totalSupplierCredit,
+    suppliersWithDebtCount,
+    netSupplierBalance,
+    topSuppliersWithDebt,
     pendingOrders,
     criticalStockProducts,
     recentSales,
@@ -500,37 +534,87 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Tarjeta de Cuenta Corriente */}
-      {totalDebt > 0 && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 p-6 rounded-2xl shadow-sm border border-orange-200 dark:border-orange-900">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">📋</span>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
-                  Cuenta Corriente Pendiente
-                </h3>
+      {/* Deudas: Clientes + Proveedores */}
+      {(totalDebt > 0 || totalSupplierDebt > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Cuenta Corriente Clientes */}
+          {totalDebt > 0 && (
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 p-6 rounded-2xl shadow-sm border border-orange-200 dark:border-orange-900">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-9 w-9 rounded-xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                      <span className="text-lg">📋</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100 uppercase tracking-wide">
+                      Clientes — Cta. Corriente
+                    </h3>
+                  </div>
+                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                    ${totalDebt.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
+                    {customersWithDebtCount} {customersWithDebtCount === 1 ? "cliente" : "clientes"} con deuda pendiente
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/clientes?filter=with_debt"
+                  className="shrink-0 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-medium text-xs transition-colors flex items-center gap-1.5"
+                >
+                  Ver <FaArrowRight className="text-[10px]" />
+                </Link>
               </div>
-              <p className="text-3xl font-bold text-red-600 mb-1">
-                $
-                {totalDebt.toLocaleString("es-AR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-slate-300">
-                {customersWithDebtCount}{" "}
-                {customersWithDebtCount === 1 ? "cliente" : "clientes"} con
-                deuda pendiente
-              </p>
             </div>
-            <Link
-              href="/dashboard/clientes?filter=with_debt"
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              Ver Clientes <FaArrowRight />
-            </Link>
-          </div>
+          )}
+
+          {/* Deuda con Proveedores */}
+          {totalSupplierDebt > 0 && (
+            <div className="bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30 p-6 rounded-2xl shadow-sm border border-rose-200 dark:border-rose-900">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-9 w-9 rounded-xl bg-rose-100 dark:bg-rose-900/40 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                      <FaTruckLoading className="text-lg" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100 uppercase tracking-wide">
+                      Proveedores — Deuda
+                    </h3>
+                  </div>
+                  <p className="text-3xl font-bold text-rose-600 dark:text-rose-400 mb-1">
+                    ${totalSupplierDebt.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-3">
+                    {suppliersWithDebtCount} {suppliersWithDebtCount === 1 ? "proveedor" : "proveedores"} con saldo pendiente
+                    {totalSupplierCredit > 0 && (
+                      <span className="ml-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+                        · ${totalSupplierCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })} a favor
+                      </span>
+                    )}
+                  </p>
+                  {topSuppliersWithDebt.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {topSuppliersWithDebt.map((s: any) => (
+                        <span
+                          key={s.id}
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800/50 truncate max-w-[140px]"
+                        >
+                          <span className="w-1 h-1 rounded-full bg-rose-400 shrink-0" />
+                          {s.name}: ${(s.debt || 0).toLocaleString("es-AR", { minimumFractionDigits: 0 })}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Link
+                  href="/dashboard/proveedores?filter=with_debt"
+                  className="shrink-0 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-medium text-xs transition-colors flex items-center gap-1.5"
+                >
+                  Ver <FaArrowRight className="text-[10px]" />
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

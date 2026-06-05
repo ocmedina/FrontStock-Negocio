@@ -44,8 +44,8 @@ type Order = {
   };
 };
 
-const DAILY_PAGE_SIZE = 20;
-const HISTORY_PAGE_SIZE = 20;
+const DAILY_PAGE_SIZE = 10;
+const HISTORY_PAGE_SIZE = 10;
 
 export default function RepartoPage() {
   const [view, setView] = useState("new_order");
@@ -402,6 +402,10 @@ export default function RepartoPage() {
         }
       }
 
+      const now = new Date();
+      const timePart = now.toTimeString().split(" ")[0]; // "HH:MM:SS"
+      const createdDateString = `${selectedDate}T${timePart}-03:00`;
+
       // 2. Crear el pedido
       const { data: orderData, error: orderError } = await (supabase as any)
         .from("orders")
@@ -410,6 +414,7 @@ export default function RepartoPage() {
           profile_id: currentUser.id,
           total_amount: total,
           status: "pendiente",
+          created_at: createdDateString,
         })
         .select()
         .single();

@@ -21,6 +21,10 @@ import {
   FaUserTie,
   FaChevronDown,
   FaChevronUp,
+  FaArrowUp,
+  FaArrowDown,
+  FaBalanceScale,
+  FaChartBar,
 } from "react-icons/fa";
 
 export default function SuppliersPage() {
@@ -84,6 +88,20 @@ export default function SuppliersPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  // Calcular resumen de deudas
+  const debtSummary = useMemo(() => {
+    const totalDebt = suppliers
+      .filter((s) => (s.debt || 0) > 0)
+      .reduce((acc, s) => acc + (s.debt || 0), 0);
+    const totalCredit = suppliers
+      .filter((s) => (s.debt || 0) < 0)
+      .reduce((acc, s) => acc + Math.abs(s.debt || 0), 0);
+    const suppliersWithDebt = suppliers.filter((s) => (s.debt || 0) > 0).length;
+    const suppliersWithCredit = suppliers.filter((s) => (s.debt || 0) < 0).length;
+    const netBalance = totalDebt - totalCredit;
+    return { totalDebt, totalCredit, netBalance, suppliersWithDebt, suppliersWithCredit };
+  }, [suppliers]);
 
   // Filtrar proveedores por búsqueda y deuda
   const filteredSuppliers = useMemo(() => {
@@ -209,6 +227,144 @@ export default function SuppliersPage() {
             </div>
           </div>
         </div>
+
+        {/* DEBT SUMMARY PANEL */}
+        {!loading && suppliers.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Deuda */}
+            <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-rose-200/60 dark:border-rose-900/40 rounded-3xl p-5 shadow-xs">
+              <div className="absolute -right-4 -top-4 w-20 h-20 bg-rose-500/5 dark:bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start justify-between gap-3 relative z-10">
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Deuda Total</p>
+                  <p className="text-xl md:text-2xl font-black text-rose-600 dark:text-rose-400 leading-none">
+                    {formatCurrency(debtSummary.totalDebt)}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                    {debtSummary.suppliersWithDebt === 0
+                      ? "Sin deudas pendientes"
+                      : `${debtSummary.suppliersWithDebt} proveedor${debtSummary.suppliersWithDebt !== 1 ? "es" : ""} con deuda`}
+                  </p>
+                </div>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  <FaArrowUp className="w-4 h-4" />
+                </span>
+              </div>
+              {debtSummary.totalDebt > 0 && (
+                <div className="mt-3 pt-3 border-t border-rose-100 dark:border-rose-900/30 relative z-10">
+                  <div className="flex flex-wrap gap-1">
+                    {suppliers
+                      .filter((s) => (s.debt || 0) > 0)
+                      .sort((a, b) => (b.debt || 0) - (a.debt || 0))
+                      .slice(0, 3)
+                      .map((s) => (
+                        <span key={s.id} className="inline-flex items-center gap-1 text-[9px] font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/40 truncate max-w-[110px]">
+                          <span className="w-1 h-1 rounded-full bg-rose-400 shrink-0" />
+                          {s.name}: {formatCurrency(s.debt)}
+                        </span>
+                      ))}
+                    {debtSummary.suppliersWithDebt > 3 && (
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 px-1 py-0.5">+{debtSummary.suppliersWithDebt - 3} más</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Créditos a Favor */}
+            <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-emerald-200/60 dark:border-emerald-900/40 rounded-3xl p-5 shadow-xs">
+              <div className="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start justify-between gap-3 relative z-10">
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Créditos a Favor</p>
+                  <p className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-none">
+                    {formatCurrency(debtSummary.totalCredit)}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                    {debtSummary.suppliersWithCredit === 0
+                      ? "Sin créditos activos"
+                      : `${debtSummary.suppliersWithCredit} proveedor${debtSummary.suppliersWithCredit !== 1 ? "es" : ""} con crédito`}
+                  </p>
+                </div>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <FaArrowDown className="w-4 h-4" />
+                </span>
+              </div>
+            </div>
+
+            {/* Saldo Neto */}
+            <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-indigo-200/60 dark:border-indigo-900/40 rounded-3xl p-5 shadow-xs">
+              <div className="absolute -right-4 -top-4 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start justify-between gap-3 relative z-10">
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Saldo Neto</p>
+                  <p className={`text-xl md:text-2xl font-black leading-none ${
+                    debtSummary.netBalance > 0
+                      ? "text-rose-600 dark:text-rose-400"
+                      : debtSummary.netBalance < 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-slate-500 dark:text-slate-400"
+                  }`}>
+                    {formatCurrency(Math.abs(debtSummary.netBalance))}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                    {debtSummary.netBalance > 0
+                      ? "Debes más de lo que te deben"
+                      : debtSummary.netBalance < 0
+                      ? "Tenés más crédito que deuda"
+                      : "Cuentas equilibradas"}
+                  </p>
+                </div>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  <FaBalanceScale className="w-4 h-4" />
+                </span>
+              </div>
+            </div>
+
+            {/* Total Proveedores */}
+            <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-orange-200/60 dark:border-orange-900/40 rounded-3xl p-5 shadow-xs">
+              <div className="absolute -right-4 -top-4 w-20 h-20 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start justify-between gap-3 relative z-10">
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Proveedores</p>
+                  <p className="text-xl md:text-2xl font-black text-orange-600 dark:text-orange-400 leading-none">
+                    {suppliers.length}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-1.5">
+                    {suppliers.length - debtSummary.suppliersWithDebt - debtSummary.suppliersWithCredit} al día
+                    {debtSummary.suppliersWithDebt > 0 && ` · ${debtSummary.suppliersWithDebt} con deuda`}
+                  </p>
+                </div>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20">
+                  <FaChartBar className="w-4 h-4" />
+                </span>
+              </div>
+              {suppliers.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-orange-100 dark:border-orange-900/30 relative z-10">
+                  <div className="flex gap-1 items-center">
+                    {/* barra proporcional */}
+                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
+                      {debtSummary.suppliersWithDebt > 0 && (
+                        <div
+                          className="h-full bg-rose-400 dark:bg-rose-500 rounded-full"
+                          style={{ width: `${(debtSummary.suppliersWithDebt / suppliers.length) * 100}%` }}
+                        />
+                      )}
+                      {debtSummary.suppliersWithCredit > 0 && (
+                        <div
+                          className="h-full bg-emerald-400 dark:bg-emerald-500 rounded-full"
+                          style={{ width: `${(debtSummary.suppliersWithCredit / suppliers.length) * 100}%` }}
+                        />
+                      )}
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400">{Math.round((debtSummary.suppliersWithDebt / suppliers.length) * 100)}%</span>
+                  </div>
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1">Porcentaje con deuda activa</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* SEARCH AND FILTERS */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs">

@@ -13,8 +13,6 @@ import {
   FaChevronRight,
   FaMoneyBillWave,
   FaUniversity,
-  FaMobileAlt,
-  FaFileInvoice,
   FaExclamationTriangle,
 } from "react-icons/fa";
 
@@ -70,7 +68,7 @@ export default function DailyOrdersView({
   onDeliverOrder,
   onCancelOrder,
 }: DailyOrdersViewProps) {
-  // Parsear fecha con T12:00:00 evita que UTC medianoche cruce al día anterior en Argentina (-03:00)
+  // Parsear fecha con T12:00:00 evita desfasajes horarios
   const parseLocalDate = (dateStr: string) => new Date(`${dateStr}T12:00:00`);
 
   const handlePrevDay = () => {
@@ -91,7 +89,7 @@ export default function DailyOrdersView({
     onDateChange(`${yyyy}-${mm}-${dd}`);
   };
 
-  // ── Totals bar ───────────────────────────────────────────────────────────
+  // Cálculos de resumen
   const deliveredOrders = dailyOrders.filter((o) => o.status === "entregado");
   const totalCobrado = deliveredOrders.reduce((s, o) => s + (o.amount_paid || 0), 0);
   const totalPendiente = deliveredOrders.reduce((s, o) => s + (o.amount_pending || 0), 0);
@@ -104,155 +102,175 @@ export default function DailyOrdersView({
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n);
-
   return (
-    <main className="p-4 space-y-4 bg-gray-50 dark:bg-slate-900 min-h-screen">
-      {/* Date Selector */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex items-center justify-between">
-        <button
-          onClick={handlePrevDay}
-          className="p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800/80 dark:bg-slate-800 rounded-full transition-colors"
-        >
-          <FaChevronLeft />
-        </button>
-        <div className="flex items-center gap-2 font-bold text-gray-800 dark:text-slate-100">
-          <FaCalendarAlt className="text-blue-600" />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="bg-transparent outline-none cursor-pointer"
-          />
+    <main className="max-w-7xl mx-auto p-4 space-y-4 pb-20">
+      {/* Date & Counters Responsive Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Selector de Fecha */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-800/80 flex items-center justify-between h-fit">
+          <button
+            onClick={handlePrevDay}
+            className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/85 bg-slate-50 dark:bg-slate-850 rounded-xl transition-all"
+            title="Día anterior"
+          >
+            <FaChevronLeft size={12} />
+          </button>
+          <div className="flex items-center gap-2 font-black text-slate-850 dark:text-slate-150 text-xs uppercase tracking-wider">
+            <FaCalendarAlt className="text-indigo-600" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => onDateChange(e.target.value)}
+              className="bg-transparent outline-none cursor-pointer font-black text-slate-800 dark:text-slate-205 focus:text-indigo-600 focus:dark:text-indigo-400"
+            />
+          </div>
+          <button
+            onClick={handleNextDay}
+            className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800/85 bg-slate-50 dark:bg-slate-850 rounded-xl transition-all"
+            title="Día siguiente"
+          >
+            <FaChevronRight size={12} />
+          </button>
         </div>
-        <button
-          onClick={handleNextDay}
-          className="p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800/80 dark:bg-slate-800 rounded-full transition-colors"
-        >
-          <FaChevronRight />
-        </button>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl p-4 text-white shadow-lg">
-          <div className="flex items-center justify-between">
+        {/* Tarjetas de Contadores de Estado */}
+        <div className="grid grid-cols-2 gap-3.5 md:col-span-2">
+          <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-5 text-white shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-sm opacity-90 font-medium">Pendientes</p>
-              <p className="text-3xl font-bold mt-1">{pendingOrdersCount}</p>
+              <p className="text-[10px] uppercase font-black tracking-wider opacity-85">Pendientes</p>
+              <p className="text-2xl font-black mt-0.5">{pendingOrdersCount}</p>
             </div>
-            <FaClock className="text-4xl opacity-80" />
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
+              <FaClock className="text-xl" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase font-black tracking-wider opacity-85">Entregados</p>
+              <p className="text-2xl font-black mt-0.5">{deliveredOrdersCount}</p>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
+              <FaCheckCircle className="text-xl" />
+            </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl p-4 text-white shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm opacity-90 font-medium">Entregados</p>
-              <p className="text-3xl font-bold mt-1">{deliveredOrdersCount}</p>
-            </div>
-            <FaCheckCircle className="text-4xl opacity-80" />
-          </div>
-        </div>
       </div>
 
-      {/* Totals bar — solo si hay entregados */}
+      {/* Resumen de Cobros del Día */}
       {deliveredOrdersCount > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 space-y-2">
-          <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Resumen de cobros</p>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/50 dark:border-slate-800/80 shadow-sm p-5 space-y-3">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-850 pb-2">
+            Resumen de Cobros
+          </p>
+          
           <div className="grid grid-cols-2 gap-2">
             {totalEfectivo > 0 && (
-              <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2">
-                <span className="text-xs font-medium text-green-700 dark:text-green-300 flex items-center gap-1"><FaMoneyBillWave className="text-green-500" />Efectivo</span>
-                <span className="text-xs font-bold text-green-700 dark:text-green-300">{fmt(totalEfectivo)}</span>
+              <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-950/15 rounded-xl px-3 py-2 border border-emerald-100/30 dark:border-emerald-900/10">
+                <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5 uppercase">
+                  <FaMoneyBillWave className="text-emerald-500" /> Efectivo
+                </span>
+                <span className="text-xs font-black text-emerald-800 dark:text-emerald-350">{fmt(totalEfectivo)}</span>
               </div>
             )}
             {totalTransf > 0 && (
-              <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2">
-                <span className="text-xs font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1"><FaUniversity className="text-blue-500" />Transf.</span>
-                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{fmt(totalTransf)}</span>
+              <div className="flex items-center justify-between bg-blue-50/50 dark:bg-blue-950/15 rounded-xl px-3 py-2 border border-blue-100/30 dark:border-blue-900/10">
+                <span className="text-[10px] font-black text-blue-800 dark:text-blue-400 flex items-center gap-1.5 uppercase">
+                  <FaUniversity className="text-blue-550" /> Transf.
+                </span>
+                <span className="text-xs font-black text-blue-800 dark:text-blue-350">{fmt(totalTransf)}</span>
               </div>
             )}
           </div>
-          <div className="flex justify-between items-center pt-1 border-t border-gray-100 dark:border-slate-700">
-            <span className="text-xs font-semibold text-gray-600 dark:text-slate-300">Total cobrado</span>
-            <span className="text-sm font-black text-green-600 dark:text-green-400">{fmt(totalCobrado)}</span>
+
+          <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-850">
+            <span className="text-xs font-bold text-slate-650 dark:text-slate-350">Total Cobrado</span>
+            <span className="text-base font-black text-emerald-600 dark:text-emerald-400">{fmt(totalCobrado)}</span>
           </div>
+
           {totalPendiente > 0 && (
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1"><FaExclamationTriangle className="text-xs" />Deuda generada</span>
-              <span className="text-sm font-black text-red-600 dark:text-red-400">{fmt(totalPendiente)}</span>
+            <div className="flex justify-between items-center text-rose-600 dark:text-rose-400">
+              <span className="text-xs font-bold flex items-center gap-1.5">
+                <FaExclamationTriangle className="text-xs" /> Deuda Generada (Fiado)
+              </span>
+              <span className="text-base font-black">{fmt(totalPendiente)}</span>
             </div>
           )}
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-lg border border-gray-200 dark:border-slate-700">
-        <h2 className="font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2 text-lg">
-          <FaClipboardList className="text-blue-600" /> Pedidos del{" "}
-          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-AR", {
-            day: "numeric",
-            month: "long",
-          })}{" "}
-          ({totalCount})
+      {/* Lista de Pedidos */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-800/80">
+        <h2 className="font-black text-slate-850 dark:text-slate-100 mb-4 flex items-center gap-2 text-xs uppercase tracking-wider">
+          <FaClipboardList className="text-indigo-500" /> Pedidos Registrados
         </h2>
-        <ul className="space-y-3">
+
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {dailyOrders.length > 0 ? (
             dailyOrders.map((order) => (
               <li
                 key={order.id}
-                className="p-4 border-2 border-gray-200 dark:border-slate-700 rounded-xl hover:border-blue-300 transition-all"
+                className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-indigo-305 transition-all bg-slate-50/20 dark:bg-slate-950/10"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-800 dark:text-slate-100">
+                <div className="flex justify-between items-start mb-3.5 gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-extrabold text-xs text-slate-800 dark:text-slate-100 truncate">
                       {order.customers.full_name}
                     </p>
+                    
                     {order.customers.address && (
-                      <div className="text-xs text-gray-600 dark:text-slate-300 mt-1 flex items-start gap-1">
-                        <FaMapMarkerAlt className="text-gray-400 mt-0.5" />
-                        <div>
-                          <span>{order.customers.address}</span>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-start gap-1">
+                        <FaMapMarkerAlt className="text-slate-400 mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="block truncate">{order.customers.address}</span>
                           {order.customers.reference && (
-                            <span className="block italic text-gray-500 dark:text-slate-400">
+                            <span className="block italic text-[10px] text-slate-400 dark:text-slate-500 truncate">
                               Ref: {order.customers.reference}
                             </span>
                           )}
                         </div>
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                      {new Date(order.created_at).toLocaleTimeString("es-AR", {
+                    
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-mono">
+                      🕒 Horario: {new Date(order.created_at).toLocaleTimeString("es-AR", {
                         hour: "2-digit",
                         minute: "2-digit",
-                      })}
+                      })} hs
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-xl text-green-600">
-                      ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  
+                  <div className="text-right shrink-0">
+                    <p className="font-black text-base text-slate-900 dark:text-white">
+                      ${order.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </p>
+                    
                     {order.status === "entregado" && (
                       <div className="mt-1 space-y-0.5">
                         {order.amount_paid > 0 && (
-                          <p className="text-xs font-semibold text-green-500">
-                            Cobrado: {fmt(order.amount_paid)}
+                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            Pago: {fmt(order.amount_paid)}
                           </p>
                         )}
                         {order.amount_pending > 0 && (
-                          <p className="text-xs font-bold text-red-500 flex items-center gap-0.5 justify-end">
-                            <FaExclamationTriangle className="text-xs" /> Debe: {fmt(order.amount_pending)}
+                          <p className="text-[10px] font-bold text-rose-500 flex items-center gap-0.5 justify-end">
+                            <FaExclamationTriangle className="text-[9px]" /> Debe: {fmt(order.amount_pending)}
                           </p>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t">
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-850">
+                  {/* Badge de Estado */}
                   <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${order.status === "pendiente"
-                        ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider w-fit ${
+                      order.status === "pendiente"
+                        ? "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border border-amber-500/10"
                         : order.status === "cancelado"
-                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                          : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                      }`}
+                        ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-500/10"
+                        : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10"
+                    }`}
                   >
                     {order.status === "pendiente" ? (
                       <FaClock />
@@ -264,22 +282,28 @@ export default function DailyOrdersView({
                     {order.status === "pendiente"
                       ? "Pendiente"
                       : order.status === "cancelado"
-                        ? "Cancelado"
-                        : "Entregado"}
+                      ? "Cancelado"
+                      : "Entregado"}
                   </span>
-                  <div className="flex gap-2 flex-wrap">
+                  
+                  {/* Panel de Acciones */}
+                  <div className="flex gap-1.5 flex-wrap justify-end">
                     <button
                       onClick={() => onViewDetails(order.id)}
-                      className="flex items-center gap-1 px-2 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-all"
+                      className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-[10px] font-black rounded-lg transition-all"
+                      title="Ver Detalles"
                     >
-                      <FaInfoCircle /> Ver
+                      <FaInfoCircle /> Info
                     </button>
+                    
                     <button
                       onClick={() => onEditOrder(order.id)}
-                      className="flex items-center gap-1 px-2 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-all"
+                      className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-[10px] font-black rounded-lg transition-all"
+                      title="Editar"
                     >
-                      <FaEdit /> Editar
+                      <FaEdit /> Ed.
                     </button>
+                    
                     {order.customers.address && (
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -287,28 +311,34 @@ export default function DailyOrdersView({
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-1.5 bg-orange-600 text-white text-xs font-semibold rounded-lg hover:bg-orange-700 transition-all"
+                        className="flex items-center gap-1 px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-lg transition-all"
+                        title="Ver en Mapa"
                       >
                         <FaMapMarkerAlt /> Mapa
                       </a>
                     )}
+                    
                     <button
                       onClick={() => onPrintRemito(order.id)}
-                      className="flex items-center gap-1 px-2 py-1.5 bg-gray-600 text-white text-xs font-semibold rounded-lg hover:bg-gray-700 transition-all"
+                      className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-705 dark:text-slate-200 text-[10px] font-black rounded-lg transition-all"
+                      title="Imprimir Remito"
                     >
                       <FaPrint /> Remito
                     </button>
+                    
                     {order.status === "pendiente" && (
                       <>
                         <button
                           onClick={() => onDeliverOrder(order)}
-                          className="flex items-center gap-1 px-2 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-all"
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all shadow-sm"
+                          title="Entregar Pedido"
                         >
                           <FaTruck /> Entregar
                         </button>
                         <button
                           onClick={() => onCancelOrder(order)}
-                          className="flex items-center gap-1 px-2 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-all"
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black rounded-lg transition-all shadow-sm"
+                          title="Cancelar Pedido"
                         >
                           <FaBan /> Cancelar
                         </button>
@@ -320,33 +350,33 @@ export default function DailyOrdersView({
             ))
           ) : (
             <div className="text-center py-12">
-              <FaClipboardList className="text-5xl text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-400 font-medium">
-                No hay pedidos para esta fecha
-              </p>
+              <FaClipboardList className="text-4xl text-slate-200 dark:text-slate-800 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500">No hay pedidos asignados</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Para esta fecha no se registran entregas</p>
             </div>
           )}
         </ul>
 
+        {/* Paginación */}
         {totalPages > 1 && (
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <span className="text-xs text-gray-600 dark:text-slate-300">
-              Pagina {currentPage} de {totalPages}
+          <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-105 dark:border-slate-850 pt-4">
+            <span className="text-[10px] font-bold text-slate-500">
+              Página {currentPage} de {totalPages}
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={onPrevPage}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-205 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FaChevronLeft /> Anterior
+                Prev
               </button>
               <button
                 onClick={onNextPage}
                 disabled={currentPage >= totalPages}
-                className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-205 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Siguiente <FaChevronRight />
+                Sig
               </button>
             </div>
           </div>

@@ -46,6 +46,11 @@ export default function NewOrderPage() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [isCustomerMenuOpen, setIsCustomerMenuOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [deliveryDay, setDeliveryDay] = useState<string>("Sin reparto");
+  const [deliveryDate, setDeliveryDate] = useState<string>(() => {
+    const now = new Date();
+    return now.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+  });
 
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<Product[]>([]);
@@ -287,10 +292,25 @@ export default function NewOrderPage() {
     const loadToast = toast.loading("Registrando pedido...");
 
     try {
+      // Si el día de reparto seleccionado es diferente al original del cliente, lo actualizamos en la base de datos
+      const originalDeliveryDay = selectedCustomer.delivery_day || "Sin reparto";
+      if (deliveryDay !== originalDeliveryDay) {
+        const dbDayValue = deliveryDay === "Sin reparto" ? null : deliveryDay;
+        const { error: customerError } = await supabase
+          .from("customers")
+          .update({ delivery_day: dbDayValue })
+          .eq("id", selectedCustomer.id);
+        
+        if (customerError) {
+          console.error("Error al actualizar día de reparto del cliente:", customerError);
+        } else {
+          selectedCustomer.delivery_day = dbDayValue;
+        }
+      }
+
       const now = new Date();
-      const argTime = new Date(
-        now.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" })
-      );
+      const timePart = now.toTimeString().split(" ")[0]; // "HH:MM:SS"
+      const createdDateString = `${deliveryDate}T${timePart}-03:00`;
 
       const orderPayload = {
         customer_id: selectedCustomer.id,
@@ -300,7 +320,7 @@ export default function NewOrderPage() {
         payment_method: paymentMethod,
         amount_paid: amountReceived,
         amount_pending: totalAmount - amountReceived,
-        created_at: argTime.toISOString(),
+        created_at: createdDateString,
       };
 
       const { data: orderData, error: orderError } = await supabase
@@ -335,7 +355,7 @@ export default function NewOrderPage() {
           amount: remainingDebt,
           payment_method: paymentMethod,
           comment: `Pedido #${orderData.id.slice(0, 8)} - saldo pendiente`,
-          created_at: argTime.toISOString(),
+          created_at: createdDateString,
         });
         if (debtError) throw debtError;
       }
@@ -672,6 +692,7 @@ export default function NewOrderPage() {
                             type="button"
                             onClick={() => {
                               setSelectedCustomer(customer);
+                              setDeliveryDay(customer.delivery_day || "Sin reparto");
                               setCustomerQuery("");
                               setIsCustomerMenuOpen(false);
                               toast.success(`Cliente: ${customer.full_name}`);
@@ -691,22 +712,43 @@ export default function NewOrderPage() {
                 </div>
 
                 {selectedCustomer && (
-                  <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/15 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-2 animate-fadeIn text-xs">
-                    <div className="flex justify-between items-center border-b border-emerald-100/50 dark:border-emerald-900/20 pb-1.5">
+                  <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/15 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-3 animate-fadeIn text-xs">
+                    <div className="flex justify-between items-center border-b border-emerald-100/50 dark:border-emerald-900/20 pb-2">
                       <span className="font-bold text-emerald-800 dark:text-emerald-350">Tipo de Cliente:</span>
                       <span className="capitalize font-bold text-emerald-700 dark:text-emerald-305">
                         {selectedCustomer.customer_type}
                       </span>
                     </div>
-                    {selectedCustomer.delivery_day && (
-                      <div className="flex justify-between items-center border-b border-emerald-100/50 dark:border-emerald-900/20 pb-1.5">
-                        <span className="font-semibold text-slate-500 dark:text-slate-400">Día de Reparto:</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">
-                          {selectedCustomer.delivery_day}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center pt-0.5">
+
+                    {/* Selector de Día de Reparto / Entrega */}
+                    <div className="space-y-1">
+                      <label className="font-bold text-emerald-850 dark:text-emerald-350 block">Día de Reparto Habitual:</label>
+                      <select
+                        value={deliveryDay}
+                        onChange={(e) => setDeliveryDay(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-850 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        title="Seleccionar día de reparto"
+                      >
+                        <option value="Sin reparto">Sin reparto (No organizar)</option>
+                        {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day) => (
+                          <option key={day} value={day}>{day}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Fecha Específica de Entrega para este Pedido */}
+                    <div className="space-y-1">
+                      <label className="font-bold text-emerald-855 dark:text-emerald-350 block">Fecha de Entrega de este Pedido:</label>
+                      <input
+                        type="date"
+                        value={deliveryDate}
+                        onChange={(e) => setDeliveryDate(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-850 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                        title="Seleccionar fecha de entrega del pedido"
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-1 border-t border-emerald-100/50 dark:border-emerald-900/10">
                       <span className="font-bold text-amber-800 dark:text-amber-450">Deuda Corriente:</span>
                       <span className="font-bold text-amber-700 dark:text-amber-400">
                         {formatCurrency(selectedCustomer.debt || 0)}

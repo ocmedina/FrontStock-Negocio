@@ -84,19 +84,19 @@ export default function OrderDetailsModal({
   const getStatusBadge = (status: string) => {
     if (status === "pendiente") {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-955/20 text-amber-600 dark:text-amber-450 border border-amber-500/10">
           <FaClock /> Pendiente
         </span>
       );
     } else if (status === "cancelado") {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 dark:bg-rose-955/20 text-rose-600 dark:text-rose-400 border border-rose-500/10">
           <FaBan /> Cancelado
         </span>
       );
     } else {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-955/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10">
           <FaCheckCircle /> Entregado
         </span>
       );
@@ -104,110 +104,114 @@ export default function OrderDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 rounded-t-3xl flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <FaInfoCircle /> Detalles del Pedido
-          </h2>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white dark:bg-slate-900 w-full sm:max-w-xl sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800/80 animate-slide-up sm:animate-none">
+        
+        {/* Cabecera del Modal */}
+        <div className="p-5 border-b border-slate-100 dark:border-slate-850 flex justify-between items-center sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center">
+              <FaInfoCircle className="text-indigo-600 dark:text-indigo-400 text-sm" />
+            </div>
+            <h2 className="text-xs font-black text-slate-850 dark:text-slate-100 uppercase tracking-wider">
+              Detalle del Pedido
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white dark:bg-slate-900 hover:bg-opacity-20 rounded-full p-2 transition-all"
+            className="w-7 h-7 flex items-center justify-center text-slate-450 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-xl font-bold"
           >
-            <FaTimes size={20} />
+            &times;
           </button>
         </div>
 
-        <div className="p-6 flex-1 overflow-y-auto">
+        {/* Cuerpo del Modal */}
+        <div className="p-5 flex-1 overflow-y-auto space-y-4">
           {loading || !orderData ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <FaSpinner className="animate-spin text-4xl text-blue-600 mb-4" />
-              <p className="text-gray-600 dark:text-slate-300">Cargando detalles del pedido...</p>
+            <div className="flex flex-col items-center justify-center py-20">
+              <FaSpinner className="animate-spin text-3xl text-indigo-600 mb-3" />
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Cargando información del pedido...</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Información del Pedido */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                    <FaHashtag className="text-blue-600" /> Información del
-                    Pedido
+            <div className="space-y-4">
+              
+              {/* Bloque: Información del Pedido */}
+              <div className="bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl p-4 border border-slate-200/40 dark:border-slate-800/35">
+                <div className="flex items-center justify-between mb-3.5">
+                  <h3 className="font-extrabold text-[11px] text-slate-450 uppercase tracking-wider flex items-center gap-1.5">
+                    <FaHashtag /> Información General
                   </h3>
                   {getStatusBadge(orderData.status)}
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                
+                <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <p className="text-gray-600 dark:text-slate-300 mb-1">ID del Pedido:</p>
-                    <p className="font-mono font-semibold text-gray-800 dark:text-slate-100">
-                      {orderData.id.substring(0, 8)}...
+                    <p className="text-slate-400 dark:text-slate-500 font-bold mb-1">ID Pedido:</p>
+                    <p className="font-mono font-black text-slate-800 dark:text-slate-200">
+                      #{orderData.id.slice(0, 8).toUpperCase()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-slate-300 mb-1 flex items-center gap-1">
-                      <FaCalendarAlt className="text-blue-600" /> Fecha:
+                    <p className="text-slate-400 dark:text-slate-500 font-bold mb-1 flex items-center gap-1">
+                      <FaCalendarAlt size={10} /> Fecha Alta:
                     </p>
-                    <p className="font-semibold text-gray-800 dark:text-slate-100">
-                      {new Date(orderData.created_at).toLocaleDateString(
-                        "es-AR",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
+                    <p className="font-extrabold text-slate-805 dark:text-slate-200">
+                      {new Date(orderData.created_at).toLocaleDateString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })} hs
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Información del Cliente */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-                  <FaUser className="text-purple-600" /> Información del Cliente
+              {/* Bloque: Información del Cliente */}
+              <div className="bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl p-4 border border-slate-200/40 dark:border-slate-800/35">
+                <h3 className="font-extrabold text-[11px] text-slate-450 uppercase tracking-wider mb-3.5 flex items-center gap-1.5">
+                  <FaUser /> Datos del Cliente
                 </h3>
-                <div className="space-y-2 text-sm">
+                
+                <div className="space-y-2.5 text-xs">
                   <div>
-                    <p className="text-gray-600 dark:text-slate-300 mb-1">Nombre Completo:</p>
-                    <p className="font-semibold text-gray-800 dark:text-slate-100 text-lg">
+                    <p className="text-slate-400 dark:text-slate-500 font-bold mb-1">Razón Social / Nombre:</p>
+                    <p className="font-black text-slate-850 dark:text-slate-100 text-sm">
                       {orderData.customers.full_name}
                     </p>
                   </div>
-                  {(orderData.customers as Customer).phone && (
-                    <div className="flex items-center gap-2">
-                      <FaPhone className="text-purple-600" />
-                      <span className="font-medium text-gray-700 dark:text-slate-200">
-                        {(orderData.customers as Customer).phone}
-                      </span>
+                  
+                  {orderData.customers.phone && (
+                    <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold">
+                      <FaPhone size={10} />
+                      <span>{orderData.customers.phone}</span>
                     </div>
                   )}
-                  {(orderData.customers as Customer).address && (
+                  
+                  {orderData.customers.address && (
                     <div className="space-y-1">
-                      <div className="flex items-start gap-2">
-                        <FaMapMarkerAlt className="text-purple-600 mt-1" />
-                        <span className="font-medium text-gray-700 dark:text-slate-200">
-                          {(orderData.customers as Customer).address}
-                        </span>
+                      <div className="flex items-start gap-1.5 text-slate-650 dark:text-slate-300 font-medium">
+                        <FaMapMarkerAlt className="mt-0.5 shrink-0 text-slate-400" size={12} />
+                        <span>{orderData.customers.address}</span>
                       </div>
-                      {(orderData.customers as Customer).reference && (
-                        <div className="ml-6 text-sm text-gray-600 dark:text-slate-300 italic">
-                          <FaInfoCircle className="inline mr-1 text-gray-400" />
-                          Ref: {(orderData.customers as Customer).reference}
+                      {orderData.customers.reference && (
+                        <div className="ml-5 text-[10px] text-slate-450 dark:text-slate-500 italic">
+                          Ref: {orderData.customers.reference}
                         </div>
                       )}
                     </div>
                   )}
-                  <div>
+                  
+                  <div className="pt-1">
                     <span
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${(orderData.customers as Customer).customer_type ===
-                          "mayorista"
-                          ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
-                          : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                        }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                        orderData.customers.customer_type === "mayorista"
+                          ? "bg-purple-50 dark:bg-purple-955/20 text-purple-600 dark:text-purple-400 border border-purple-500/10"
+                          : "bg-emerald-50 dark:bg-emerald-955/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10"
+                      }`}
                     >
-                      {(orderData.customers as Customer).customer_type ===
-                        "mayorista"
+                      {orderData.customers.customer_type === "mayorista"
                         ? "🏢 Cliente Mayorista"
                         : "👤 Cliente Minorista"}
                     </span>
@@ -215,39 +219,39 @@ export default function OrderDetailsModal({
                 </div>
               </div>
 
-              {/* Productos del Pedido */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-                  <FaBox className="text-green-600" /> Productos (
-                  {orderData.order_items.length})
+              {/* Bloque: Productos del Pedido */}
+              <div className="bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl p-4 border border-slate-200/40 dark:border-slate-800/35">
+                <h3 className="font-extrabold text-[11px] text-slate-455 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <FaBox /> Detalle de Ítems ({orderData.order_items.length})
                 </h3>
+                
                 <div className="space-y-2">
                   {orderData.order_items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border border-green-200"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/40 dark:border-slate-800/40"
                     >
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800 dark:text-slate-100">
-                          {item.products?.name || "Producto desconocido"}
+                      <div className="flex-1 pr-2">
+                        <p className="font-extrabold text-xs text-slate-800 dark:text-slate-100">
+                          {item.products?.name || "Producto sin nombre"}
                         </p>
                         {item.products?.sku && (
-                          <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">
+                          <p className="text-[9px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                             SKU: {item.products.sku}
                           </p>
                         )}
-                        <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">
-                          Cantidad:{" "}
-                          <span className="font-bold">{item.quantity}</span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-455 mt-1">
+                          Unidades: <span className="font-black text-slate-700 dark:text-slate-200">{item.quantity}</span>
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600 dark:text-slate-300">Precio Unit.</p>
-                        <p className="font-bold text-gray-800 dark:text-slate-100">
-                          ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      
+                      <div className="text-right shrink-0">
+                        <p className="text-[9px] text-slate-400 dark:text-slate-550">Precio unit.</p>
+                        <p className="font-bold text-xs text-slate-800 dark:text-slate-100 mt-0.5">
+                          ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-green-600 font-semibold mt-1">
-                          Subtotal: ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black mt-1">
+                          Subt: ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -255,25 +259,24 @@ export default function OrderDetailsModal({
                 </div>
               </div>
 
-              {/* Total del Pedido */}
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-5 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold">Total del Pedido:</span>
-                  <span className="text-3xl font-bold">
-                    ${orderData.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
+              {/* Panel de Total del Pedido */}
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-5 text-white shadow-sm flex items-center justify-between">
+                <span className="text-xs uppercase font-black tracking-wider">Total a Facturar / Cobrar:</span>
+                <span className="text-2xl font-black">
+                  ${orderData.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-6 border-t bg-gray-50 dark:bg-slate-950 rounded-b-3xl">
+        {/* Footer del Modal */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20 rounded-b-3xl">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+            className="w-full py-3 bg-slate-900 hover:bg-black dark:bg-slate-800 dark:hover:bg-slate-750 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all"
           >
-            Cerrar
+            Cerrar Ventana
           </button>
         </div>
       </div>

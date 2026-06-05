@@ -37,6 +37,7 @@ type Customer = {
   id: string;
   full_name: string;
   customer_type: string;
+  delivery_day?: string | null;
 };
 
 type Order = {
@@ -66,6 +67,7 @@ export default function EditOrderPage({
     "efectivo" | "fiado" | "transferencia" | "mixto"
   >("efectivo");
   const [amountReceived, setAmountReceived] = useState<number>(0);
+  const [deliveryDay, setDeliveryDay] = useState<string>("Sin reparto");
 
   // Búsqueda de productos
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,6 +144,7 @@ export default function EditOrderPage({
     setItems(data.order_items || []);
     setPaymentMethod(data.payment_method || "efectivo");
     setAmountReceived(data.amount_paid || 0);
+    setDeliveryDay(data.customers?.delivery_day || "Sin reparto");
     setLoading(false);
   };
 
@@ -235,6 +238,23 @@ export default function EditOrderPage({
     try {
       const total = calculateTotal();
 
+      // Si el día de reparto cambió, lo actualizamos en la base de datos
+      const cust = customers.find((c) => c.id === selectedCustomerId);
+      const originalDeliveryDay = cust?.delivery_day || "Sin reparto";
+      if (deliveryDay !== originalDeliveryDay) {
+        const dbDayValue = deliveryDay === "Sin reparto" ? null : deliveryDay;
+        const { error: customerError } = await supabase
+          .from("customers")
+          .update({ delivery_day: dbDayValue })
+          .eq("id", selectedCustomerId);
+          
+        if (customerError) {
+          console.error("Error al actualizar día de reparto del cliente:", customerError);
+        } else {
+          setCustomers(prev => prev.map(c => c.id === selectedCustomerId ? { ...c, delivery_day: dbDayValue } : c));
+        }
+      }
+
       // Usar el Server Action para actualizar el pedido
       const result = await updateOrder(
         id,
@@ -309,8 +329,13 @@ export default function EditOrderPage({
           </label>
           <select
             value={selectedCustomerId}
-            onChange={(e) => setSelectedCustomerId(e.target.value)}
-            className="w-full p-3 border-2 border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            onChange={(e) => {
+              const newCustId = e.target.value;
+              setSelectedCustomerId(newCustId);
+              const cust = customers.find((c) => c.id === newCustId);
+              setDeliveryDay(cust?.delivery_day || "Sin reparto");
+            }}
+            className="w-full p-3 border-2 border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-800"
             title="Seleccionar cliente"
           >
             <option value="">Seleccionar cliente...</option>
@@ -321,6 +346,27 @@ export default function EditOrderPage({
                   ? "Mayorista"
                   : "Minorista"}
                 )
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Día de Reparto / Entrega */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
+            Día de Entrega / Reparto
+          </label>
+          <select
+            value={deliveryDay}
+            onChange={(e) => setDeliveryDay(e.target.value)}
+            disabled={!selectedCustomerId}
+            className="w-full p-3 border-2 border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-60 bg-white dark:bg-slate-800"
+            title="Seleccionar día de entrega"
+          >
+            <option value="Sin reparto">Sin reparto (No organizar)</option>
+            {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day) => (
+              <option key={day} value={day}>
+                {day}
               </option>
             ))}
           </select>
