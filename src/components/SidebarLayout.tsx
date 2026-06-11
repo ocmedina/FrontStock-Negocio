@@ -4,6 +4,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import UpdatesNotification from "./UpdatesNotification";
 import MobileBottomNav from "./MobileBottomNav";
+import TimeWeatherIndicator from "./TimeWeatherIndicator";
 
 export default function SidebarLayout({
     children,
@@ -25,6 +26,10 @@ export default function SidebarLayout({
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Desktop top header utility bar */}
+                <header className="hidden lg:flex bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 h-16 items-center justify-end px-8 shrink-0">
+                    <TimeWeatherIndicator />
+                </header>
 
                 {/* Scrollable Page Content */}
                 <main

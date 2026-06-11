@@ -56,6 +56,13 @@ const navSections = {
       activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
     },
     {
+      href: "/dashboard/listas-precios",
+      label: "Listas de Precios",
+      icon: HiOutlineClipboardList,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
+    },
+    {
       href: "/dashboard/ventas",
       label: "Historial",
       icon: HiOutlineDocumentText,

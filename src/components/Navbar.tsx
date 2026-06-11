@@ -22,6 +22,7 @@ import {
   HiOutlineCash,
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import TimeWeatherIndicator from "@/components/TimeWeatherIndicator";
 
 const navSections = {
   comercial: [
@@ -42,6 +43,11 @@ const navSections = {
       adminOnly: true,
     },
     { href: "/dashboard/clientes", label: "Clientes", icon: HiOutlineUsers },
+    {
+      href: "/dashboard/listas-precios",
+      label: "Listas de Precios",
+      icon: HiOutlineClipboardList,
+    },
     {
       href: "/dashboard/ventas",
       label: "Historial",
@@ -241,7 +247,8 @@ export default function Navbar() {
           </div>
 
           {/* User Menu - Desktop */}
-          <div className="hidden lg:flex items-center gap-2 relative flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-3 relative flex-shrink-0">
+            <TimeWeatherIndicator />
             <ThemeToggle />
             
             <button

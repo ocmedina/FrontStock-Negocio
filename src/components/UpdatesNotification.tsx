@@ -17,6 +17,16 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-06-11-updates",
+    date: "11 Jun 2026",
+    title: "🔄 Gestión de Pagos, Cierre de Caja y Búsqueda de Clientes",
+    description:
+      "Agregamos soporte para cobros con Cheque en todas las secciones, eliminando 'Otros' y valores NaN del Cierre de Caja. Implementamos el flujo atómico para anular y editar cobros por UUID en cuentas corrientes. También mejoramos el buscador de clientes en Ventas y creamos la sección inicial para Listas de Precios.",
+    icon: "🔄",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2026-06-05-delivery-dates-pagination",
     date: "5 Jun 2026",
     title: "🗓️ Fechas de Entrega, Paginación y Control de Pedidos",
