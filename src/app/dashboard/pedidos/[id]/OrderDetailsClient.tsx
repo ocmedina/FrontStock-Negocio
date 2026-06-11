@@ -184,6 +184,10 @@ export default function OrderDetailsClient({
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-purple-100 text-purple-800 border border-purple-300">
                 <FaDollarSign /> Mixto
               </span>
+            ) : order.payment_method === "cheque" ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-850 border border-amber-300">
+                <FaMoneyBillWave /> Cheque
+              </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-300">
                 <FaMoneyBillWave /> Efectivo

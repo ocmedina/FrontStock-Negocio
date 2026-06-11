@@ -367,6 +367,7 @@ export default function SalesHistoryPage() {
                 <option value="efectivo">Efectivo</option>
                 <option value="transferencia">Transferencia</option>
                 <option value="mercado_pago">Mercado Pago</option>
+                <option value="cheque">Cheque</option>
                 <option value="cuenta_corriente">
                   Cuenta Corriente (Fiado)
                 </option>
@@ -511,6 +512,10 @@ export default function SalesHistoryPage() {
                       ) : sale.payment_method === "mercado_pago" ? (
                         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-cyan-100 to-cyan-200 text-cyan-800 border border-cyan-300">
                           <FaMobileAlt /> Mercado Pago
+                        </span>
+                      ) : sale.payment_method === "cheque" ? (
+                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300">
+                          <FaMoneyBillWave /> Cheque
                         </span>
                       ) : (
                         <span className="text-gray-500 dark:text-slate-400 capitalize">

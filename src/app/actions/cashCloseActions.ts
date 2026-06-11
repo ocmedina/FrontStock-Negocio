@@ -21,7 +21,10 @@ export type PaymentBreakdown = {
   transferencia: number;
   mercado_pago: number;
   cuenta_corriente: number;
-  otros: number;
+  cheque: number;
+  tarjeta_debito: number;
+  tarjeta_credito: number;
+  mixto: number;
   total: number;
 };
 
@@ -114,7 +117,10 @@ export async function getDeliveryCashClose(
       transferencia: 0,
       mercado_pago: 0,
       cuenta_corriente: 0,
-      otros: 0,
+      cheque: 0,
+      tarjeta_debito: 0,
+      tarjeta_credito: 0,
+      mixto: 0,
       total: 0,
     };
 
@@ -127,8 +133,11 @@ export async function getDeliveryCashClose(
       if (method === 'efectivo') collected.efectivo += paid;
       else if (method === 'transferencia') collected.transferencia += paid;
       else if (method === 'mercado_pago' || method === 'mercadopago') collected.mercado_pago += paid;
-      else if (method === 'cuenta_corriente') collected.cuenta_corriente += paid;
-      else collected.otros += paid;
+      else if (method === 'cuenta_corriente') collected.cuenta_corriente += o.total_amount;
+      else if (method === 'cheque') collected.cheque += paid;
+      else if (method === 'tarjeta_debito' || method === 'tarjeta_de_debito') collected.tarjeta_debito += paid;
+      else if (method === 'tarjeta_credito' || method === 'tarjeta_de_credito') collected.tarjeta_credito += paid;
+      else if (method === 'mixto' || method === 'mixtos') collected.mixto += paid;
 
       collected.total += paid;
       debtGenerated += o.amount_pending;
@@ -198,7 +207,10 @@ export async function getDeskCashClose(
       transferencia: 0,
       mercado_pago: 0,
       cuenta_corriente: 0,
-      otros: 0,
+      cheque: 0,
+      tarjeta_debito: 0,
+      tarjeta_credito: 0,
+      mixto: 0,
       total: 0,
     };
 
@@ -210,7 +222,10 @@ export async function getDeskCashClose(
       else if (method === 'transferencia') collected.transferencia += amount;
       else if (method === 'mercado_pago' || method === 'mercadopago') collected.mercado_pago += amount;
       else if (method === 'cuenta_corriente') collected.cuenta_corriente += amount;
-      else collected.otros += amount;
+      else if (method === 'cheque') collected.cheque += amount;
+      else if (method === 'tarjeta_debito' || method === 'tarjeta_de_debito') collected.tarjeta_debito += amount;
+      else if (method === 'tarjeta_credito' || method === 'tarjeta_de_credito') collected.tarjeta_credito += amount;
+      else if (method === 'mixto' || method === 'mixtos') collected.mixto += amount;
 
       collected.total += amount;
     }

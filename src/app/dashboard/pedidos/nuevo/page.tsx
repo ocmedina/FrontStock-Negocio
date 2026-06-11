@@ -60,7 +60,7 @@ export default function NewOrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "fiado" | "transferencia" | "mixto">("efectivo");
+  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "fiado" | "transferencia" | "mixto" | "cheque">("efectivo");
   
   // Received payments (splits for mixed or simple received amount)
   const [amountReceived, setAmountReceived] = useState<number>(0);
@@ -184,7 +184,7 @@ export default function NewOrderPage() {
 
   // Amount Received updates based on payment methods
   useEffect(() => {
-    if (paymentMethod === "efectivo" || paymentMethod === "transferencia") {
+    if (paymentMethod === "efectivo" || paymentMethod === "transferencia" || paymentMethod === "cheque") {
       setAmountReceived(totalAmount);
     } else if (paymentMethod === "fiado") {
       setAmountReceived(0);
@@ -937,10 +937,11 @@ export default function NewOrderPage() {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                     Forma de Cobro del Pedido
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {[
                       { id: "efectivo", label: "💵 Efectivo" },
                       { id: "transferencia", label: "🏦 Transferencia" },
+                      { id: "cheque", label: "🎫 Cheque" },
                       { id: "fiado", label: "📋 Cuenta Cte." },
                       { id: "mixto", label: "💳 Pago Mixto" },
                     ].map((method) => {
@@ -952,7 +953,7 @@ export default function NewOrderPage() {
                           type="button"
                           onClick={() => {
                             setPaymentMethod(method.id as any);
-                            if (method.id === "efectivo" || method.id === "transferencia") {
+                            if (method.id === "efectivo" || method.id === "transferencia" || method.id === "cheque") {
                               setAmountReceived(totalAmount);
                             } else if (method.id === "fiado") {
                               setAmountReceived(0);

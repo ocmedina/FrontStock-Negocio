@@ -24,18 +24,19 @@ import {
   FaChevronRight,
   FaSync,
   FaExclamationTriangle,
+  FaCreditCard,
 } from "react-icons/fa";
 import { HiOutlineCash } from "react-icons/hi";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const fmt = (n: number) =>
+const fmt = (n: any) =>
   new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(n);
+  }).format(Number(n) || 0);
 
 const todayAR = () =>
   new Date().toLocaleDateString("en-CA", {
@@ -60,7 +61,12 @@ function methodLabel(method: string | null) {
     transferencia: "Transferencia",
     mercado_pago: "Mercado Pago",
     mercadopago: "Mercado Pago",
+    cheque: "Cheque",
+    tarjeta_debito: "Tarjeta de Débito",
+    tarjeta_credito: "Tarjeta de Crédito",
     cuenta_corriente: "Cuenta Corriente",
+    mixto: "Pago Mixto",
+    mixtos: "Pago Mixto",
   };
   return map[method.toLowerCase()] ?? method;
 }
@@ -71,7 +77,12 @@ function methodBadge(method: string | null) {
     transferencia: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
     mercado_pago: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20",
     mercadopago: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20",
+    cheque: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20",
+    tarjeta_debito: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20",
+    tarjeta_credito: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20",
     cuenta_corriente: "bg-amber-500/10 text-amber-600 dark:text-amber-405 border border-amber-500/20",
+    mixto: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20",
+    mixtos: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20",
   };
   const key = (method ?? "").toLowerCase();
   return colors[key] ?? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-350 border border-slate-200/50 dark:border-slate-700/60";
@@ -119,15 +130,15 @@ function DateNav({ date, onChange }: { date: string; onChange: (d: string) => vo
 
 // ─── Payment Breakdown Card ───────────────────────────────────────────────────
 
-function PaymentRow({ icon, label, amount, color }: { icon: React.ReactNode; label: string; amount: number; color: string }) {
-  if (amount === 0) return null;
+function PaymentRow({ icon, label, amount, color }: { icon: React.ReactNode; label: string; amount: any; color: string }) {
+  const cleanAmount = Number(amount) || 0;
   return (
     <div className={`flex items-center justify-between p-3.5 rounded-xl border border-transparent transition-all hover:scale-[1.01] ${color}`}>
       <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider">
         <span className="opacity-80">{icon}</span>
         {label}
       </div>
-      <span className="font-black text-sm tracking-tight">{fmt(amount)}</span>
+      <span className="font-black text-sm tracking-tight">{fmt(cleanAmount)}</span>
     </div>
   );
 }
@@ -238,12 +249,16 @@ function RepartoTab() {
                   color="bg-blue-500/10 text-blue-600 dark:text-blue-400" />
                 <PaymentRow icon={<FaMobileAlt />} label="Mercado Pago" amount={data.collected.mercado_pago}
                   color="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" />
+                <PaymentRow icon={<FaMoneyBillWave />} label="Cheque" amount={data.collected.cheque}
+                  color="bg-purple-500/10 text-purple-600 dark:text-purple-400" />
+                <PaymentRow icon={<FaCreditCard />} label="Tarjeta Débito" amount={data.collected.tarjeta_debito}
+                  color="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" />
+                <PaymentRow icon={<FaCreditCard />} label="Tarjeta Crédito" amount={data.collected.tarjeta_credito}
+                  color="bg-pink-500/10 text-pink-600 dark:text-pink-400" />
                 <PaymentRow icon={<FaFileInvoice />} label="Cuenta Corriente" amount={data.collected.cuenta_corriente}
                   color="bg-amber-500/10 text-amber-600 dark:text-amber-450" />
-                {data.collected.otros > 0 && (
-                  <PaymentRow icon={<HiOutlineCash />} label="Otros" amount={data.collected.otros}
-                    color="bg-slate-500/10 text-slate-600 dark:text-slate-350" />
-                )}
+                <PaymentRow icon={<FaSync />} label="Pago Mixto" amount={data.collected.mixto}
+                  color="bg-teal-500/10 text-teal-600 dark:text-teal-400" />
                 {data.collected.total === 0 && (
                   <p className="text-xs text-slate-400 text-center py-6 font-semibold">Sin cobros registrados en pedidos entregados</p>
                 )}
@@ -486,12 +501,16 @@ function MostradorTab() {
                 color="bg-blue-500/10 text-blue-600 dark:text-blue-400" />
               <PaymentRow icon={<FaMobileAlt />} label="Mercado Pago" amount={data.collected.mercado_pago}
                 color="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" />
+              <PaymentRow icon={<FaMoneyBillWave />} label="Cheque" amount={data.collected.cheque}
+                color="bg-purple-500/10 text-purple-600 dark:text-purple-400" />
+              <PaymentRow icon={<FaCreditCard />} label="Tarjeta Débito" amount={data.collected.tarjeta_debito}
+                color="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" />
+              <PaymentRow icon={<FaCreditCard />} label="Tarjeta Crédito" amount={data.collected.tarjeta_credito}
+                color="bg-pink-500/10 text-pink-600 dark:text-pink-400" />
               <PaymentRow icon={<FaFileInvoice />} label="Cuenta Corriente (Fiado)" amount={data.collected.cuenta_corriente}
                 color="bg-amber-500/10 text-amber-600 dark:text-amber-450" />
-              {data.collected.otros > 0 && (
-                <PaymentRow icon={<HiOutlineCash />} label="Otros" amount={data.collected.otros}
-                  color="bg-slate-500/10 text-slate-600 dark:text-slate-350" />
-              )}
+              <PaymentRow icon={<FaSync />} label="Pago Mixto" amount={data.collected.mixto}
+                color="bg-teal-500/10 text-teal-600 dark:text-teal-400" />
             </div>
             {data.collected.total === 0 && (
               <p className="text-xs text-slate-450 text-center py-6 font-semibold">Sin ventas activas para esta fecha</p>

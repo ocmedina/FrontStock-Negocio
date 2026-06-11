@@ -99,6 +99,9 @@ export default function DailyOrdersView({
   const totalTransf = deliveredOrders
     .filter((o) => (o.payment_method || "").toLowerCase() === "transferencia")
     .reduce((s, o) => s + (o.amount_paid || 0), 0);
+  const totalCheque = deliveredOrders
+    .filter((o) => (o.payment_method || "").toLowerCase() === "cheque")
+    .reduce((s, o) => s + (o.amount_paid || 0), 0);
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n);
@@ -163,7 +166,7 @@ export default function DailyOrdersView({
             Resumen de Cobros
           </p>
           
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {totalEfectivo > 0 && (
               <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-950/15 rounded-xl px-3 py-2 border border-emerald-100/30 dark:border-emerald-900/10">
                 <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5 uppercase">
@@ -178,6 +181,14 @@ export default function DailyOrdersView({
                   <FaUniversity className="text-blue-550" /> Transf.
                 </span>
                 <span className="text-xs font-black text-blue-800 dark:text-blue-350">{fmt(totalTransf)}</span>
+              </div>
+            )}
+            {totalCheque > 0 && (
+              <div className="flex items-center justify-between bg-purple-50/50 dark:bg-purple-950/15 rounded-xl px-3 py-2 border border-purple-100/30 dark:border-purple-900/10">
+                <span className="text-[10px] font-black text-purple-800 dark:text-purple-400 flex items-center gap-1.5 uppercase">
+                  <FaMoneyBillWave className="text-purple-500" /> Cheque
+                </span>
+                <span className="text-xs font-black text-purple-800 dark:text-purple-350">{fmt(totalCheque)}</span>
               </div>
             )}
           </div>

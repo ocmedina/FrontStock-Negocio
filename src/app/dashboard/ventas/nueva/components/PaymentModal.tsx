@@ -180,6 +180,7 @@ export default function PaymentModal({
                   <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
                   <option value="transferencia">🏦 Transferencia</option>
                   <option value="mercado_pago">📱 Mercado Pago</option>
+                  <option value="cheque">🎫 Cheque</option>
                   <option value="mixtos">🔀 Pagos Mixtos</option>
                   <option value="cuenta_corriente">
                     📋 Cuenta Corriente (Fiado)
@@ -247,6 +248,7 @@ export default function PaymentModal({
                         <option value="tarjeta_credito">Crédito</option>
                         <option value="transferencia">Transferencia</option>
                         <option value="mercado_pago">Mercado Pago</option>
+                        <option value="cheque">Cheque</option>
                       </select>
                       <div className="relative flex-1">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400">

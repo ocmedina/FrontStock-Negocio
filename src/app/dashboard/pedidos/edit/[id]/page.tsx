@@ -64,7 +64,7 @@ export default function EditOrderPage({
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<
-    "efectivo" | "fiado" | "transferencia" | "mixto"
+    "efectivo" | "fiado" | "transferencia" | "mixto" | "cheque"
   >("efectivo");
   const [amountReceived, setAmountReceived] = useState<number>(0);
   const [deliveryDay, setDeliveryDay] = useState<string>("Sin reparto");
@@ -377,7 +377,7 @@ export default function EditOrderPage({
           <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
             Método de Pago
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => {
@@ -403,6 +403,19 @@ export default function EditOrderPage({
                 }`}
             >
               🏦 Transferencia
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentMethod("cheque");
+                setAmountReceived(calculateTotal());
+              }}
+              className={`px-4 py-3 rounded-lg border-2 transition-all ${paymentMethod === "cheque"
+                ? "border-amber-500 bg-amber-55/50 dark:bg-amber-955/20 text-amber-700 dark:text-amber-300 font-semibold"
+                : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:border-gray-400 dark:hover:border-slate-500"
+                }`}
+            >
+              🎫 Cheque
             </button>
             <button
               type="button"

@@ -148,6 +148,7 @@ export default function DeliveryConfirmationModal({
                 <option value="efectivo">💵 Efectivo</option>
                 <option value="transferencia">🏦 Transferencia</option>
                 <option value="mercado_pago">📱 Mercado Pago</option>
+                <option value="cheque">🎫 Cheque</option>
                 <option value="mixto">💳 Mixto</option>
                 <option value="cuenta_corriente">
                   📋 Cuenta Corriente (Fiado)

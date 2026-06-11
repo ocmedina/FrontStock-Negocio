@@ -730,14 +730,11 @@ export default function NewSalePage() {
                     }}
                     onFocus={() => {
                       setIsCustomerMenuOpen(true);
-                      if (!customerQuery) {
-                        setCustomerQuery(selectedCustomer?.full_name || "");
-                      }
                     }}
                     onBlur={() => {
                       setTimeout(() => setIsCustomerMenuOpen(false), 120);
                     }}
-                    placeholder="Buscar cliente..."
+                    placeholder={selectedCustomer ? `Cliente: ${selectedCustomer.full_name}` : "Buscar cliente..."}
                     className="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-gray-50 dark:bg-slate-950 hover:bg-white dark:bg-slate-900 transition-colors"
                   />
                 </div>
@@ -771,13 +768,16 @@ export default function NewSalePage() {
                 )}
                 {selectedCustomer && (
                   <div className="mt-4 p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
-                    <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                    <p className="text-sm font-bold text-emerald-900 dark:text-emerald-50 mb-1.5">
+                      {selectedCustomer.full_name}
+                    </p>
+                    <p className="text-xs text-emerald-800 dark:text-emerald-200">
                       <span className="font-semibold">Tipo:</span>{" "}
                       <span className="capitalize">
                         {selectedCustomer.customer_type}
                       </span>
                     </p>
-                    <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1">
+                    <p className="text-xs text-emerald-800 dark:text-emerald-200 mt-1">
                       <span className="font-semibold">Deuda Actual:</span> $
                       {formatCurrency(selectedCustomer.debt || 0).replace("$", "")}
                     </p>
