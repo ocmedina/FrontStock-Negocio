@@ -92,14 +92,17 @@ export default function TimeWeatherIndicator() {
     if (code === 0) {
       return <FaSun className="text-amber-500 animate-spin-slow" />;
     }
-    if ([1, 2, 3].includes(code)) {
-      return <FaCloudSun className="text-amber-450" />;
+    if ([1, 2].includes(code)) {
+      return <FaCloudSun className="text-amber-400" />;
     }
-    if ([45, 48].includes(code)) {
+    if (code === 3) {
       return <FaCloud className="text-slate-400" />;
     }
+    if ([45, 48].includes(code)) {
+      return <FaCloud className="text-slate-350 animate-pulse" />;
+    }
     if ([51, 53, 55, 56, 57].includes(code)) {
-      return <FaCloudRain className="text-sky-400 animate-bounce" style={{ animationDuration: "2s" }} />;
+      return <FaCloudRain className="text-teal-400 animate-bounce" style={{ animationDuration: "2.5s" }} />;
     }
     if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
       return <FaCloudShowersHeavy className="text-blue-500" />;
@@ -124,17 +127,7 @@ export default function TimeWeatherIndicator() {
       };
     }
 
-    // Rain / Drizzle
-    if (weatherCode !== null && weatherCode >= 51 && weatherCode <= 82) {
-      return {
-        label: "Lluvia 🌧️",
-        borderClass: "border-blue-300 dark:border-blue-800/80",
-        glowClass: "shadow-[0_0_10px_rgba(59,130,246,0.2)]",
-        bgClass: "bg-blue-50/60 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400",
-      };
-    }
-
-    // Storms
+    // 1. Storms
     if (weatherCode !== null && [95, 96, 99].includes(weatherCode)) {
       return {
         label: "Tormenta ⚡",
@@ -144,13 +137,74 @@ export default function TimeWeatherIndicator() {
       };
     }
 
-    // Snow
+    // 2. Snow
     if (weatherCode !== null && [71, 73, 75, 77, 85, 86].includes(weatherCode)) {
       return {
         label: "Nieve ❄️",
         borderClass: "border-sky-200 dark:border-sky-800/60",
         glowClass: "shadow-[0_0_10px_rgba(186,230,253,0.25)]",
         bgClass: "bg-sky-50/50 dark:bg-sky-950/20 text-sky-600 dark:text-sky-300",
+      };
+    }
+
+    // 3. Rain
+    if (weatherCode !== null && [61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) {
+      return {
+        label: "Lluvia 🌧️",
+        borderClass: "border-blue-300 dark:border-blue-800/80",
+        glowClass: "shadow-[0_0_10px_rgba(59,130,246,0.2)]",
+        bgClass: "bg-blue-50/60 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400",
+      };
+    }
+
+    // 4. Drizzle / Llovizna
+    if (weatherCode !== null && [51, 53, 55, 56, 57].includes(weatherCode)) {
+      return {
+        label: "Llovizna 🌦️",
+        borderClass: "border-teal-200 dark:border-teal-800/60",
+        glowClass: "shadow-[0_0_10px_rgba(20,184,166,0.15)]",
+        bgClass: "bg-teal-50/50 dark:bg-teal-950/20 text-teal-650 dark:text-teal-400",
+      };
+    }
+
+    // 5. Fog / Niebla
+    if (weatherCode !== null && [45, 48].includes(weatherCode)) {
+      return {
+        label: "Niebla 🌫️",
+        borderClass: "border-slate-300 dark:border-slate-700/80",
+        glowClass: "shadow-[0_0_10px_rgba(148,163,184,0.15)]",
+        bgClass: "bg-slate-100/60 dark:bg-slate-800/35 text-slate-500 dark:text-slate-400",
+      };
+    }
+
+    // 6. Cloudy / Nublado
+    if (weatherCode !== null && [1, 2, 3].includes(weatherCode)) {
+      return {
+        label: weatherCode === 3 ? "Nublado ☁️" : "Parcial. Nublado ⛅",
+        borderClass: "border-slate-200 dark:border-slate-700/60",
+        glowClass: "shadow-[0_0_10px_rgba(203,213,225,0.15)]",
+        bgClass: "bg-slate-100/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300",
+      };
+    }
+
+    // 7. Clear/Sunny
+    if (weatherCode === 0) {
+      return {
+        label: "Soleado ☀️",
+        borderClass: "border-amber-350 dark:border-amber-900/40",
+        glowClass: "shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+        bgClass: "bg-amber-50/40 dark:bg-amber-950/10 text-amber-600 dark:text-amber-400",
+      };
+    }
+
+    // Temperature fallbacks if weatherCode is not matched or null
+    // Hot (>= 28°C)
+    if (temp >= 28) {
+      return {
+        label: "Calor ☀️",
+        borderClass: "border-orange-300 dark:border-orange-900/50",
+        glowClass: "shadow-[0_0_10px_rgba(249,115,22,0.2)]",
+        bgClass: "bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400",
       };
     }
 
@@ -164,19 +218,9 @@ export default function TimeWeatherIndicator() {
       };
     }
 
-    // Hot (>= 28°C)
-    if (temp >= 28) {
-      return {
-        label: "Calor ☀️",
-        borderClass: "border-orange-300 dark:border-orange-900/50",
-        glowClass: "shadow-[0_0_10px_rgba(249,115,22,0.2)]",
-        bgClass: "bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400",
-      };
-    }
-
     // Default Temperate
     return {
-      label: "",
+      label: "Templado 🌡️",
       borderClass: "border-slate-100 dark:border-slate-800/80",
       glowClass: "shadow-sm",
       bgClass: "bg-slate-50/60 dark:bg-slate-850/50 text-slate-600 dark:text-slate-350",
