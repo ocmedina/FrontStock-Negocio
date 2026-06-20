@@ -11,6 +11,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import RegisterSupplierPayment from "@/components/payments/RegisterSupplierPayment";
+import DeleteSupplierPaymentButton from "@/components/payments/DeleteSupplierPaymentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -224,13 +225,22 @@ export default async function SupplierDetailPage(props: {
                       )}
                     </div>
                   </div>
-                  <p
-                    className={`font-black text-lg ${
-                      isCompra ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-                    } sm:text-right`}
-                  >
-                    {isCompra ? "+" : "-"}{formatCurrency(item.amount)}
-                  </p>
+                  <div className="flex items-center gap-4 sm:text-right">
+                    <p
+                      className={`font-black text-lg ${
+                        isCompra ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                      }`}
+                    >
+                      {isCompra ? "+" : "-"}{formatCurrency(item.amount)}
+                    </p>
+                    {!isCompra && (
+                      <DeleteSupplierPaymentButton
+                        paymentId={item.id}
+                        supplierId={supplier.id}
+                        amount={item.amount}
+                      />
+                    )}
+                  </div>
                 </div>
               );
             })
