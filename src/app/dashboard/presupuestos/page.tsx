@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import PDFDownloadButton from "@/components/pdf/PDFDownloadButton";
+import toast from "react-hot-toast";
 import {
   FaCalendarAlt,
   FaFileInvoiceDollar,
@@ -12,6 +13,7 @@ import {
   FaSpinner,
   FaTimes,
   FaUser,
+  FaTrash,
 } from "react-icons/fa";
 
 type BudgetRow = {
@@ -189,6 +191,36 @@ export default function BudgetsPage() {
     loadBudgets();
   }, []);
 
+  const handleDeleteBudget = async (budgetId: string) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este presupuesto? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    const loadingToast = toast.loading("Eliminando presupuesto...");
+    try {
+      // 1. Delete items first to avoid foreign key errors
+      const { error: itemsError } = await supabase
+        .from("budget_items")
+        .delete()
+        .eq("budget_id", budgetId);
+
+      if (itemsError) throw itemsError;
+
+      // 2. Delete budget itself
+      const { error: budgetError } = await supabase
+        .from("budgets")
+        .delete()
+        .eq("id", budgetId);
+
+      if (budgetError) throw budgetError;
+
+      toast.success("Presupuesto eliminado", { id: loadingToast });
+      setBudgets((prev) => prev.filter((b) => b.id !== budgetId));
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar presupuesto", { id: loadingToast });
+    }
+  };
+
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-950 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -250,16 +282,25 @@ export default function BudgetsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between">
-                    <button
-                      onClick={() => setSelectedBudgetIdForPrint(budget.id)}
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      <FaPrint /> PDF
-                    </button>
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedBudgetIdForPrint(budget.id)}
+                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-all"
+                      >
+                        <FaPrint className="w-3 h-3" /> PDF
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBudget(budget.id)}
+                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-red-50 hover:bg-red-150 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-650 dark:text-red-400 rounded-lg hover:text-red-700 font-semibold transition-all"
+                        title="Eliminar Presupuesto"
+                      >
+                        <FaTrash className="w-3 h-3" /> Eliminar
+                      </button>
+                    </div>
                     <Link
                       href={`/dashboard/presupuestos/${budget.id}`}
-                      className="text-xs text-blue-700 dark:text-blue-300 font-semibold hover:text-blue-800"
+                      className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline"
                     >
                       Ver detalle
                     </Link>

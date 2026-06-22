@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/numberFormat";
 import PDFDownloadButton from "@/components/pdf/PDFDownloadButton";
-import { FaArrowLeft, FaCalendarAlt, FaPrint, FaUser } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabaseClient";
+import { FaArrowLeft, FaCalendarAlt, FaPrint, FaUser, FaTrash } from "react-icons/fa";
 
 type BudgetItem = {
   quantity: number;
@@ -35,11 +38,45 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function BudgetDetailClient({ budget }: { budget: BudgetDetail }) {
+  const router = useRouter();
   const [printFormat, setPrintFormat] = useState<"A4" | "thermal">("A4");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const items = budget.budget_items ?? [];
   const statusKey = (budget.status || "activo").toLowerCase();
   const statusClass = statusStyles[statusKey] || statusStyles.activo;
+
+  const handleDelete = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este presupuesto? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    const loadingToast = toast.loading("Eliminando presupuesto...");
+    try {
+      // 1. Delete items first
+      const { error: itemsError } = await supabase
+        .from("budget_items")
+        .delete()
+        .eq("budget_id", budget.id);
+
+      if (itemsError) throw itemsError;
+
+      // 2. Delete budget itself
+      const { error: budgetError } = await supabase
+        .from("budgets")
+        .delete()
+        .eq("id", budget.id);
+
+      if (budgetError) throw budgetError;
+
+      toast.success("Presupuesto eliminado", { id: loadingToast });
+      router.push("/dashboard/presupuestos");
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar presupuesto", { id: loadingToast });
+      setIsDeleting(false);
+    }
+  };
 
   const orderData = useMemo(() => {
     return {
@@ -185,6 +222,24 @@ export default function BudgetDetailClient({ budget }: { budget: BudgetDetail })
                   fileNamePrefix="presupuesto"
                 />
               </div>
+            </div>
+
+            {/* Zona Peligrosa - Danger Zone Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-red-150 dark:border-red-950/20 shadow-sm p-6 space-y-4">
+              <h2 className="font-semibold text-red-650 dark:text-red-400 flex items-center gap-2">
+                <FaTrash className="w-4 h-4" /> Zona Peligrosa
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                Esta acción no se puede deshacer. Se eliminarán permanentemente el presupuesto y todos sus detalles.
+              </p>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-650 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <FaTrash className="w-3.5 h-3.5" />
+                {isDeleting ? "Eliminando..." : "Eliminar Presupuesto"}
+              </button>
             </div>
           </div>
         </div>
