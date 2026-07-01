@@ -60,7 +60,7 @@ export default function NewOrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "fiado" | "transferencia" | "mixto" | "cheque">("efectivo");
+  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "fiado" | "transferencia" | "mixto" | "cheque">("fiado");
   
   // Received payments (splits for mixed or simple received amount)
   const [amountReceived, setAmountReceived] = useState<number>(0);
@@ -99,7 +99,44 @@ export default function NewOrderPage() {
         if (customersError) throw customersError;
         if (productsError) throw productsError;
 
-        setCustomers(customersData || []);
+        // Fetch pending debt details dynamically to calculate correct debt in-memory
+        const [ordersDebtRes, salesDebtRes] = await Promise.all([
+          supabase
+            .from("orders")
+            .select("customer_id, amount_pending")
+            .gt("amount_pending", 0)
+            .neq("status", "cancelado"),
+          supabase
+            .from("sales")
+            .select("customer_id, amount_pending")
+            .eq("payment_method", "cuenta_corriente")
+            .eq("is_cancelled", false)
+            .gt("amount_pending", 0),
+        ]);
+
+        if (ordersDebtRes.error) throw ordersDebtRes.error;
+        if (salesDebtRes.error) throw salesDebtRes.error;
+
+        const debtByCustomer = new Map<string, number>();
+        const addDebt = (customerId: string | null, amountPending: number | null) => {
+          if (!customerId) return;
+          const current = debtByCustomer.get(customerId) || 0;
+          debtByCustomer.set(customerId, current + Number(amountPending || 0));
+        };
+
+        (ordersDebtRes.data || []).forEach((row) => {
+          addDebt(row.customer_id, row.amount_pending as number | null);
+        });
+        (salesDebtRes.data || []).forEach((row) => {
+          addDebt(row.customer_id, row.amount_pending as number | null);
+        });
+
+        const customersWithRealDebt = (customersData || []).map((customer) => ({
+          ...customer,
+          debt: debtByCustomer.get(customer.id) || 0,
+        }));
+
+        setCustomers(customersWithRealDebt);
         setProducts(productsData || []);
         setCurrentUser(session?.user ?? null);
       } catch (error) {

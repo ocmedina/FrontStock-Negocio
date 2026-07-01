@@ -502,15 +502,26 @@ export default function RepartoPage() {
       }
 
       // 2. Registrar movimientos en la cuenta corriente
-      const movements = [
-        {
+      // Check if a "compra" movement already exists for this order to avoid duplicates
+      const shortId = orderId.substring(0, 8);
+      const { data: existingPurchase } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("customer_id", order.customer_id)
+        .eq("type", "compra")
+        .ilike("comment", `%Pedido%${shortId}%`)
+        .maybeSingle();
+
+      const movements = [];
+      if (!existingPurchase) {
+        movements.push({
           customer_id: order.customer_id,
           order_id: order.id,
           type: "compra",
           amount: total,
           comment: `Pedido ${order.id.substring(0, 8)}`,
-        },
-      ];
+        });
+      }
 
       if (amountPaid > 0) {
         movements.push({
@@ -522,7 +533,9 @@ export default function RepartoPage() {
         });
       }
 
-      await supabase.from("payments").insert(movements);
+      if (movements.length > 0) {
+        await supabase.from("payments").insert(movements);
+      }
 
       // 3. Marcar pedido como 'entregado' y actualizar método de pago usando RPC
       // Primero actualizamos los datos de pago
