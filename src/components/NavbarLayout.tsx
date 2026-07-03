@@ -2,6 +2,7 @@
 
 import Navbar from "./Navbar";
 import UpdatesNotification from "./UpdatesNotification";
+import MaintenanceBanner from "./MaintenanceBanner";
 
 export default function NavbarLayout({
     children,
@@ -10,6 +11,9 @@ export default function NavbarLayout({
 }) {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col">
+            {/* Maintenance Banner */}
+            <MaintenanceBanner />
+
             {/* Top Navbar */}
             <Navbar />
 

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Package, BarChart3, FileText, Settings, ArrowRight } from "lucide-react";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 
 export default function FrontStockWelcome() {
   const features = [
@@ -42,6 +43,11 @@ export default function FrontStockWelcome() {
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[450px] h-[450px] bg-indigo-600/5 rounded-full blur-[110px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[450px] h-[450px] bg-blue-500/5 rounded-full blur-[110px] pointer-events-none" />
+
+      {/* Maintenance Banner */}
+      <div className="w-full max-w-5xl mx-auto z-20">
+        <MaintenanceBanner />
+      </div>
 
       {/* Main Container */}
       <div className="max-w-5xl w-full mx-auto my-auto py-12 relative z-10">

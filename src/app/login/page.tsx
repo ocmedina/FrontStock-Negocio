@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -69,6 +70,11 @@ export default function LoginPage() {
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[550px] h-[550px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-indigo-600/5 rounded-full blur-[110px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[110px] pointer-events-none" />
+
+      {/* Maintenance Banner */}
+      <div className="w-full max-w-md mx-auto z-20">
+        <MaintenanceBanner />
+      </div>
 
       {/* Main Container */}
       <div className="w-full max-w-md mx-auto my-auto relative z-10 py-8 animate-fadeIn">
