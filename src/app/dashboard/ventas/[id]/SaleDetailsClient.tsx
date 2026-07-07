@@ -26,6 +26,19 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
   const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [settings, setSettings] = useState<any>(null);
 
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceType, setInvoiceType] = useState("B");
+  const [customerCuit, setCustomerCuit] = useState("");
+  const [customerIvaCondition, setCustomerIvaCondition] = useState("Consumidor Final");
+
+  useEffect(() => {
+    if (sale?.customers) {
+      const isMayorista = sale.customers.customer_type === "mayorista";
+      setInvoiceType(isMayorista ? "A" : "B");
+      setCustomerIvaCondition(isMayorista ? "Responsable Inscripto" : "Consumidor Final");
+    }
+  }, [sale]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -58,7 +71,7 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
       // 3. Verificar si ya existe factura
       const { data: existingInvoice } = await supabase
         .from("invoices")
-        .select("id, invoice_number, created_at, customer_data, items_data, total_amount")
+        .select("id, invoice_number, created_at, customer_data, items_data, total_amount, invoice_type, customer_cuit, customer_iva_condition, observations")
         .eq("sale_id", sale.id)
         .maybeSingle();
 
@@ -75,6 +88,11 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
   }, [sale.id]);
 
   const handleGenerateInvoice = async () => {
+    if (invoiceType === "A" && !customerCuit.trim()) {
+      toast.error("La Factura A requiere ingresar el CUIT del cliente.");
+      return;
+    }
+
     setLoadingGenerate(true);
 
     // 1. Chequear sesión antes de generar
@@ -89,10 +107,16 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
     }
 
     // 2. Generar factura
-    const result = await createInvoiceFromSale(sale.id);
+    const result = await createInvoiceFromSale(
+      sale.id,
+      invoiceType,
+      customerCuit,
+      customerIvaCondition
+    );
     if (result.success) {
       toast.success(result.message);
       setInvoiceData(result.invoiceData);
+      setShowInvoiceModal(false);
     } else {
       toast.error(result.message);
     }
@@ -140,16 +164,12 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
                 />
               ) : (
                 <button
-                  onClick={handleGenerateInvoice}
+                  onClick={() => setShowInvoiceModal(true)}
                   disabled={loadingGenerate}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 shadow-lg hover:shadow-xl transition-all"
                 >
-                  {loadingGenerate ? (
-                    <FaSpinner className="animate-spin" />
-                  ) : (
-                    <FaFileInvoiceDollar />
-                  )}
-                  {loadingGenerate ? "Generando..." : "Generar Factura"}
+                  <FaFileInvoiceDollar />
+                  Generar Factura
                 </button>
               )}
             </div>
@@ -288,6 +308,116 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
           </div>
         </div>
       </div>
+
+      {/* MODAL DE GENERACIÓN DE FACTURA (A/B/C) */}
+      {showInvoiceModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+              <h3 className="text-xl font-black flex items-center gap-2">
+                <FaFileInvoiceDollar /> Generar Factura
+              </h3>
+              <p className="text-xs text-white/80 mt-1">
+                Seleccioná el tipo de comprobante y los datos fiscales del receptor.
+              </p>
+            </div>
+            
+            <div className="p-6 space-y-4 text-slate-800 dark:text-slate-100">
+              {/* Tipo de Factura */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                  Tipo de Factura
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['A', 'B', 'C'].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setInvoiceType(type);
+                        if (type === 'A') {
+                          setCustomerIvaCondition('Responsable Inscripto');
+                        } else if (type === 'B') {
+                          setCustomerIvaCondition('Consumidor Final');
+                        } else {
+                          setCustomerIvaCondition('Monotributista');
+                        }
+                      }}
+                      className={`py-3 text-sm font-black rounded-xl border transition-all ${
+                        invoiceType === type
+                          ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/40 dark:text-blue-400 ring-2 ring-blue-500/20'
+                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      Factura {type}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed font-medium">
+                  {invoiceType === 'A' && 'Emitida por Responsable Inscripto a Responsable Inscripto. Discrimina IVA 21%.'}
+                  {invoiceType === 'B' && 'Emitida por Responsable Inscripto a Consumidores Finales o Exentos. IVA incluido.'}
+                  {invoiceType === 'C' && 'Emitida por Monotributistas. No contiene conceptos de IVA.'}
+                </p>
+              </div>
+
+              {/* Condicion de IVA */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Condición IVA del Cliente
+                </label>
+                <select
+                  value={customerIvaCondition}
+                  onChange={(e) => setCustomerIvaCondition(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-semibold transition-all"
+                >
+                  <option value="Consumidor Final">Consumidor Final</option>
+                  <option value="Responsable Inscripto">Responsable Inscripto</option>
+                  <option value="Monotributista">Monotributista</option>
+                  <option value="Exento">IVA Exento</option>
+                </select>
+              </div>
+
+              {/* CUIT / CUIL / DNI */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  CUIT / CUIL / DNI del Cliente {invoiceType === 'A' && <span className="text-red-500">*</span>}
+                </label>
+                <input
+                  type="text"
+                  value={customerCuit}
+                  onChange={(e) => setCustomerCuit(e.target.value)}
+                  placeholder={invoiceType === 'A' ? "Ej: 30-12345678-9 (Requerido)" : "Ej: 20-98765432-1 (Opcional)"}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-semibold transition-all"
+                />
+              </div>
+
+              {/* Acciones del Modal */}
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-wider"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateInvoice}
+                  disabled={loadingGenerate}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 text-white font-bold rounded-xl disabled:opacity-50 transition-all text-xs uppercase tracking-wider shadow-md hover:shadow-lg flex items-center justify-center gap-1.5"
+                >
+                  {loadingGenerate ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaFileInvoiceDollar />
+                  )}
+                  {loadingGenerate ? 'Generando...' : 'Generar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,12 @@ export type Customer = Database["public"]["Tables"]["customers"]["Row"] & {
   debt?: number | null;
 };
 export type Product = Database["public"]["Tables"]["products"]["Row"];
-export type CartItem = Product & { quantity: number; customPrice?: number };
+export type CartItem = Product & { 
+  quantity: number; 
+  customPrice?: number;
+  taxRateId?: number;
+  taxRateVal?: number;
+};
 
 export type SaleTab = {
   id: number;
@@ -19,6 +24,9 @@ export type SaleTab = {
   showPaymentPanel: boolean;
   payToSupplier: boolean;
   selectedSupplierId: string | null;
+  voucherTypeId?: string;
+  pointOfSale?: number;
+  observations?: string;
 };
 
 export type Supplier = {

@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import {
   FaSave, FaUpload, FaStore, FaMapMarkerAlt, FaPhone,
   FaImage, FaCheck, FaLock, FaPalette, FaDownload, FaFileImport,
-  FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaSpinner
+  FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaSpinner,
+  FaEnvelope, FaBuilding
 } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { useLayout } from '@/contexts/LayoutContext';
@@ -432,58 +433,204 @@ export default function SettingsPage() {
                 <div className="p-6 lg:p-8">
                   {/* SECCIÓN GENERAL */}
                   {activeTab === 'general' && (
-                    <div className="space-y-6 max-w-2xl">
-                      <div className="group">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
-                          Nombre del Negocio
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <FaStore />
+                    <div className="space-y-6 max-w-4xl">
+                      <h3 className="text-sm font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-gray-100 dark:border-slate-800 pb-2">
+                        Identidad de la Empresa
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Razón Social
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <FaBuilding />
+                            </div>
+                            <input
+                              type="text"
+                              value={settings.business_name || ''}
+                              onChange={e => handleInputChange('business_name', e.target.value)}
+                              placeholder="Ej: Mi Empresa S.A."
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            />
                           </div>
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Nombre de Fantasía
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <FaStore />
+                            </div>
+                            <input
+                              type="text"
+                              value={settings.business_fantasy_name || ''}
+                              onChange={e => handleInputChange('business_fantasy_name', e.target.value)}
+                              placeholder="Ej: Almacén Don Juan"
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <h3 className="text-sm font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-gray-100 dark:border-slate-800 pb-2 pt-4">
+                        Datos Fiscales (AFIP / ARCA)
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            CUIT
+                          </label>
                           <input
                             type="text"
-                            value={settings.business_name || ''}
-                            onChange={e => handleInputChange('business_name', e.target.value)}
-                            placeholder="Ej: Mi Empresa S.A."
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            value={settings.business_cuit || ''}
+                            onChange={e => handleInputChange('business_cuit', e.target.value)}
+                            placeholder="Ej: 30-12345678-9"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                          />
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Ingresos Brutos (IIBB)
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.business_iibb || ''}
+                            onChange={e => handleInputChange('business_iibb', e.target.value)}
+                            placeholder="Ej: 30-12345678-9 o CM"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                          />
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Inicio de Actividades
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.business_start_date || ''}
+                            onChange={e => handleInputChange('business_start_date', e.target.value)}
+                            placeholder="Ej: 01/01/2020"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="group">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
-                          Dirección
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <FaMapMarkerAlt />
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Condición ante el IVA
+                          </label>
+                          <select
+                            value={settings.business_iva_condition || 'Responsable Inscripto'}
+                            onChange={e => handleInputChange('business_iva_condition', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                          >
+                            <option value="Responsable Inscripto">Responsable Inscripto</option>
+                            <option value="Monotributista">Monotributista</option>
+                            <option value="Exento">Exento</option>
+                          </select>
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Punto de Venta
+                          </label>
                           <input
                             type="text"
-                            value={settings.business_address || ''}
-                            onChange={e => handleInputChange('business_address', e.target.value)}
-                            placeholder="Ej: Av. San Martín 1234"
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            value={settings.business_point_of_sale || '1'}
+                            onChange={e => handleInputChange('business_point_of_sale', e.target.value)}
+                            placeholder="Ej: 1"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="group">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
-                          Teléfono
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <FaPhone />
+                      <h3 className="text-sm font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-gray-100 dark:border-slate-800 pb-2 pt-4">
+                        Contacto y Ubicación
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="group md:col-span-3">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Dirección
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <FaMapMarkerAlt />
+                            </div>
+                            <input
+                              type="text"
+                              value={settings.business_address || ''}
+                              onChange={e => handleInputChange('business_address', e.target.value)}
+                              placeholder="Ej: Av. San Martín 1234"
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            />
                           </div>
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Localidad
+                          </label>
                           <input
                             type="text"
-                            value={settings.business_phone || ''}
-                            onChange={e => handleInputChange('business_phone', e.target.value)}
-                            placeholder="Ej: +54 9 11 1234-5678"
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            value={settings.business_locality || ''}
+                            onChange={e => handleInputChange('business_locality', e.target.value)}
+                            placeholder="Ej: Rosario"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
                           />
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Provincia
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.business_province || ''}
+                            onChange={e => handleInputChange('business_province', e.target.value)}
+                            placeholder="Ej: Santa Fe"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                          />
+                        </div>
+
+                        <div className="group">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Teléfono
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <FaPhone />
+                            </div>
+                            <input
+                              type="text"
+                              value={settings.business_phone || ''}
+                              onChange={e => handleInputChange('business_phone', e.target.value)}
+                              placeholder="Ej: +54 9 341 123456"
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="group md:col-span-3">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                            Email de Contacto
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <FaEnvelope />
+                            </div>
+                            <input
+                              type="email"
+                              value={settings.business_email || ''}
+                              onChange={e => handleInputChange('business_email', e.target.value)}
+                              placeholder="Ej: contacto@miempresa.com"
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-900 dark:text-white sm:text-sm"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>

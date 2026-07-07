@@ -17,6 +17,16 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-07-07-invoice-types-argentina",
+    date: "7 Jul 2026",
+    title: "🇦🇷 Facturación Tipo A, B, C y Comprobantes de Venta",
+    description:
+      "Implementamos soporte completo de facturas fiscales según la normativa argentina. Ahora puedes crear Facturas A, B y C directamente desde la sección de Facturas, con discriminación de IVA por alícuotas en el PDF, buscador inteligente de ventas pendientes y numeración secuencial.",
+    icon: "🇦🇷",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2026-06-11-updates",
     date: "11 Jun 2026",
     title: "🔄 Gestión de Pagos, Cierre de Caja y Búsqueda de Clientes",

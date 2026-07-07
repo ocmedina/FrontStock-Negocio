@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { formatCurrency } from "@/lib/numberFormat";
 import toast from "react-hot-toast";
 import { FaUser, FaShoppingCart, FaMoneyBillWave, FaSearch } from "react-icons/fa";
+import { useVoucher } from "@/hooks/useVoucher";
 
 import {
   Customer,
@@ -13,7 +14,7 @@ import {
   SaleTab,
   Product,
   CartItem,
-} from "./components/../types";
+} from "./types";
 import ProductSearch from "./components/ProductSearch";
 import PaymentModal from "./components/PaymentModal";
 import ProductSearchModal from "./components/ProductSearchModal";
@@ -45,6 +46,9 @@ export default function NewSalePage() {
       showPaymentPanel: false,
       payToSupplier: false,
       selectedSupplierId: null,
+      voucherTypeId: "FB",
+      pointOfSale: 1,
+      observations: "",
     },
   ]);
   const [activeTabId, setActiveTabId] = useState(1);
@@ -69,6 +73,33 @@ export default function NewSalePage() {
   const showPaymentPanel = activeTab.showPaymentPanel;
   const payToSupplier = activeTab.payToSupplier;
   const selectedSupplierId = activeTab.selectedSupplierId;
+
+  const selectedVoucherId = activeTab.voucherTypeId || "FB";
+
+  const mappedCartItemsForCalculation = useMemo(() => {
+    return cart.map((item) => {
+      const price =
+        item.customPrice !== undefined
+          ? item.customPrice
+          : (selectedCustomer?.customer_type === "mayorista"
+              ? item.price_mayorista
+              : item.price_minorista) || 0;
+      return {
+        price,
+        quantity: item.quantity,
+        taxRateVal: item.taxRateVal !== undefined ? item.taxRateVal : 21.00,
+        taxRateId: item.taxRateId !== undefined ? item.taxRateId : 1,
+      };
+    });
+  }, [cart, selectedCustomer]);
+
+  const {
+    voucherTypes,
+    taxRates,
+    companySettings,
+    calculations,
+    activeVoucherType,
+  } = useVoucher(selectedVoucherId, mappedCartItemsForCalculation);
 
   // Funciones para actualizar el estado de la pestaña activa
   const updateActiveTab = (updates: Partial<SaleTab>) => {
@@ -144,6 +175,9 @@ export default function NewSalePage() {
       showPaymentPanel: false,
       payToSupplier: false,
       selectedSupplierId: null,
+      voucherTypeId: "FB",
+      pointOfSale: 1,
+      observations: "",
     };
 
     setTabs([...tabs, newTab]);
@@ -252,33 +286,58 @@ export default function NewSalePage() {
     loadInitialData();
   }, []);
 
+  const prevCustomerIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedCustomer) return;
+    if (prevCustomerIdRef.current === selectedCustomer.id) return;
+    prevCustomerIdRef.current = selectedCustomer.id;
+
+    const companyIva = companySettings?.business_iva_condition || "Responsable Inscripto";
+    const customerIva = selectedCustomer.iva_condition || "Consumidor Final";
+
+    let defaultVoucher = "FB";
+    if (companyIva === "Responsable Inscripto") {
+      if (customerIva === "Responsable Inscripto") {
+        defaultVoucher = "FA";
+      } else {
+        defaultVoucher = "FB";
+      }
+    } else {
+      defaultVoucher = "FC";
+    }
+
+    updateActiveTab({ voucherTypeId: defaultVoucher });
+  }, [selectedCustomer, companySettings]);
+
+  const calculatedTotal = useMemo(() => {
+    return cart.reduce((sum, item) => {
+      const price =
+        item.customPrice !== undefined
+          ? item.customPrice
+          : (selectedCustomer?.customer_type === "mayorista"
+              ? item.price_mayorista
+              : item.price_minorista) || 0;
+      return sum + (price * item.quantity);
+    }, 0);
+  }, [cart, selectedCustomer]);
+
   useEffect(() => {
     if (!selectedCustomer) {
       setTotal(0);
       return;
     }
 
-    const newTotal = cart.reduce((acc, item) => {
-      // Si tiene precio personalizado, usarlo; sino, usar el precio según tipo de cliente
-      const price =
-        item.customPrice !== undefined
-          ? item.customPrice
-          : selectedCustomer.customer_type === "mayorista"
-          ? item.price_mayorista
-          : item.price_minorista;
-      return acc + (price || 0) * item.quantity;
-    }, 0);
-
-    setTotal(newTotal);
+    setTotal(calculatedTotal);
 
     if (!useMixedPayment) {
       if (paymentMethod !== "cuenta_corriente") {
-        setAmountPaid(newTotal.toFixed(2));
+        setAmountPaid(calculatedTotal.toFixed(2));
       } else {
         setAmountPaid("0");
       }
     }
-  }, [cart, selectedCustomer, paymentMethod, useMixedPayment, activeTabId]);
+  }, [calculatedTotal, selectedCustomer, paymentMethod, useMixedPayment, activeTabId]);
 
   // Funciones para manejo de pagos mixtos
   const handleAddPaymentMethod = () => {
@@ -339,7 +398,7 @@ export default function NewSalePage() {
         }
       } else {
         if ((productToAdd.stock || 0) > 0) {
-          setCart([...cart, { ...productToAdd, quantity: 1 }]);
+          setCart([...cart, { ...productToAdd, quantity: 1, taxRateId: 1, taxRateVal: 21.00 }]);
           toast.success("Producto agregado al carrito");
         } else {
           toast.error("Este producto no tiene stock.");
@@ -399,6 +458,14 @@ export default function NewSalePage() {
     );
   };
 
+  const handleUpdateTaxRate = (productId: string, taxRateId: number, taxRateVal: number) => {
+    setCart(
+      cart.map((item) =>
+        item.id === productId ? { ...item, taxRateId, taxRateVal } : item
+      )
+    );
+  };
+
   const handleFinalizeSale = useCallback(async () => {
     if (!selectedCustomer || cart.length === 0 || !currentUser?.id) {
       toast.error("Faltan datos para completar la venta.");
@@ -434,16 +501,27 @@ export default function NewSalePage() {
         })
       );
 
-      const saleItemsPayload = cart.map((item) => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        price:
+      // Calculate per-item details for the database transaction
+      const saleItemsPayload = cart.map((item) => {
+        const itemPrice =
           item.customPrice !== undefined
             ? item.customPrice
-            : selectedCustomer.customer_type === "mayorista"
-            ? item.price_mayorista
-            : item.price_minorista,
-      }));
+            : (selectedCustomer?.customer_type === "mayorista"
+                ? item.price_mayorista
+                : item.price_minorista) || 0;
+               
+        const qty = item.quantity;
+        const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
+        
+        return {
+          product_id: item.id,
+          quantity: qty,
+          price: itemPrice,
+          tax_rate_id: 1, // default tax rate ID
+          subtotal_neto: round(itemPrice * qty),
+          iva_amount: 0
+        };
+      });
 
       const mixedPaymentPayload = useMixedPayment
         ? paymentMethods
@@ -469,6 +547,12 @@ export default function NewSalePage() {
           p_pay_to_supplier: payToSupplier,
           p_selected_supplier_id: selectedSupplierId,
           p_customer_full_name: selectedCustomer.full_name,
+          p_voucher_type_id: "FB",
+          p_point_of_sale: parseInt(companySettings?.business_point_of_sale || "1") || 1,
+          p_observations: null,
+          p_subtotal_neto: total,
+          p_iva_amount: 0,
+          p_iva_breakdown: [],
         }
       );
 
@@ -480,6 +564,9 @@ export default function NewSalePage() {
       };
 
       const newSupplierDebt = txResult.new_supplier_debt;
+
+      // No longer auto-generating background invoices from Nueva Venta.
+      // Generation is managed manually from the Invoices registry page.
 
       if (payToSupplier && selectedSupplierId && paid > 0 && newSupplierDebt !== undefined && newSupplierDebt !== null) {
         if (newSupplierDebt > 0) {
@@ -548,6 +635,10 @@ export default function NewSalePage() {
     tabs,
     activeTabId,
     closeTab,
+    selectedVoucherId,
+    companySettings,
+    calculations,
+    activeVoucherType,
   ]);
 
   // Atajos de teclado F10, F12, F2 y Ctrl+T
@@ -786,6 +877,8 @@ export default function NewSalePage() {
               </div>
             </div>
 
+
+
             {/* Resumen de Venta */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-800 sticky top-6 overflow-hidden">
               <div className="px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-900">
@@ -799,14 +892,11 @@ export default function NewSalePage() {
 
               <div className="p-6">
                 <div className="space-y-4 mb-8">
-                  <div className="flex justify-between items-center text-gray-600 dark:text-slate-300">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(total)}</span>
+                  <div className="flex justify-between items-center text-sm text-gray-600 dark:text-slate-300">
+                    <span>Productos</span>
+                    <span>{cart.reduce((acc, item) => acc + item.quantity, 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-gray-600 dark:text-slate-300">
-                    <span>Impuestos</span>
-                    <span>{formatCurrency(0)}</span>
-                  </div>
+
                   <div className="border-t border-dashed border-gray-200 dark:border-slate-700 pt-4 flex justify-between items-center">
                     <span className="text-xl font-bold text-gray-900 dark:text-slate-50">Total</span>
                     <span className="text-3xl font-bold text-emerald-600">

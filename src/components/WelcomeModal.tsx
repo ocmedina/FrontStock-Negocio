@@ -196,6 +196,10 @@ export default function WelcomeModal() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-350">
                     <FaCheckCircle className="text-emerald-500 shrink-0 w-4 h-4" />
+                    <span className="font-bold">Facturación Tipo A, B, C y Comprobantes de Venta</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-350">
+                    <FaCheckCircle className="text-emerald-500 shrink-0 w-4 h-4" />
                     <span className="font-bold">Rediseño de Gráficos e Indicadores Financieros</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-350">

@@ -23,10 +23,23 @@ export default function NewCustomerPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [locality, setLocality] = useState("");
+  const [province, setProvince] = useState("");
+  const [cuit, setCuit] = useState("");
+  const [ivaCondition, setIvaCondition] = useState("Consumidor Final");
   const [reference, setReference] = useState("");
   const [customerType, setCustomerType] = useState("minorista");
   const [deliveryDay, setDeliveryDay] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCustomerTypeChange = (type: string) => {
+    setCustomerType(type);
+    if (type === "minorista") {
+      setIvaCondition("Consumidor Final");
+    } else if (type === "mayorista") {
+      setIvaCondition("Responsable Inscripto");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +58,10 @@ export default function NewCustomerPage() {
           phone: phone || null,
           email: email || null,
           address: address || null,
+          locality: locality || null,
+          province: province || null,
+          cuit: cuit || null,
+          iva_condition: ivaCondition,
           reference: reference || null,
           customer_type: customerType,
           delivery_day: deliveryDay || null,
@@ -117,7 +134,7 @@ export default function NewCustomerPage() {
                     htmlFor="fullName"
                     className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
                   >
-                    Nombre Completo <span className="text-rose-500">*</span>
+                    Nombre Completo / Razón Social <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3" />
@@ -127,7 +144,7 @@ export default function NewCustomerPage() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       required
-                      placeholder="Ej. Juan Pérez"
+                      placeholder="Ej. Juan Pérez o Distribuidora S.A."
                       className="block w-full pl-9 pr-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs focus:outline-none transition-all"
                     />
                   </div>
@@ -143,12 +160,51 @@ export default function NewCustomerPage() {
                   <select
                     id="customerType"
                     value={customerType}
-                    onChange={(e) => setCustomerType(e.target.value)}
+                    onChange={(e) => handleCustomerTypeChange(e.target.value)}
                     required
                     className="block w-full px-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs font-semibold focus:outline-none transition-all"
                   >
                     <option value="minorista">🛒 Minorista</option>
                     <option value="mayorista">📦 Mayorista</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="cuit"
+                    className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
+                  >
+                    DNI / CUIT / CUIL
+                  </label>
+                  <input
+                    type="text"
+                    id="cuit"
+                    value={cuit}
+                    onChange={(e) => setCuit(e.target.value)}
+                    placeholder="Ej. 20-35123456-9"
+                    className="block w-full px-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="ivaCondition"
+                    className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
+                  >
+                    Condición ante el IVA
+                  </label>
+                  <select
+                    id="ivaCondition"
+                    value={ivaCondition}
+                    onChange={(e) => setIvaCondition(e.target.value)}
+                    className="block w-full px-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs font-semibold focus:outline-none transition-all"
+                  >
+                    <option value="Consumidor Final">Consumidor Final</option>
+                    <option value="Responsable Inscripto">Responsable Inscripto</option>
+                    <option value="Monotributista">Monotributista</option>
+                    <option value="Exento">Exento</option>
                   </select>
                 </div>
               </div>
@@ -215,7 +271,7 @@ export default function NewCustomerPage() {
                     htmlFor="address"
                     className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
                   >
-                    Dirección Física / Local
+                    Dirección Física / Domicilio
                   </label>
                   <div className="relative">
                     <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3" />
@@ -224,10 +280,46 @@ export default function NewCustomerPage() {
                       id="address"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Ej. Av. Corrientes 1234, CABA"
+                      placeholder="Ej. Av. Corrientes 1234"
                       className="block w-full pl-9 pr-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs focus:outline-none transition-all"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="locality"
+                    className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
+                  >
+                    Localidad
+                  </label>
+                  <input
+                    type="text"
+                    id="locality"
+                    value={locality}
+                    onChange={(e) => setLocality(e.target.value)}
+                    placeholder="Ej. Rosario"
+                    className="block w-full px-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="province"
+                    className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
+                  >
+                    Provincia
+                  </label>
+                  <input
+                    type="text"
+                    id="province"
+                    value={province}
+                    onChange={(e) => setProvince(e.target.value)}
+                    placeholder="Ej. Santa Fe"
+                    className="block w-full px-3 py-2.5 border border-slate-350 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 text-xs focus:outline-none transition-all"
+                  />
                 </div>
 
                 <div className="space-y-1.5">

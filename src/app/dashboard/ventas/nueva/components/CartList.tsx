@@ -8,6 +8,7 @@ interface CartListProps {
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onUpdateCustomPrice: (productId: string, newPrice: string) => void;
+  onUpdateTaxRate?: (productId: string, taxRateId: number, taxRateVal: number) => void;
 }
 
 export default function CartList({
@@ -15,6 +16,7 @@ export default function CartList({
   onUpdateQuantity,
   onRemoveFromCart,
   onUpdateCustomPrice,
+  onUpdateTaxRate,
 }: CartListProps) {
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
