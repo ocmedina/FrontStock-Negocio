@@ -181,6 +181,7 @@ export default function PedidosPendientesPage() {
       // Registrar el pago en la tabla de pagos
       const { error: paymentError } = await supabase.from("payments").insert({
         customer_id: selectedPedido.customer_id,
+        order_id: selectedPedido.id,
         type: "pago",
         amount: amount,
         comment: paymentComment || `Pago parcial para Pedido #${selectedPedido.id.slice(0, 8)}`,

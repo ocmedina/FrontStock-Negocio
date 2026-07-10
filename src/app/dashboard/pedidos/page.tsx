@@ -599,14 +599,30 @@ export default function OrdersPage() {
 
       // 2. Eliminar movimientos de cuenta corriente asociados a este pedido si existen
       const shortId = order.id.slice(0, 8);
-      const { error: paymentError } = await supabase
+      
+      // Eliminar por ID de pedido (relación directa de clave foránea)
+      const { error: paymentErrorById } = await supabase
         .from("payments")
         .delete()
-        .eq("customer_id", order.customers?.id || "")
-        .like("comment", `%Pedido #${shortId}%`);
+        .eq("order_id", order.id);
 
-      if (paymentError) {
-        console.error("Error al eliminar movimiento de deuda:", paymentError);
+      if (paymentErrorById) {
+        console.error("Error al eliminar pagos por order_id:", paymentErrorById);
+      }
+
+      // Eliminar por comentario para compatibilidad con registros antiguos
+      if (order.customers?.id) {
+        await supabase
+          .from("payments")
+          .delete()
+          .eq("customer_id", order.customers.id)
+          .like("comment", `%Pedido #${shortId}%`);
+
+        await supabase
+          .from("payments")
+          .delete()
+          .eq("customer_id", order.customers.id)
+          .like("comment", `%Pedido ${shortId}%`);
       }
 
       toast.success("Pedido anulado correctamente.", { id: loadToast });
@@ -632,14 +648,30 @@ export default function OrdersPage() {
 
       // 2. Eliminar movimientos de cuenta corriente asociados
       const shortId = order.id.slice(0, 8);
-      const { error: paymentError } = await supabase
+      
+      // Eliminar por ID de pedido (relación directa de clave foránea)
+      const { error: paymentErrorById } = await supabase
         .from("payments")
         .delete()
-        .eq("customer_id", order.customers?.id || "")
-        .like("comment", `%Pedido #${shortId}%`);
+        .eq("order_id", order.id);
 
-      if (paymentError) {
-        console.error("Error al eliminar movimiento de deuda:", paymentError);
+      if (paymentErrorById) {
+        console.error("Error al eliminar pagos por order_id:", paymentErrorById);
+      }
+
+      // Eliminar por comentario para compatibilidad con registros antiguos
+      if (order.customers?.id) {
+        await supabase
+          .from("payments")
+          .delete()
+          .eq("customer_id", order.customers.id)
+          .like("comment", `%Pedido #${shortId}%`);
+
+        await supabase
+          .from("payments")
+          .delete()
+          .eq("customer_id", order.customers.id)
+          .like("comment", `%Pedido ${shortId}%`);
       }
 
       // 3. Eliminar el pedido

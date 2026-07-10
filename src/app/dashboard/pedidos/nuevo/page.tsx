@@ -388,6 +388,7 @@ export default function NewOrderPage() {
       if (remainingDebt > 0) {
         const { error: debtError } = await supabase.from("payments").insert({
           customer_id: selectedCustomer.id,
+          order_id: orderData.id,
           type: "compra",
           amount: remainingDebt,
           payment_method: paymentMethod,
