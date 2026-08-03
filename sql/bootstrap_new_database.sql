@@ -599,7 +599,7 @@ declare
     'sales', 'sale_items', 'payments', 'orders', 'order_items',
     'invoices', 'settings', 'purchases', 'purchase_items', 'supplier_payments',
     'purchase_orders', 'purchase_order_items', 'stock_movements', 'expenses',
-    'cash_movements', 'daily_reports', 'budgets', 'budget_items'
+    'cash_movements', 'daily_reports', 'budgets', 'budget_items', 'price_lists', 'price_list_items'
   ];
 begin
   foreach t in array tables loop

@@ -278,6 +278,48 @@ export default function NewSalePage() {
         } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
         setCurrentUser(session?.user ?? null);
+
+        // Pre-cargar desde Lista de Precios si existe en sessionStorage
+        const storedPriceList = sessionStorage.getItem("load_price_list");
+        if (storedPriceList) {
+          try {
+            const priceListData = JSON.parse(storedPriceList);
+            sessionStorage.removeItem("load_price_list");
+
+            let targetCustomer = priceListData.customer;
+            if (!targetCustomer && priceListData.customer_id && customersData) {
+              targetCustomer = customersData.find(
+                (c) => c.id === priceListData.customer_id
+              );
+            }
+            if (targetCustomer) {
+              setSelectedCustomer(targetCustomer);
+            }
+
+            if (priceListData.items && priceListData.items.length > 0) {
+              const isMayorista = targetCustomer?.customer_type === "mayorista";
+              const cartItems: CartItem[] = priceListData.items
+                .filter((item: any) => item.product !== null)
+                .map((item: any) => {
+                  const prod = item.product;
+                  const customPrice = isMayorista
+                    ? item.custom_price_mayorista
+                    : item.custom_price_minorista;
+                  return {
+                    ...prod,
+                    quantity: 1,
+                    customPrice,
+                  };
+                });
+              setCart(cartItems);
+              toast.success(
+                `📋 ${cartItems.length} productos cargados desde la lista "${priceListData.name}"`
+              );
+            }
+          } catch (e) {
+            console.error("Error al precargar lista de precios:", e);
+          }
+        }
       } catch (error) {
         console.error("Error cargando datos iniciales:", error);
         toast.error("Error al cargar los datos");
