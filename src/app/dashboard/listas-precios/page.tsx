@@ -195,7 +195,7 @@ export default function PriceListsDashboardPage() {
             <span className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 shadow-3xs">
               <FaFileInvoiceDollar className="w-6 h-6" />
             </span>
-            Listas de Precios a Medida
+            Listas de Precios Personalizadas
           </h1>
         </div>
 
