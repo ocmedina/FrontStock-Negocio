@@ -11,14 +11,18 @@ import {
   FaExclamationTriangle,
   FaLayerGroup,
   FaTag,
+  FaTruck,
+  FaCheckSquare,
+  FaSquare,
+  FaEdit,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 interface CategoryBrandPriceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  entityType: "category" | "brand";
-  entityId: number;
+  entityType: "category" | "brand" | "supplier";
+  entityId: number | string;
   entityName: string;
   onSuccess: () => void;
 }
@@ -54,6 +58,12 @@ export default function CategoryBrandPriceModal({
   const [targetPrices, setTargetPrices] = useState<TargetPrices>("both");
   const [roundingMode, setRoundingMode] = useState<RoundingMode>("ceil_integer");
 
+  // Selection & Manual Overrides
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [manualOverrides, setManualOverrides] = useState<{
+    [id: string]: { cost?: number; minorista?: number; mayorista?: number };
+  }>({});
+
   useEffect(() => {
     if (isOpen && entityId) {
       fetchProducts();
@@ -63,16 +73,37 @@ export default function CategoryBrandPriceModal({
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const column = entityType === "category" ? "category_id" : "brand_id";
+      let brandIds: number[] = [];
+
+      if (entityType === "supplier") {
+        // Fetch all brand IDs belonging to this supplier
+        const { data: bData } = await supabase
+          .from("brands")
+          .select("id")
+          .eq("supplier_id", entityId as string);
+
+        brandIds = (bData || []).map((b) => b.id);
+      }
+
       let allProducts: Product[] = [];
       let from = 0;
       const step = 300;
 
       while (true) {
-        const { data, error } = await supabase
+        let query = supabase
           .from("products")
-          .select("id, name, sku, cost_price, price_minorista, price_mayorista")
-          .eq(column, entityId)
+          .select("id, name, sku, cost_price, price_minorista, price_mayorista");
+
+        if (entityType === "category") {
+          query = query.eq("category_id", entityId as number);
+        } else if (entityType === "brand") {
+          query = query.eq("brand_id", entityId as number);
+        } else if (entityType === "supplier") {
+          if (brandIds.length === 0) break; // No brands assigned to this supplier
+          query = query.in("brand_id", brandIds);
+        }
+
+        const { data, error } = await query
           .order("name")
           .range(from, from + step - 1);
 
@@ -84,9 +115,12 @@ export default function CategoryBrandPriceModal({
       }
 
       setProducts(allProducts);
+      // Select all by default
+      setSelectedProductIds(allProducts.map((p) => p.id));
+      setManualOverrides({});
     } catch (err: any) {
       console.error("Error al cargar productos para cambio de precio:", err);
-      toast.error("Error al cargar productos de la categoría/marca");
+      toast.error("Error al cargar productos");
     } finally {
       setLoading(false);
     }
@@ -111,12 +145,29 @@ export default function CategoryBrandPriceModal({
     }
   };
 
-  // Helper calculation for preview
+  // Calculation for preview
   const calculateNewPrice = (
-    currentPrice: number,
-    costPrice: number,
+    product: Product,
     field: "cost" | "minorista" | "mayorista"
   ): number => {
+    const isSelected = selectedProductIds.includes(product.id);
+    const currentPrice =
+      field === "cost"
+        ? product.cost_price || 0
+        : field === "minorista"
+        ? product.price_minorista || 0
+        : product.price_mayorista || 0;
+
+    // Check for manual override first
+    if (manualOverrides[product.id]?.[field] !== undefined) {
+      return manualOverrides[product.id]![field]!;
+    }
+
+    // If product is unselected, keep current price
+    if (!isSelected) {
+      return currentPrice;
+    }
+
     const numericValue = parseFloat(value) || 0;
     if (!value || isNaN(numericValue)) return currentPrice;
 
@@ -133,7 +184,7 @@ export default function CategoryBrandPriceModal({
         break;
       }
       case "cost_margin": {
-        const baseCost = costPrice || 0;
+        const baseCost = product.cost_price || 0;
         if (field === "cost") return baseCost;
         const factor = 1 + numericValue / 100;
         rawPrice = baseCost * factor;
@@ -156,55 +207,73 @@ export default function CategoryBrandPriceModal({
     return false;
   };
 
+  const toggleSelectAll = () => {
+    if (selectedProductIds.length === products.length) {
+      setSelectedProductIds([]);
+    } else {
+      setSelectedProductIds(products.map((p) => p.id));
+    }
+  };
+
+  const toggleSelectProduct = (id: string) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleManualPriceChange = (
+    productId: string,
+    field: "cost" | "minorista" | "mayorista",
+    val: string
+  ) => {
+    const num = parseFloat(val);
+    setManualOverrides((prev) => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [field]: isNaN(num) ? undefined : num,
+      },
+    }));
+  };
+
   const handleApplyPriceChanges = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!value || isNaN(parseFloat(value))) {
-      toast.error("Ingrese un valor numérico válido");
-      return;
-    }
-
-    if (products.length === 0) {
-      toast.error("No hay productos en esta clasificación para modificar");
+    if (selectedProductIds.length === 0 && Object.keys(manualOverrides).length === 0) {
+      toast.error("Seleccione al menos un producto para actualizar o modifique un precio manualmente.");
       return;
     }
 
     setExecuting(true);
-    const toastId = toast.loading(`Actualizando precios de ${products.length} productos...`);
+    const toastId = toast.loading(`Actualizando precios de productos en ${entityName}...`);
 
     try {
-      const updates = products.map((product) => {
-        const updatePayload: any = {};
+      const updates = products
+        .filter(
+          (product) =>
+            selectedProductIds.includes(product.id) ||
+            manualOverrides[product.id] !== undefined
+        )
+        .map((product) => {
+          const updatePayload: any = {};
 
-        if (shouldUpdateField("cost")) {
-          updatePayload.cost_price = calculateNewPrice(
-            product.cost_price || 0,
-            product.cost_price || 0,
-            "cost"
-          );
-        }
+          if (shouldUpdateField("cost")) {
+            updatePayload.cost_price = calculateNewPrice(product, "cost");
+          }
 
-        if (shouldUpdateField("minorista")) {
-          updatePayload.price_minorista = calculateNewPrice(
-            product.price_minorista || 0,
-            product.cost_price || 0,
-            "minorista"
-          );
-        }
+          if (shouldUpdateField("minorista")) {
+            updatePayload.price_minorista = calculateNewPrice(product, "minorista");
+          }
 
-        if (shouldUpdateField("mayorista")) {
-          updatePayload.price_mayorista = calculateNewPrice(
-            product.price_mayorista || 0,
-            product.cost_price || 0,
-            "mayorista"
-          );
-        }
+          if (shouldUpdateField("mayorista")) {
+            updatePayload.price_mayorista = calculateNewPrice(product, "mayorista");
+          }
 
-        return supabase.from("products").update(updatePayload).eq("id", product.id);
-      });
+          return supabase.from("products").update(updatePayload).eq("id", product.id);
+        });
 
       await Promise.all(updates);
 
-      toast.success(`Se actualizaron ${products.length} productos en ${entityName}`, {
+      toast.success(`Se actualizaron los precios en ${entityName}`, {
         id: toastId,
       });
 
@@ -220,23 +289,39 @@ export default function CategoryBrandPriceModal({
 
   if (!isOpen) return null;
 
+  const entityIcon =
+    entityType === "category" ? (
+      <FaLayerGroup size={20} />
+    ) : entityType === "brand" ? (
+      <FaTag size={20} />
+    ) : (
+      <FaTruck size={20} />
+    );
+
+  const entityBg =
+    entityType === "category"
+      ? "bg-purple-600"
+      : entityType === "brand"
+      ? "bg-blue-600"
+      : "bg-emerald-600";
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl text-white ${entityType === 'category' ? 'bg-purple-600' : 'bg-blue-600'}`}>
-              {entityType === 'category' ? <FaLayerGroup size={20} /> : <FaTag size={20} />}
+            <div className={`p-2.5 rounded-xl text-white ${entityBg}`}>
+              {entityIcon}
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                Ajustar Precios de {entityType === "category" ? "Categoría" : "Marca"}:{" "}
+                Ajustar Precios de {entityType === "category" ? "Categoría" : entityType === "brand" ? "Marca" : "Proveedor"}:{" "}
                 <span className="text-purple-600 dark:text-purple-400">{entityName}</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Aplica variaciones por porcentaje o monto fijo con redondeo automático hacia arriba.
+                Selecciona qué productos aumentan, edita precios individuales o aplica variaciones masivas.
               </p>
             </div>
           </div>
@@ -334,14 +419,29 @@ export default function CategoryBrandPriceModal({
 
           </div>
 
-          {/* Live Preview Table */}
+          {/* Live Preview & Individual Override Table */}
           <div className="flex-1 flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900">
-            <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <FaCalculator className="text-purple-600" /> Previsualización en Tiempo Real ({products.length} productos)
-              </span>
+            <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  className="text-purple-600 font-bold text-xs flex items-center gap-1.5 hover:underline"
+                >
+                  {selectedProductIds.length === products.length ? (
+                    <>
+                      <FaCheckSquare size={15} /> Desmarcar todos
+                    </>
+                  ) : (
+                    <>
+                      <FaSquare size={15} className="text-slate-400" /> Seleccionar todos ({selectedProductIds.length}/{products.length})
+                    </>
+                  )}
+                </button>
+              </div>
+
               <span className="text-[10px] text-slate-400">
-                Valores redondeados hacia arriba según la regla seleccionada.
+                Usa las casillas para aumentar en lote o ingresa valores manuales en la tabla.
               </span>
             </div>
 
@@ -350,48 +450,90 @@ export default function CategoryBrandPriceModal({
                 <div className="p-8 text-center text-slate-500">Cargando productos...</div>
               ) : products.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 dark:text-slate-400">
-                  No hay productos asignados a esta {entityType === 'category' ? 'categoría' : 'marca'}.
+                  No hay productos para modificar en esta {entityType === 'category' ? 'categoría' : entityType === 'brand' ? 'marca' : 'proveedor'}.
                 </div>
               ) : (
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0">
+                  <thead className="bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
                     <tr>
+                      <th className="p-3 w-10 text-center">Incluir</th>
                       <th className="p-3">Producto</th>
-                      {shouldUpdateField("cost") && <th className="p-3 text-right">P. Costo</th>}
-                      {shouldUpdateField("minorista") && <th className="p-3 text-right">P. Minorista</th>}
-                      {shouldUpdateField("mayorista") && <th className="p-3 text-right">P. Mayorista</th>}
+                      {shouldUpdateField("cost") && <th className="p-3 text-right">P. Costo ($)</th>}
+                      {shouldUpdateField("minorista") && <th className="p-3 text-right">P. Minorista ($)</th>}
+                      {shouldUpdateField("mayorista") && <th className="p-3 text-right">P. Mayorista ($)</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {products.map((p) => {
-                      const newCost = calculateNewPrice(p.cost_price || 0, p.cost_price || 0, "cost");
-                      const newMin = calculateNewPrice(p.price_minorista || 0, p.cost_price || 0, "minorista");
-                      const newMay = calculateNewPrice(p.price_mayorista || 0, p.cost_price || 0, "mayorista");
+                      const isSelected = selectedProductIds.includes(p.id);
+                      const newCost = calculateNewPrice(p, "cost");
+                      const newMin = calculateNewPrice(p, "minorista");
+                      const newMay = calculateNewPrice(p, "mayorista");
 
                       return (
-                        <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <tr
+                          key={p.id}
+                          className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${
+                            !isSelected ? "opacity-60 bg-slate-50/50 dark:bg-slate-950/20" : ""
+                          }`}
+                        >
+                          <td className="p-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelectProduct(p.id)}
+                              className="text-purple-600"
+                            >
+                              {isSelected ? (
+                                <FaCheckSquare size={16} />
+                              ) : (
+                                <FaSquare size={16} className="text-slate-300 dark:text-slate-700" />
+                              )}
+                            </button>
+                          </td>
+
                           <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">
                             {p.name}
+                            <span className="block text-[10px] text-slate-400 font-mono">
+                              SKU: {p.sku || "N/A"}
+                            </span>
                           </td>
 
                           {shouldUpdateField("cost") && (
                             <td className="p-3 text-right">
                               <span className="text-slate-400 line-through mr-1 font-mono">${(p.cost_price || 0).toLocaleString("es-AR")}</span>
-                              <span className="font-bold text-slate-800 dark:text-slate-100 font-mono">${newCost.toLocaleString("es-AR")}</span>
+                              <input
+                                type="number"
+                                step="any"
+                                value={newCost}
+                                onChange={(e) => handleManualPriceChange(p.id, "cost", e.target.value)}
+                                className="w-24 px-2 py-1 text-right border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-1 focus:ring-purple-500"
+                              />
                             </td>
                           )}
 
                           {shouldUpdateField("minorista") && (
                             <td className="p-3 text-right">
                               <span className="text-slate-400 line-through mr-1 font-mono">${(p.price_minorista || 0).toLocaleString("es-AR")}</span>
-                              <span className="font-bold text-purple-600 dark:text-purple-400 font-mono">${newMin.toLocaleString("es-AR")}</span>
+                              <input
+                                type="number"
+                                step="any"
+                                value={newMin}
+                                onChange={(e) => handleManualPriceChange(p.id, "minorista", e.target.value)}
+                                className="w-24 px-2 py-1 text-right border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 font-bold text-xs text-purple-600 dark:text-purple-400 outline-none focus:ring-1 focus:ring-purple-500"
+                              />
                             </td>
                           )}
 
                           {shouldUpdateField("mayorista") && (
                             <td className="p-3 text-right">
                               <span className="text-slate-400 line-through mr-1 font-mono">${(p.price_mayorista || 0).toLocaleString("es-AR")}</span>
-                              <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">${newMay.toLocaleString("es-AR")}</span>
+                              <input
+                                type="number"
+                                step="any"
+                                value={newMay}
+                                onChange={(e) => handleManualPriceChange(p.id, "mayorista", e.target.value)}
+                                className="w-24 px-2 py-1 text-right border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 font-bold text-xs text-blue-600 dark:text-blue-400 outline-none focus:ring-1 focus:ring-purple-500"
+                              />
                             </td>
                           )}
                         </tr>
@@ -405,9 +547,11 @@ export default function CategoryBrandPriceModal({
 
           {/* Footer Buttons */}
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-medium">
               <FaExclamationTriangle />
-              <span>Esta acción actualizará de forma permanente los precios en la base de datos.</span>
+              <span>
+                Se modificarán únicamente los {selectedProductIds.length} producto(s) marcados o editados manualmente.
+              </span>
             </div>
 
             <div className="flex gap-3">
@@ -420,14 +564,14 @@ export default function CategoryBrandPriceModal({
               </button>
               <button
                 type="submit"
-                disabled={executing || !value || products.length === 0}
+                disabled={executing || (selectedProductIds.length === 0 && Object.keys(manualOverrides).length === 0)}
                 className="px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-xs font-extrabold transition-all shadow-md flex items-center gap-2"
               >
                 {executing ? (
                   <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                 ) : (
                   <>
-                    <FaSave /> Confirmar y Aplicar Cambio
+                    <FaSave /> Confirmar y Aplicar Cambio ({selectedProductIds.length})
                   </>
                 )}
               </button>

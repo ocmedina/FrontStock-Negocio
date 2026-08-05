@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import CustomerActions from "@/components/CustomerActions";
@@ -160,8 +160,63 @@ function CustomersPageContent() {
     );
   }, [customers, searchTerm]);
 
-  // Reset page on search or filter change
+  const isInitialMount = useRef(true);
+  const [isStateRestored, setIsStateRestored] = useState(false);
+
+  // 1. Initial State Restoration on Mount
   useEffect(() => {
+    const pageFromUrl = searchParams.get("page");
+    const searchFromUrl = searchParams.get("search");
+
+    let restoredPage = 1;
+    let restoredSearch = "";
+
+    if (pageFromUrl || searchFromUrl !== null) {
+      if (pageFromUrl) restoredPage = Number(pageFromUrl) || 1;
+      if (searchFromUrl !== null) restoredSearch = searchFromUrl;
+    } else {
+      const savedState = sessionStorage.getItem("customers_table_state");
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          if (parsed.page) restoredPage = Number(parsed.page) || 1;
+          if (parsed.search !== undefined) restoredSearch = parsed.search;
+        } catch (e) {}
+      }
+    }
+
+    setCurrentPage(restoredPage);
+    setSearchTerm(restoredSearch);
+    setIsStateRestored(true);
+  }, []);
+
+  // 2. Persist state to sessionStorage and URL parameters
+  useEffect(() => {
+    if (!isStateRestored) return;
+
+    sessionStorage.setItem(
+      "customers_table_state",
+      JSON.stringify({ page: currentPage, search: searchTerm })
+    );
+
+    const params = new URLSearchParams(window.location.search);
+    if (currentPage > 1) params.set("page", currentPage.toString());
+    else params.delete("page");
+
+    if (searchTerm) params.set("search", searchTerm);
+    else params.delete("search");
+
+    const queryString = params.toString();
+    const newUrl = queryString ? `/dashboard/clientes?${queryString}` : "/dashboard/clientes";
+    window.history.replaceState(null, "", newUrl);
+  }, [currentPage, searchTerm, isStateRestored]);
+
+  // 3. Reset page on interactive search or filter change
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [searchTerm, debtFilter]);
 

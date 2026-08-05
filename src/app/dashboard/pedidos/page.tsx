@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import {
   FaSearch,
@@ -546,10 +547,45 @@ function RemitoModal({
   );
 }
 
+const getInitialOrdersState = () => {
+  if (typeof window === "undefined") return { page: 1, search: "", status: "todos", day: "todos" };
+  const params = new URLSearchParams(window.location.search);
+  const pageFromUrl = params.get("page");
+  const searchFromUrl = params.get("search");
+  const statusFromUrl = params.get("status");
+  const dayFromUrl = params.get("day");
+
+  if (pageFromUrl || searchFromUrl !== null || statusFromUrl !== null || dayFromUrl !== null) {
+    return {
+      page: pageFromUrl ? Math.max(1, Number(pageFromUrl) || 1) : 1,
+      search: searchFromUrl || "",
+      status: (statusFromUrl as any) || "todos",
+      day: dayFromUrl || "todos",
+    };
+  }
+
+  const saved = sessionStorage.getItem("orders_table_state");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      return {
+        page: parsed.page ? Math.max(1, Number(parsed.page) || 1) : 1,
+        search: parsed.search || "",
+        status: parsed.status || "todos",
+        day: parsed.day || "todos",
+      };
+    } catch (e) {}
+  }
+
+  return { page: 1, search: "", status: "todos", day: "todos" };
+};
+
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  const [currentPage, setCurrentPage] = useState<number>(() => getInitialOrdersState().page);
   const [totalCount, setTotalCount] = useState(0);
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
   const [selectedOrderIdForDetails, setSelectedOrderIdForDetails] = useState<string | null>(null);
@@ -558,10 +594,49 @@ export default function OrdersPage() {
   const [pedidoAccion, setPedidoAccion] = useState<OrderRow | null>(null);
   const [showAccionModal, setShowAccionModal] = useState(false);
 
-  const [statusFilter, setStatusFilter] = useState<"todos" | OrderRow["status"]>("todos");
+  const [statusFilter, setStatusFilter] = useState<"todos" | OrderRow["status"]>(
+    () => getInitialOrdersState().status as any
+  );
   const [dateFilter, setDateFilter] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [deliveryDayFilter, setDeliveryDayFilter] = useState("todos");
+  const [searchQuery, setSearchQuery] = useState<string>(() => getInitialOrdersState().search);
+  const [deliveryDayFilter, setDeliveryDayFilter] = useState<string>(
+    () => getInitialOrdersState().day
+  );
+
+  // 1. Persist state to sessionStorage and update URL query params
+  useEffect(() => {
+    sessionStorage.setItem(
+      "orders_table_state",
+      JSON.stringify({ page: currentPage, search: searchQuery, status: statusFilter, day: deliveryDayFilter })
+    );
+
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set("page", currentPage.toString());
+    if (searchQuery) params.set("search", searchQuery);
+    if (statusFilter && statusFilter !== "todos") params.set("status", statusFilter);
+    if (deliveryDayFilter && deliveryDayFilter !== "todos") params.set("day", deliveryDayFilter);
+
+    const queryString = params.toString();
+    const newUrl = queryString ? `/dashboard/pedidos?${queryString}` : "/dashboard/pedidos";
+
+    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [currentPage, searchQuery, statusFilter, deliveryDayFilter]);
+
+  // 2. Listen to browser Back/Forward (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const state = getInitialOrdersState();
+      setCurrentPage(state.page);
+      setSearchQuery(state.search);
+      setStatusFilter(state.status as any);
+      setDeliveryDayFilter(state.day);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Estadísticas de reparto
   const [deliveryStats, setDeliveryStats] = useState({

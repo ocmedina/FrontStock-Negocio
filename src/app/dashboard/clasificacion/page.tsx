@@ -1,25 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import SuppliersManager from "./components/SuppliersManager";
 import BrandsManager from "./components/BrandsManager";
 import CategoriesManager from "./components/CategoriesManager";
 import {
   FaTags,
   FaLayerGroup,
   FaTag,
+  FaTruck,
   FaBoxes,
   FaExclamationTriangle,
   FaArrowLeft,
-  FaPercentage,
 } from "react-icons/fa";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function ClassificationPage() {
-  const [activeTab, setActiveTab] = useState<"categories" | "brands">("categories");
+  const [activeTab, setActiveTab] = useState<"suppliers" | "brands" | "categories">("suppliers");
   const [stats, setStats] = useState({
-    totalCategories: 0,
+    totalSuppliers: 0,
     totalBrands: 0,
+    totalCategories: 0,
     classifiedProducts: 0,
     unclassifiedProducts: 0,
   });
@@ -32,14 +34,20 @@ export default function ClassificationPage() {
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      // Fetch categories count
-      const { count: catCount } = await supabase
-        .from("categories")
-        .select("id", { count: "exact", head: true });
+      // Fetch suppliers count
+      const { count: supCount } = await supabase
+        .from("suppliers")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true);
 
       // Fetch brands count
       const { count: brandCount } = await supabase
         .from("brands")
+        .select("id", { count: "exact", head: true });
+
+      // Fetch categories count
+      const { count: catCount } = await supabase
+        .from("categories")
         .select("id", { count: "exact", head: true });
 
       // Fetch all products classification status in chunks
@@ -72,8 +80,9 @@ export default function ClassificationPage() {
       });
 
       setStats({
-        totalCategories: catCount || 0,
+        totalSuppliers: supCount || 0,
         totalBrands: brandCount || 0,
+        totalCategories: catCount || 0,
         classifiedProducts: classified,
         unclassifiedProducts: unclassified,
       });
@@ -97,11 +106,11 @@ export default function ClassificationPage() {
             >
               <FaArrowLeft /> Volver a Productos
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-3">
-              <FaTags className="text-purple-600" /> Clasificación y Precios
+            <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
+              <FaTruck className="text-emerald-600" /> Clasificación y Precios
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Crea categorías y marcas, mete productos de forma masiva y ajusta los precios según tu clasificación.
+              Organiza Proveedores, Marcas y Categorías. Aplica aumentos masivos o individuales con selección flexible.
             </p>
           </div>
         </div>
@@ -109,15 +118,15 @@ export default function ClassificationPage() {
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           
-          {/* Categorías */}
+          {/* Proveedores */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-xl">
-              <FaLayerGroup size={20} />
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl">
+              <FaTruck size={20} />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400">Categorías</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400">Proveedores</span>
               <p className="text-xl font-black text-slate-800 dark:text-slate-100">
-                {loadingStats ? "..." : stats.totalCategories}
+                {loadingStats ? "..." : stats.totalSuppliers}
               </p>
             </div>
           </div>
@@ -135,28 +144,28 @@ export default function ClassificationPage() {
             </div>
           </div>
 
-          {/* Clasificados */}
+          {/* Categorías */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl">
-              <FaBoxes size={20} />
+            <div className="p-3 bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-xl">
+              <FaLayerGroup size={20} />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400">Prod. Clasificados</span>
-              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                {loadingStats ? "..." : stats.classifiedProducts}
+              <span className="text-[10px] uppercase font-bold text-slate-400">Categorías</span>
+              <p className="text-xl font-black text-slate-800 dark:text-slate-100">
+                {loadingStats ? "..." : stats.totalCategories}
               </p>
             </div>
           </div>
 
-          {/* Sin Clasificar */}
+          {/* Prod. Clasificados */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl">
-              <FaExclamationTriangle size={20} />
+            <div className="p-3 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <FaBoxes size={20} />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400">Sin Clasificar</span>
-              <p className="text-xl font-black text-amber-600 dark:text-amber-400">
-                {loadingStats ? "..." : stats.unclassifiedProducts}
+              <span className="text-[10px] uppercase font-bold text-slate-400">Prod. Clasificados</span>
+              <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+                {loadingStats ? "..." : stats.classifiedProducts}
               </p>
             </div>
           </div>
@@ -164,16 +173,16 @@ export default function ClassificationPage() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 flex-wrap">
           <button
-            onClick={() => setActiveTab("categories")}
+            onClick={() => setActiveTab("suppliers")}
             className={`pb-3 px-5 font-bold text-sm flex items-center gap-2 transition-all border-b-2 ${
-              activeTab === "categories"
-                ? "border-purple-600 text-purple-600 dark:text-purple-400"
+              activeTab === "suppliers"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
-            <FaLayerGroup /> Categorías ({stats.totalCategories})
+            <FaTruck /> Proveedores ({stats.totalSuppliers})
           </button>
 
           <button
@@ -186,11 +195,28 @@ export default function ClassificationPage() {
           >
             <FaTag /> Marcas ({stats.totalBrands})
           </button>
+
+          <button
+            onClick={() => setActiveTab("categories")}
+            className={`pb-3 px-5 font-bold text-sm flex items-center gap-2 transition-all border-b-2 ${
+              activeTab === "categories"
+                ? "border-purple-600 text-purple-600 dark:text-purple-400"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+          >
+            <FaLayerGroup /> Categorías ({stats.totalCategories})
+          </button>
         </div>
 
         {/* Tab View */}
         <div className="animate-fadeIn">
-          {activeTab === "categories" ? <CategoriesManager /> : <BrandsManager />}
+          {activeTab === "suppliers" ? (
+            <SuppliersManager />
+          ) : activeTab === "brands" ? (
+            <BrandsManager />
+          ) : (
+            <CategoriesManager />
+          )}
         </div>
 
       </div>

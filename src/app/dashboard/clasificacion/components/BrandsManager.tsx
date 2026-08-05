@@ -13,25 +13,41 @@ import {
   FaDollarSign,
   FaSearch,
   FaBoxes,
+  FaTruck,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import CategoryBrandProductManagerModal from "./CategoryBrandProductManagerModal";
 import CategoryBrandPriceModal from "./CategoryBrandPriceModal";
 
+type SupplierOption = {
+  id: string;
+  name: string;
+};
+
 type BrandWithCount = {
   id: number;
   name: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
   productCount: number;
 };
 
 export default function BrandsManager() {
   const [brands, setBrands] = useState<BrandWithCount[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit / Add state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editSupplierId, setEditSupplierId] = useState<string>("");
+
   const [newName, setNewName] = useState("");
+  const [newSupplierId, setNewSupplierId] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState<string>("");
 
   // Modals state
   const [productManagerTarget, setProductManagerTarget] = useState<{
@@ -45,21 +61,31 @@ export default function BrandsManager() {
   } | null>(null);
 
   useEffect(() => {
-    fetchBrands();
+    fetchData();
   }, []);
 
-  const fetchBrands = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch brands
+      // 1. Fetch suppliers
+      const { data: supData } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+
+      setSuppliers(supData || []);
+      const supMap = Object.fromEntries((supData || []).map((s) => [s.id, s.name]));
+
+      // 2. Fetch brands
       const { data: brandData, error: brandError } = await supabase
         .from("brands")
-        .select("id, name")
+        .select("id, name, supplier_id")
         .order("name");
 
       if (brandError) throw brandError;
 
-      // Fetch all products in chunks to count per brand
+      // 3. Fetch all products in chunks to count per brand
       let allProdData: { brand_id: number | null }[] = [];
       let from = 0;
       const step = 300;
@@ -88,6 +114,8 @@ export default function BrandsManager() {
       const formatted: BrandWithCount[] = (brandData || []).map((b) => ({
         id: b.id,
         name: b.name,
+        supplier_id: b.supplier_id,
+        supplier_name: b.supplier_id ? supMap[b.supplier_id] || "Proveedor no encontrado" : null,
         productCount: countMap[b.id] || 0,
       }));
 
@@ -104,34 +132,36 @@ export default function BrandsManager() {
     e.preventDefault();
     if (!newName.trim()) return;
 
-    const { error } = await supabase
-      .from("brands")
-      .insert([{ name: newName.trim() }]);
+    const payload: any = { name: newName.trim() };
+    if (newSupplierId) payload.supplier_id = newSupplierId;
+
+    const { error } = await supabase.from("brands").insert([payload]);
 
     if (error) {
-      toast.error("Error al crear marca");
+      toast.error("Error al crear marca: " + error.message);
     } else {
       toast.success("Marca creada con éxito");
       setNewName("");
+      setNewSupplierId("");
       setIsAdding(false);
-      fetchBrands();
+      fetchData();
     }
   };
 
   const handleUpdate = async (id: number) => {
     if (!editName.trim()) return;
 
-    const { error } = await supabase
-      .from("brands")
-      .update({ name: editName.trim() })
-      .eq("id", id);
+    const payload: any = { name: editName.trim() };
+    payload.supplier_id = editSupplierId || null;
+
+    const { error } = await supabase.from("brands").update(payload).eq("id", id);
 
     if (error) {
-      toast.error("Error al actualizar marca");
+      toast.error("Error al actualizar marca: " + error.message);
     } else {
       toast.success("Marca actualizada");
       setEditingId(null);
-      fetchBrands();
+      fetchData();
     }
   };
 
@@ -154,13 +184,19 @@ export default function BrandsManager() {
       toast.error("Error al eliminar marca");
     } else {
       toast.success("Marca eliminada");
-      fetchBrands();
+      fetchData();
     }
   };
 
-  const filteredBrands = brands.filter((b) =>
-    b.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBrands = brands.filter((b) => {
+    const matchesSearch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (supplierFilter === "none") return !b.supplier_id;
+    if (supplierFilter) return b.supplier_id === supplierFilter;
+
+    return true;
+  });
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -181,7 +217,22 @@ export default function BrandsManager() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Supplier Filter */}
+          <select
+            value={supplierFilter}
+            onChange={(e) => setSupplierFilter(e.target.value)}
+            className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Todos los proveedores</option>
+            <option value="none">Sin proveedor asignado</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
           <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
             <input
@@ -206,16 +257,30 @@ export default function BrandsManager() {
       {isAdding && (
         <form
           onSubmit={handleAdd}
-          className="p-4 bg-blue-50/60 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/40 flex gap-3 items-center animate-fadeIn"
+          className="p-4 bg-blue-50/60 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/40 flex flex-wrap gap-3 items-center animate-fadeIn"
         >
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Nombre de la nueva marca (Ej: Arcor, Unilever, Nestlé)..."
-            className="flex-1 px-4 py-2 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            placeholder="Nombre de la marca (Ej: Arcor, Coca-Cola)..."
+            className="flex-1 min-w-[200px] px-4 py-2 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
             autoFocus
           />
+
+          <select
+            value={newSupplierId}
+            onChange={(e) => setNewSupplierId(e.target.value)}
+            className="px-3 py-2 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Seleccionar Proveedor (Opcional)...</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
           <button
             type="submit"
             className="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-bold hover:bg-green-700 transition-colors flex items-center gap-1.5"
@@ -247,14 +312,26 @@ export default function BrandsManager() {
               className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
             >
               {editingId === brand.id ? (
-                <div className="flex gap-2 items-center flex-1">
+                <div className="flex gap-2 items-center flex-1 flex-wrap">
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="flex-1 px-3 py-1.5 border border-blue-300 dark:border-blue-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+                    className="flex-1 min-w-[150px] px-3 py-1.5 border border-blue-300 dark:border-blue-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
                     autoFocus
                   />
+                  <select
+                    value={editSupplierId}
+                    onChange={(e) => setEditSupplierId(e.target.value)}
+                    className="px-3 py-1.5 border border-blue-300 dark:border-blue-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="">Sin proveedor</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     onClick={() => handleUpdate(brand.id)}
                     className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 rounded-lg"
@@ -271,10 +348,21 @@ export default function BrandsManager() {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                     {brand.name}
                   </span>
+                  
+                  {brand.supplier_name ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                      <FaTruck className="text-emerald-500 text-[10px]" /> {brand.supplier_name}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 font-medium">
+                      Sin proveedor
+                    </span>
+                  )}
+
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center gap-1">
                     <FaBoxes className="text-blue-500 text-[10px]" /> {brand.productCount} productos
                   </span>
@@ -304,9 +392,10 @@ export default function BrandsManager() {
                   onClick={() => {
                     setEditingId(brand.id);
                     setEditName(brand.name);
+                    setEditSupplierId(brand.supplier_id || "");
                   }}
                   className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors"
-                  title="Editar nombre"
+                  title="Editar marca y proveedor"
                 >
                   <FaEdit size={15} />
                 </button>
@@ -332,7 +421,7 @@ export default function BrandsManager() {
           entityType="brand"
           entityId={productManagerTarget.id}
           entityName={productManagerTarget.name}
-          onRefresh={fetchBrands}
+          onRefresh={fetchData}
         />
       )}
 
@@ -344,7 +433,7 @@ export default function BrandsManager() {
           entityType="brand"
           entityId={priceManagerTarget.id}
           entityName={priceManagerTarget.name}
-          onSuccess={fetchBrands}
+          onSuccess={fetchData}
         />
       )}
 

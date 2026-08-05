@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import ProductActions from "@/components/ProductActions";
 import ProductListDownloadButton from "@/components/pdf/ProductListDownloadButton";
@@ -37,15 +38,46 @@ import CustomPricesModal from "./components/CustomPricesModal";
 type Product = Database["public"]["Tables"]["products"]["Row"];
 const ITEMS_PER_PAGE = 10;
 
+const getInitialProductsState = () => {
+  if (typeof window === "undefined") return { page: 1, search: "", stock: "all" };
+  const params = new URLSearchParams(window.location.search);
+  const pageFromUrl = params.get("page");
+  const searchFromUrl = params.get("search");
+  const stockFromUrl = params.get("stock");
+
+  if (pageFromUrl || searchFromUrl !== null || stockFromUrl !== null) {
+    return {
+      page: pageFromUrl ? Math.max(1, Number(pageFromUrl) || 1) : 1,
+      search: searchFromUrl || "",
+      stock: stockFromUrl || "all",
+    };
+  }
+
+  const saved = sessionStorage.getItem("products_table_state");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      return {
+        page: parsed.page ? Math.max(1, Number(parsed.page) || 1) : 1,
+        search: parsed.search || "",
+        stock: parsed.stock || "all",
+      };
+    } catch (e) {}
+  }
+
+  return { page: 1, search: "", stock: "all" };
+};
+
 export default function ProductsPage() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(() => getInitialProductsState().page);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>(() => getInitialProductsState().search);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [stockFilter, setStockFilter] = useState("all"); // all, sin_stock, stock_bajo, con_stock
+  const [stockFilter, setStockFilter] = useState<string>(() => getInitialProductsState().stock);
   const [stats, setStats] = useState({
     sinStock: 0,
     stockBajo: 0,
@@ -209,9 +241,38 @@ export default function ProductsPage() {
     return () => clearTimeout(timeoutId);
   }, [currentPage, searchTerm, stockFilter, refreshKey]);
 
+  // 1. Persist state to sessionStorage and update URL query params
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, stockFilter]);
+    sessionStorage.setItem(
+      "products_table_state",
+      JSON.stringify({ page: currentPage, search: searchTerm, stock: stockFilter })
+    );
+
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set("page", currentPage.toString());
+    if (searchTerm) params.set("search", searchTerm);
+    if (stockFilter && stockFilter !== "all") params.set("stock", stockFilter);
+
+    const queryString = params.toString();
+    const newUrl = queryString ? `/dashboard/products?${queryString}` : "/dashboard/products";
+
+    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [currentPage, searchTerm, stockFilter]);
+
+  // 2. Listen to browser Back/Forward (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const state = getInitialProductsState();
+      setCurrentPage(state.page);
+      setSearchTerm(state.search);
+      setStockFilter(state.stock);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const handleExportCurrentStock = async () => {
     try {
@@ -428,7 +489,10 @@ export default function ProductsPage() {
                 type="text"
                 placeholder="Buscar productos por nombre o SKU..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs font-medium bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
               />
             </div>
@@ -438,7 +502,10 @@ export default function ProductsPage() {
               <FaFilter className="text-slate-400 w-3.5 h-3.5" />
               <select
                 value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value)}
+                onChange={(e) => {
+                  setStockFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 aria-label="Filtrar por stock"
                 className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-205"
               >

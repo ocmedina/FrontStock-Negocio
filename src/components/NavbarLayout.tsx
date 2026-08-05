@@ -1,7 +1,6 @@
 "use client";
 
 import Navbar from "./Navbar";
-import UpdatesNotification from "./UpdatesNotification";
 import MaintenanceBanner from "./MaintenanceBanner";
 
 export default function NavbarLayout({
@@ -24,9 +23,6 @@ export default function NavbarLayout({
             >
                 {children}
             </main>
-
-            {/* Updates Notification */}
-            <UpdatesNotification />
         </div>
     );
 }

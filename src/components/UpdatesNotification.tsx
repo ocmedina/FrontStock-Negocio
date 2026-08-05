@@ -17,6 +17,26 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-08-05-v2-5-price-and-suppliers",
+    date: "5 Ago 2026",
+    title: "💲 Aumento Seleccionable de Precios y Proveedores ➔ Marcas",
+    description:
+      "Novedad v2.5: Aumentos por porcentaje o monto fijo con casillas de selección por producto, edición manual en caliente y redondeo inteligente ($10, $50, $100). Nueva jerarquía Proveedores ➔ Marcas para aumentar catálogos completos por distribuidor.",
+    icon: "💲",
+    isNew: true,
+    type: "feature",
+  },
+  {
+    id: "2026-08-05-v2-5-maintenance-and-pagination",
+    date: "5 Ago 2026",
+    title: "🧹 Limpieza del Sistema y Memoria de Paginación",
+    description:
+      "Nuevo módulo en Configuración para escanear y depurar categorías/marcas vacías, ventas canceladas y productos obsoletos con protección antierrores. Además, el sistema recuerda exactamente tu página (ej: pág. 38), búsquedas y filtros al editar productos o volver.",
+    icon: "🧹",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2026-07-07-invoice-types-argentina",
     date: "7 Jul 2026",
     title: "🇦🇷 Facturación Tipo A, B, C y Comprobantes de Venta",

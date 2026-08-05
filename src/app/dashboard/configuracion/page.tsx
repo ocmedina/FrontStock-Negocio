@@ -19,8 +19,10 @@ import {
   HiOutlineColorSwatch,
   HiOutlineDatabase
 } from 'react-icons/hi';
+import SystemMaintenanceTab from './components/SystemMaintenanceTab';
+import { FaBroom } from 'react-icons/fa';
 
-type Tab = 'general' | 'branding' | 'appearance' | 'migration';
+type Tab = 'general' | 'branding' | 'appearance' | 'migration' | 'maintenance';
 
 type MigrationResult = {
   table: string;
@@ -391,6 +393,17 @@ export default function SettingsPage() {
               <HiOutlineDatabase className="text-lg flex-shrink-0" />
               Migración de Datos
             </button>
+            <button
+              onClick={() => setActiveTab('maintenance')}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
+                ${activeTab === 'maintenance'
+                  ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm ring-1 ring-gray-200 dark:ring-slate-700'
+                  : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-slate-200'
+                }`}
+            >
+              <FaBroom className="text-lg flex-shrink-0" />
+              Limpieza y Mantenimiento
+            </button>
           </nav>
 
           {/* Área de Contenido */}
@@ -409,8 +422,9 @@ export default function SettingsPage() {
                     {activeTab === 'branding' && 'Marca y Logo'}
                     {activeTab === 'appearance' && 'Estilos y Apariencia'}
                     {activeTab === 'migration' && 'Migración de Datos'}
+                    {activeTab === 'maintenance' && 'Limpieza y Mantenimiento del Sistema'}
                   </h2>
-                  {activeTab !== 'migration' && (
+                  {activeTab !== 'migration' && activeTab !== 'maintenance' && (
                     <button
                       onClick={handleSaveSettings}
                       disabled={saving}
@@ -986,9 +1000,15 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'maintenance' && (
+                      <div className="p-6">
+                        <SystemMaintenanceTab />
+                      </div>
+                    )}
+                  </div>
               </div>
             )}
           </div>
