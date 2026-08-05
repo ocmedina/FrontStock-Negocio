@@ -42,16 +42,28 @@ export default function ClassificationPage() {
         .from("brands")
         .select("id", { count: "exact", head: true });
 
-      // Fetch active products classification status
-      const { data: products } = await supabase
-        .from("products")
-        .select("category_id, brand_id")
-        .eq("is_active", true);
+      // Fetch all products classification status in chunks
+      let allProducts: { category_id: number | null; brand_id: number | null }[] = [];
+      let from = 0;
+      const step = 300;
+
+      while (true) {
+        const { data: chunk, error: prodErr } = await supabase
+          .from("products")
+          .select("category_id, brand_id")
+          .range(from, from + step - 1);
+
+        if (prodErr) throw prodErr;
+        if (!chunk || chunk.length === 0) break;
+        allProducts = [...allProducts, ...chunk];
+        if (chunk.length < step) break;
+        from += step;
+      }
 
       let classified = 0;
       let unclassified = 0;
 
-      (products || []).forEach((p) => {
+      allProducts.forEach((p) => {
         if (p.category_id || p.brand_id) {
           classified++;
         } else {

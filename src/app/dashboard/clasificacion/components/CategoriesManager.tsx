@@ -59,17 +59,27 @@ export default function CategoriesManager() {
 
       if (catError) throw catError;
 
-      // Fetch products to count per category
-      const { data: prodData, error: prodError } = await supabase
-        .from("products")
-        .select("category_id")
-        .eq("is_active", true);
+      // Fetch all products in chunks to count per category
+      let allProdData: { category_id: number | null }[] = [];
+      let from = 0;
+      const step = 300;
 
-      if (prodError) throw prodError;
+      while (true) {
+        const { data: chunk, error: prodError } = await supabase
+          .from("products")
+          .select("category_id")
+          .range(from, from + step - 1);
+
+        if (prodError) throw prodError;
+        if (!chunk || chunk.length === 0) break;
+        allProdData = [...allProdData, ...chunk];
+        if (chunk.length < step) break;
+        from += step;
+      }
 
       // Map count per category
       const countMap: { [key: number]: number } = {};
-      (prodData || []).forEach((p) => {
+      allProdData.forEach((p) => {
         if (p.category_id) {
           countMap[p.category_id] = (countMap[p.category_id] || 0) + 1;
         }

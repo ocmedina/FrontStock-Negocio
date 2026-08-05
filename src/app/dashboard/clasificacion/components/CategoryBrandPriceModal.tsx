@@ -9,8 +9,6 @@ import {
   FaCalculator,
   FaSave,
   FaExclamationTriangle,
-  FaArrowUp,
-  FaArrowDown,
   FaLayerGroup,
   FaTag,
 } from "react-icons/fa";
@@ -36,6 +34,7 @@ type Product = {
 
 type AdjustMode = "percentage" | "fixed" | "cost_margin" | "exact";
 type TargetPrices = "both" | "minorista" | "mayorista" | "cost" | "all";
+type RoundingMode = "ceil_integer" | "ceil_10" | "ceil_50" | "ceil_100" | "exact_cents";
 
 export default function CategoryBrandPriceModal({
   isOpen,
@@ -53,6 +52,7 @@ export default function CategoryBrandPriceModal({
   const [adjustMode, setAdjustMode] = useState<AdjustMode>("percentage");
   const [value, setValue] = useState<string>("");
   const [targetPrices, setTargetPrices] = useState<TargetPrices>("both");
+  const [roundingMode, setRoundingMode] = useState<RoundingMode>("ceil_integer");
 
   useEffect(() => {
     if (isOpen && entityId) {
@@ -64,20 +64,50 @@ export default function CategoryBrandPriceModal({
     setLoading(true);
     try {
       const column = entityType === "category" ? "category_id" : "brand_id";
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name, sku, cost_price, price_minorista, price_mayorista")
-        .eq(column, entityId)
-        .eq("is_active", true)
-        .order("name");
+      let allProducts: Product[] = [];
+      let from = 0;
+      const step = 300;
 
-      if (error) throw error;
-      setProducts(data || []);
+      while (true) {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, name, sku, cost_price, price_minorista, price_mayorista")
+          .eq(column, entityId)
+          .order("name")
+          .range(from, from + step - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allProducts = [...allProducts, ...data];
+        if (data.length < step) break;
+        from += step;
+      }
+
+      setProducts(allProducts);
     } catch (err: any) {
       console.error("Error al cargar productos para cambio de precio:", err);
       toast.error("Error al cargar productos de la categoría/marca");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to apply rounding
+  const applyRounding = (val: number, mode: RoundingMode): number => {
+    if (val <= 0) return 0;
+    switch (mode) {
+      case "ceil_integer":
+        return Math.ceil(val);
+      case "ceil_10":
+        return Math.ceil(val / 10) * 10;
+      case "ceil_50":
+        return Math.ceil(val / 50) * 50;
+      case "ceil_100":
+        return Math.ceil(val / 100) * 100;
+      case "exact_cents":
+        return Math.round(val * 100) / 100;
+      default:
+        return Math.ceil(val);
     }
   };
 
@@ -90,27 +120,33 @@ export default function CategoryBrandPriceModal({
     const numericValue = parseFloat(value) || 0;
     if (!value || isNaN(numericValue)) return currentPrice;
 
+    let rawPrice = currentPrice;
+
     switch (adjustMode) {
       case "percentage": {
         const factor = 1 + numericValue / 100;
-        return Math.max(0, Math.round(currentPrice * factor * 100) / 100);
+        rawPrice = currentPrice * factor;
+        break;
       }
       case "fixed": {
-        return Math.max(0, Math.round((currentPrice + numericValue) * 100) / 100);
+        rawPrice = currentPrice + numericValue;
+        break;
       }
       case "cost_margin": {
-        // Apply margin on cost_price
         const baseCost = costPrice || 0;
         if (field === "cost") return baseCost;
         const factor = 1 + numericValue / 100;
-        return Math.max(0, Math.round(baseCost * factor * 100) / 100);
+        rawPrice = baseCost * factor;
+        break;
       }
       case "exact": {
         return Math.max(0, numericValue);
       }
       default:
-        return currentPrice;
+        rawPrice = currentPrice;
     }
+
+    return applyRounding(Math.max(0, rawPrice), roundingMode);
   };
 
   const shouldUpdateField = (field: "cost" | "minorista" | "mayorista") => {
@@ -200,7 +236,7 @@ export default function CategoryBrandPriceModal({
                 <span className="text-purple-600 dark:text-purple-400">{entityName}</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Aplica variaciones masivas por porcentaje, monto fijo o margen de ganancia.
+                Aplica variaciones por porcentaje o monto fijo con redondeo automático hacia arriba.
               </p>
             </div>
           </div>
@@ -217,7 +253,7 @@ export default function CategoryBrandPriceModal({
         <form onSubmit={handleApplyPriceChanges} className="flex-1 overflow-hidden flex flex-col p-6 space-y-5">
           
           {/* Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             
             {/* Mode */}
             <div>
@@ -278,6 +314,24 @@ export default function CategoryBrandPriceModal({
               </div>
             </div>
 
+            {/* Rounding Mode */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Regla de Redondeo
+              </label>
+              <select
+                value={roundingMode}
+                onChange={(e) => setRoundingMode(e.target.value as RoundingMode)}
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="ceil_integer">Redondear al entero (Ej: $8901)</option>
+                <option value="ceil_10">Redondear a $10 sup. (Ej: $8950)</option>
+                <option value="ceil_50">Redondear a $50 sup. (Ej: $8950)</option>
+                <option value="ceil_100">Redondear a $100 sup. (Ej: $9000)</option>
+                <option value="exact_cents">Mantener decimales exactos</option>
+              </select>
+            </div>
+
           </div>
 
           {/* Live Preview Table */}
@@ -287,7 +341,7 @@ export default function CategoryBrandPriceModal({
                 <FaCalculator className="text-purple-600" /> Previsualización en Tiempo Real ({products.length} productos)
               </span>
               <span className="text-[10px] text-slate-400">
-                Los cambios se guardan al confirmar.
+                Valores redondeados hacia arriba según la regla seleccionada.
               </span>
             </div>
 
@@ -322,22 +376,22 @@ export default function CategoryBrandPriceModal({
 
                           {shouldUpdateField("cost") && (
                             <td className="p-3 text-right">
-                              <span className="text-slate-400 line-through mr-1 font-mono">${p.cost_price || 0}</span>
-                              <span className="font-bold text-slate-800 dark:text-slate-100 font-mono">${newCost}</span>
+                              <span className="text-slate-400 line-through mr-1 font-mono">${(p.cost_price || 0).toLocaleString("es-AR")}</span>
+                              <span className="font-bold text-slate-800 dark:text-slate-100 font-mono">${newCost.toLocaleString("es-AR")}</span>
                             </td>
                           )}
 
                           {shouldUpdateField("minorista") && (
                             <td className="p-3 text-right">
-                              <span className="text-slate-400 line-through mr-1 font-mono">${p.price_minorista}</span>
-                              <span className="font-bold text-purple-600 dark:text-purple-400 font-mono">${newMin}</span>
+                              <span className="text-slate-400 line-through mr-1 font-mono">${(p.price_minorista || 0).toLocaleString("es-AR")}</span>
+                              <span className="font-bold text-purple-600 dark:text-purple-400 font-mono">${newMin.toLocaleString("es-AR")}</span>
                             </td>
                           )}
 
                           {shouldUpdateField("mayorista") && (
                             <td className="p-3 text-right">
-                              <span className="text-slate-400 line-through mr-1 font-mono">${p.price_mayorista}</span>
-                              <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">${newMay}</span>
+                              <span className="text-slate-400 line-through mr-1 font-mono">${(p.price_mayorista || 0).toLocaleString("es-AR")}</span>
+                              <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">${newMay.toLocaleString("es-AR")}</span>
                             </td>
                           )}
                         </tr>

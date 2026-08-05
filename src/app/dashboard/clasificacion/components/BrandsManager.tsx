@@ -59,17 +59,27 @@ export default function BrandsManager() {
 
       if (brandError) throw brandError;
 
-      // Fetch products to count per brand
-      const { data: prodData, error: prodError } = await supabase
-        .from("products")
-        .select("brand_id")
-        .eq("is_active", true);
+      // Fetch all products in chunks to count per brand
+      let allProdData: { brand_id: number | null }[] = [];
+      let from = 0;
+      const step = 300;
 
-      if (prodError) throw prodError;
+      while (true) {
+        const { data: chunk, error: prodError } = await supabase
+          .from("products")
+          .select("brand_id")
+          .range(from, from + step - 1);
+
+        if (prodError) throw prodError;
+        if (!chunk || chunk.length === 0) break;
+        allProdData = [...allProdData, ...chunk];
+        if (chunk.length < step) break;
+        from += step;
+      }
 
       // Map count per brand
       const countMap: { [key: number]: number } = {};
-      (prodData || []).forEach((p) => {
+      allProdData.forEach((p) => {
         if (p.brand_id) {
           countMap[p.brand_id] = (countMap[p.brand_id] || 0) + 1;
         }

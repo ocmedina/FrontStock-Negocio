@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   FaTimes,
@@ -13,8 +13,9 @@ import {
   FaSquare,
   FaTag,
   FaLayerGroup,
-  FaEdit,
-  FaExchangeAlt,
+  FaChevronLeft,
+  FaChevronRight,
+  FaFilter,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
@@ -49,11 +50,22 @@ export default function CategoryBrandProductManagerModal({
   onRefresh,
 }: CategoryBrandProductManagerModalProps) {
   const [activeTab, setActiveTab] = useState<"assigned" | "unassigned">("assigned");
+  
+  // Products data
   const [assignedProducts, setAssignedProducts] = useState<Product[]>([]);
+  const [totalAssignedCount, setTotalAssignedCount] = useState(0);
+
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [totalAvailableCount, setTotalAvailableCount] = useState(0);
+
   const [loading, setLoading] = useState(true);
 
-  // Search terms
+  // Pagination state
+  const [pageAssigned, setPageAssigned] = useState(1);
+  const [pageAvailable, setPageAvailable] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  // Search & Filter terms
   const [searchAssigned, setSearchAssigned] = useState("");
   const [searchAvailable, setSearchAvailable] = useState("");
   const [onlyUnclassifiedFilter, setOnlyUnclassifiedFilter] = useState(false);
@@ -68,31 +80,38 @@ export default function CategoryBrandProductManagerModal({
   }>({});
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && entityId) {
-      fetchData();
-    }
-  }, [isOpen, entityId, entityType]);
+  const column = entityType === "category" ? "category_id" : "brand_id";
 
-  const fetchData = async () => {
+  // 1. Fetch Assigned Products with Server-Side Search & Pagination
+  const fetchAssignedProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const column = entityType === "category" ? "category_id" : "brand_id";
-
-      // 1. Fetch assigned products
-      const { data: assignedData, error: assignedErr } = await supabase
+      let query = supabase
         .from("products")
-        .select("id, sku, barcode, name, cost_price, price_minorista, price_mayorista, stock, category_id, brand_id")
-        .eq(column, entityId)
-        .eq("is_active", true)
-        .order("name");
+        .select(
+          "id, sku, barcode, name, cost_price, price_minorista, price_mayorista, stock, category_id, brand_id",
+          { count: "exact" }
+        )
+        .eq(column, entityId);
 
-      if (assignedErr) throw assignedErr;
-      setAssignedProducts(assignedData || []);
+      if (searchAssigned.trim()) {
+        const term = `%${searchAssigned.trim()}%`;
+        query = query.or(`name.ilike.${term},sku.ilike.${term},barcode.ilike.${term}`);
+      }
+
+      const from = (pageAssigned - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, count, error } = await query.order("name").range(from, to);
+
+      if (error) throw error;
+
+      setAssignedProducts(data || []);
+      setTotalAssignedCount(count || 0);
 
       // Initialize editing prices map
       const initialPrices: { [id: string]: { cost: string; minorista: string; mayorista: string } } = {};
-      (assignedData || []).forEach((p) => {
+      (data || []).forEach((p) => {
         initialPrices[p.id] = {
           cost: (p.cost_price ?? 0).toString(),
           minorista: (p.price_minorista ?? 0).toString(),
@@ -100,29 +119,72 @@ export default function CategoryBrandProductManagerModal({
         };
       });
       setEditingPrices(initialPrices);
-
-      // 2. Fetch available products (products not in this category/brand)
-      const { data: availData, error: availErr } = await supabase
-        .from("products")
-        .select("id, sku, barcode, name, cost_price, price_minorista, price_mayorista, stock, category_id, brand_id")
-        .or(`${column}.is.null,${column}.neq.${entityId}`)
-        .eq("is_active", true)
-        .order("name")
-        .limit(300);
-
-      if (availErr) throw availErr;
-      setAvailableProducts(availData || []);
-
-      // Reset selections
-      setSelectedAssignedIds([]);
-      setSelectedAvailableIds([]);
     } catch (err: any) {
-      console.error("Error cargando productos de clasificación:", err);
-      toast.error("Error al obtener productos");
+      console.error("Error al cargar productos asignados:", err);
+      toast.error("Error al obtener productos asignados");
     } finally {
       setLoading(false);
     }
-  };
+  }, [column, entityId, pageAssigned, pageSize, searchAssigned]);
+
+  // 2. Fetch Available Products with Server-Side Search & Pagination
+  const fetchAvailableProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("products")
+        .select(
+          "id, sku, barcode, name, cost_price, price_minorista, price_mayorista, stock, category_id, brand_id",
+          { count: "exact" }
+        );
+
+      if (onlyUnclassifiedFilter) {
+        query = query.is(column, null);
+      } else {
+        query = query.or(`${column}.is.null,${column}.neq.${entityId}`);
+      }
+
+      if (searchAvailable.trim()) {
+        const term = `%${searchAvailable.trim()}%`;
+        query = query.or(`name.ilike.${term},sku.ilike.${term},barcode.ilike.${term}`);
+      }
+
+      const from = (pageAvailable - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, count, error } = await query.order("name").range(from, to);
+
+      if (error) throw error;
+
+      setAvailableProducts(data || []);
+      setTotalAvailableCount(count || 0);
+    } catch (err: any) {
+      console.error("Error al cargar productos disponibles:", err);
+      toast.error("Error al obtener productos del inventario");
+    } finally {
+      setLoading(false);
+    }
+  }, [column, entityId, onlyUnclassifiedFilter, pageAvailable, pageSize, searchAvailable]);
+
+  // Effect to reload when modal opens or activeTab changes
+  useEffect(() => {
+    if (isOpen && entityId) {
+      if (activeTab === "assigned") {
+        fetchAssignedProducts();
+      } else {
+        fetchAvailableProducts();
+      }
+    }
+  }, [isOpen, entityId, activeTab, fetchAssignedProducts, fetchAvailableProducts]);
+
+  // Reset page to 1 on search / filter change
+  useEffect(() => {
+    setPageAssigned(1);
+  }, [searchAssigned]);
+
+  useEffect(() => {
+    setPageAvailable(1);
+  }, [searchAvailable, onlyUnclassifiedFilter]);
 
   // Inline Price Saver
   const handleSaveProductPrices = async (product: Product) => {
@@ -147,7 +209,6 @@ export default function CategoryBrandProductManagerModal({
       if (error) throw error;
       toast.success(`Precios actualizados para ${product.name}`);
       
-      // Update local state
       setAssignedProducts((prev) =>
         prev.map((p) =>
           p.id === product.id
@@ -162,10 +223,9 @@ export default function CategoryBrandProductManagerModal({
     }
   };
 
-  // Unassign products from this category/brand
+  // Unassign products
   const handleUnassignProducts = async (productIds: string[]) => {
     if (productIds.length === 0) return;
-    const column = entityType === "category" ? "category_id" : "brand_id";
 
     const loadingToast = toast.loading(`Desvinculando ${productIds.length} producto(s)...`);
     try {
@@ -177,22 +237,23 @@ export default function CategoryBrandProductManagerModal({
       if (error) throw error;
 
       toast.success(`Producto(s) desvinculados correctamente`, { id: loadingToast });
-      fetchData();
+      setSelectedAssignedIds([]);
+      fetchAssignedProducts();
+      fetchAvailableProducts();
       onRefresh();
     } catch (err: any) {
       toast.error("Error al desvincular: " + err.message, { id: loadingToast });
     }
   };
 
-  // Assign selected available products to this category/brand
+  // Assign selected products
   const handleAssignProducts = async () => {
     if (selectedAvailableIds.length === 0) {
       toast.error("Seleccione al menos un producto para asignar");
       return;
     }
 
-    const column = entityType === "category" ? "category_id" : "brand_id";
-    const loadingToast = toast.loading(`Asignando ${selectedAvailableIds.length} producto(s) a ${entityName}...`);
+    const loadingToast = toast.loading(`Asignando ${selectedAvailableIds.length} producto(s)...`);
 
     try {
       const { error } = await supabase
@@ -203,7 +264,9 @@ export default function CategoryBrandProductManagerModal({
       if (error) throw error;
 
       toast.success(`Se asignaron ${selectedAvailableIds.length} productos a ${entityName}`, { id: loadingToast });
-      fetchData();
+      setSelectedAvailableIds([]);
+      fetchAssignedProducts();
+      fetchAvailableProducts();
       onRefresh();
       setActiveTab("assigned");
     } catch (err: any) {
@@ -211,34 +274,7 @@ export default function CategoryBrandProductManagerModal({
     }
   };
 
-  // Filtered lists
-  const filteredAssigned = assignedProducts.filter((p) => {
-    const query = searchAssigned.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(query) ||
-      (p.sku && p.sku.toLowerCase().includes(query)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(query))
-    );
-  });
-
-  const filteredAvailable = availableProducts.filter((p) => {
-    const query = searchAvailable.toLowerCase();
-    const matchesQuery =
-      p.name.toLowerCase().includes(query) ||
-      (p.sku && p.sku.toLowerCase().includes(query)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(query));
-
-    if (!matchesQuery) return false;
-
-    if (onlyUnclassifiedFilter) {
-      const column = entityType === "category" ? p.category_id : p.brand_id;
-      return column === null;
-    }
-
-    return true;
-  });
-
-  // Toggle selection helpers
+  // Selection helpers
   const toggleSelectAssigned = (id: string) => {
     setSelectedAssignedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -246,10 +282,10 @@ export default function CategoryBrandProductManagerModal({
   };
 
   const toggleSelectAllAssigned = () => {
-    if (selectedAssignedIds.length === filteredAssigned.length) {
+    if (selectedAssignedIds.length === assignedProducts.length) {
       setSelectedAssignedIds([]);
     } else {
-      setSelectedAssignedIds(filteredAssigned.map((p) => p.id));
+      setSelectedAssignedIds(assignedProducts.map((p) => p.id));
     }
   };
 
@@ -260,12 +296,16 @@ export default function CategoryBrandProductManagerModal({
   };
 
   const toggleSelectAllAvailable = () => {
-    if (selectedAvailableIds.length === filteredAvailable.length) {
+    if (selectedAvailableIds.length === availableProducts.length) {
       setSelectedAvailableIds([]);
     } else {
-      setSelectedAvailableIds(filteredAvailable.map((p) => p.id));
+      setSelectedAvailableIds(availableProducts.map((p) => p.id));
     }
   };
+
+  // Page count math
+  const totalPagesAssigned = Math.ceil(totalAssignedCount / pageSize) || 1;
+  const totalPagesAvailable = Math.ceil(totalAvailableCount / pageSize) || 1;
 
   if (!isOpen) return null;
 
@@ -285,7 +325,7 @@ export default function CategoryBrandProductManagerModal({
                 <span className="text-purple-600 dark:text-purple-400">{entityName}</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Administra, selecciona productos e ingresa precios directamente.
+                Selecciona productos del inventario con paginación y cambia precios directamente.
               </p>
             </div>
           </div>
@@ -309,7 +349,7 @@ export default function CategoryBrandProductManagerModal({
                   : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
-              <FaBoxOpen /> Productos Asignados ({assignedProducts.length})
+              <FaBoxOpen /> Productos Asignados ({totalAssignedCount})
             </button>
             <button
               onClick={() => setActiveTab("unassigned")}
@@ -319,27 +359,48 @@ export default function CategoryBrandProductManagerModal({
                   : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
-              <FaPlus /> Meter / Seleccionar Productos
+              <FaPlus /> Meter / Seleccionar Productos ({totalAvailableCount})
             </button>
           </div>
 
-          {activeTab === "assigned" && selectedAssignedIds.length > 0 && (
-            <button
-              onClick={() => handleUnassignProducts(selectedAssignedIds)}
-              className="mb-2 px-3 py-1.5 bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg text-xs font-bold hover:bg-red-100 transition-all flex items-center gap-1.5"
-            >
-              <FaTrash /> Desvincular ({selectedAssignedIds.length})
-            </button>
-          )}
+          <div className="flex items-center gap-3 mb-2">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="font-semibold">Por pág:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPageAssigned(1);
+                  setPageAvailable(1);
+                }}
+                className="px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+              </select>
+            </div>
 
-          {activeTab === "unassigned" && selectedAvailableIds.length > 0 && (
-            <button
-              onClick={handleAssignProducts}
-              className="mb-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <FaPlus /> Asignar Seleccionados ({selectedAvailableIds.length})
-            </button>
-          )}
+            {activeTab === "assigned" && selectedAssignedIds.length > 0 && (
+              <button
+                onClick={() => handleUnassignProducts(selectedAssignedIds)}
+                className="px-3 py-1.5 bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg text-xs font-bold hover:bg-red-100 transition-all flex items-center gap-1.5"
+              >
+                <FaTrash /> Desvincular ({selectedAssignedIds.length})
+              </button>
+            )}
+
+            {activeTab === "unassigned" && selectedAvailableIds.length > 0 && (
+              <button
+                onClick={handleAssignProducts}
+                className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-1.5"
+              >
+                <FaPlus /> Asignar Seleccionados ({selectedAvailableIds.length})
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -349,10 +410,10 @@ export default function CategoryBrandProductManagerModal({
           {activeTab === "assigned" && (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               
-              {/* Search & Actions Bar */}
+              {/* Search & Pagination Bar */}
               <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
                 <div className="relative flex-1 min-w-[240px]">
-                  <FaSearch className="absolute left-3 top.1/2 transform -translate-y-1/2 text-slate-400 text-xs" />
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs" />
                   <input
                     type="text"
                     value={searchAssigned}
@@ -361,19 +422,45 @@ export default function CategoryBrandProductManagerModal({
                     className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
-                <span className="text-xs text-slate-500 font-medium">
-                  Mostrando {filteredAssigned.length} de {assignedProducts.length} productos
-                </span>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">
+                    Página {pageAssigned} de {totalPagesAssigned} ({totalAssignedCount} productos)
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setPageAssigned((p) => Math.max(1, p - 1))}
+                      disabled={pageAssigned === 1}
+                      className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs"
+                      title="Página anterior"
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <button
+                      onClick={() => setPageAssigned((p) => Math.min(totalPagesAssigned, p + 1))}
+                      disabled={pageAssigned >= totalPagesAssigned}
+                      className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs"
+                      title="Página siguiente"
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Table */}
               <div className="flex-1 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                 {loading ? (
-                  <div className="p-12 text-center text-slate-500">Cargando productos...</div>
-                ) : filteredAssigned.length === 0 ? (
+                  <div className="p-12 text-center text-slate-500">Cargando productos asignados...</div>
+                ) : assignedProducts.length === 0 ? (
                   <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     <FaBoxOpen className="mx-auto text-4xl mb-3 opacity-30" />
-                    <p className="font-semibold text-sm">No hay productos asignados a esta {entityType === 'category' ? 'categoría' : 'marca'}.</p>
+                    <p className="font-semibold text-sm">
+                      {searchAssigned
+                        ? `No se encontraron productos asignados para "${searchAssigned}"`
+                        : `No hay productos asignados a esta ${entityType === 'category' ? 'categoría' : 'marca'}.`}
+                    </p>
                     <p className="text-xs text-slate-400 mt-1">
                       Usa la pestaña <strong>"Meter / Seleccionar Productos"</strong> para agregar ítems.
                     </p>
@@ -384,7 +471,7 @@ export default function CategoryBrandProductManagerModal({
                       <tr>
                         <th className="p-3 w-10 text-center">
                           <button onClick={toggleSelectAllAssigned} className="text-purple-600">
-                            {selectedAssignedIds.length > 0 && selectedAssignedIds.length === filteredAssigned.length ? (
+                            {selectedAssignedIds.length > 0 && selectedAssignedIds.length === assignedProducts.length ? (
                               <FaCheckSquare size={16} />
                             ) : (
                               <FaSquare size={16} className="text-slate-300 dark:text-slate-700" />
@@ -400,7 +487,7 @@ export default function CategoryBrandProductManagerModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                      {filteredAssigned.map((product) => {
+                      {assignedProducts.map((product) => {
                         const isSelected = selectedAssignedIds.includes(product.id);
                         const prices = editingPrices[product.id] || { cost: "0", minorista: "0", mayorista: "0" };
 
@@ -522,7 +609,7 @@ export default function CategoryBrandProductManagerModal({
           {activeTab === "unassigned" && (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               
-              {/* Filter bar */}
+              {/* Filter & Pagination Bar */}
               <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
                 <div className="relative flex-1 min-w-[240px]">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs" />
@@ -530,7 +617,7 @@ export default function CategoryBrandProductManagerModal({
                     type="text"
                     value={searchAvailable}
                     onChange={(e) => setSearchAvailable(e.target.value)}
-                    placeholder="Buscar productos para meter a esta clasificación..."
+                    placeholder="Buscar productos en el catálogo..."
                     className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -542,15 +629,40 @@ export default function CategoryBrandProductManagerModal({
                     onChange={(e) => setOnlyUnclassifiedFilter(e.target.checked)}
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
-                  Mostrar solo productos sin {entityType === "category" ? "categoría" : "marca"}
+                  Mostrar solo sin {entityType === "category" ? "categoría" : "marca"}
                 </label>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">
+                    Página {pageAvailable} de {totalPagesAvailable} ({totalAvailableCount} productos)
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setPageAvailable((p) => Math.max(1, p - 1))}
+                      disabled={pageAvailable === 1}
+                      className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs"
+                      title="Página anterior"
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <button
+                      onClick={() => setPageAvailable((p) => Math.min(totalPagesAvailable, p + 1))}
+                      disabled={pageAvailable >= totalPagesAvailable}
+                      className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs"
+                      title="Página siguiente"
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Table */}
               <div className="flex-1 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                 {loading ? (
                   <div className="p-12 text-center text-slate-500">Cargando productos disponibles...</div>
-                ) : filteredAvailable.length === 0 ? (
+                ) : availableProducts.length === 0 ? (
                   <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     No se encontraron productos disponibles para asignar.
                   </div>
@@ -560,7 +672,7 @@ export default function CategoryBrandProductManagerModal({
                       <tr>
                         <th className="p-3 w-10 text-center">
                           <button onClick={toggleSelectAllAvailable} className="text-blue-600">
-                            {selectedAvailableIds.length > 0 && selectedAvailableIds.length === filteredAvailable.length ? (
+                            {selectedAvailableIds.length > 0 && selectedAvailableIds.length === availableProducts.length ? (
                               <FaCheckSquare size={16} />
                             ) : (
                               <FaSquare size={16} className="text-slate-300 dark:text-slate-700" />
@@ -575,7 +687,7 @@ export default function CategoryBrandProductManagerModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                      {filteredAvailable.map((product) => {
+                      {availableProducts.map((product) => {
                         const isSelected = selectedAvailableIds.includes(product.id);
                         const currentEntityId = entityType === "category" ? product.category_id : product.brand_id;
 
@@ -642,7 +754,9 @@ export default function CategoryBrandProductManagerModal({
         {/* Footer */}
         <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex justify-between items-center">
           <div className="text-xs text-slate-500 font-medium">
-            Total en catálogo: {assignedProducts.length + availableProducts.length} productos
+            {activeTab === "assigned"
+              ? `Asignados: ${totalAssignedCount} productos`
+              : `Disponibles en inventario: ${totalAvailableCount} productos`}
           </div>
 
           <div className="flex gap-3">
