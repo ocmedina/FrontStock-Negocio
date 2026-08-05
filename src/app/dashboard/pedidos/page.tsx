@@ -808,18 +808,22 @@ export default function OrdersPage() {
     const from = (currentPage - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
+    const hasCustomerFilter = searchQuery.trim().length > 0 || deliveryDayFilter !== "todos";
+    const customerSelect = hasCustomerFilter
+      ? "customers!inner ( id, full_name, delivery_day )"
+      : "customers ( id, full_name, delivery_day )";
+
     let query = supabase
       .from("orders")
       .select(
         `
         id, created_at, total_amount, status, payment_method, amount_paid, amount_pending,
-        customers ( id, full_name, delivery_day ),
+        ${customerSelect},
         order_items ( quantity, products ( id, name, stock ) )
       `,
         { count: "exact" }
       )
-      .order("created_at", { ascending: false })
-      .range(from, to);
+      .order("created_at", { ascending: false });
 
     if (statusFilter !== "todos") query = query.eq("status", statusFilter);
     
@@ -829,13 +833,15 @@ export default function OrdersPage() {
       query = query.gte("created_at", startDate).lte("created_at", endDate);
     }
     
-    if (searchQuery.length > 2) {
-      query = query.ilike("customers.full_name", `%${searchQuery}%`);
+    if (searchQuery.trim().length > 0) {
+      query = query.ilike("customers.full_name", `%${searchQuery.trim()}%`);
     }
     
     if (deliveryDayFilter !== "todos") {
       query = query.eq("customers.delivery_day", deliveryDayFilter);
     }
+
+    query = query.range(from, to);
 
     const { data, error, count } = await query;
 
