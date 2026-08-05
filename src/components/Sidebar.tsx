@@ -86,6 +86,13 @@ const navSections = {
       activeBg: "bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450 border-emerald-550",
     },
     {
+      href: "/dashboard/clasificacion",
+      label: "Categorías y Marcas",
+      icon: HiOutlineTag,
+      colorClass: "text-emerald-500",
+      activeBg: "bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450 border-emerald-550",
+    },
+    {
       href: "/dashboard/proveedores",
       label: "Proveedores",
       icon: HiOutlineTruck,
