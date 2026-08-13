@@ -22,6 +22,7 @@ import {
   FaCubes,
   FaBan,
   FaInfoCircle,
+  FaGift,
 } from "react-icons/fa";
 
 export default function OrderDetailsClient({
@@ -232,35 +233,53 @@ export default function OrderDetailsClient({
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
-                {order.order_items?.map((item: any, index: number) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-900 dark:text-slate-50">
-                        {item.products?.name ?? "Producto no disponible"}
-                      </div>
-                      {item.products?.sku && (
-                        <div className="text-xs text-gray-500 dark:text-slate-400 font-mono mt-0.5">
-                          SKU: {item.products.sku}
+                {(order.order_items || []).map((item: any, index: number) => {
+                  const promo = item.promotion;
+                  const hasPromo = promo && promo.applied && promo.totalGiftQuantity > 0;
+                  return (
+                    <tr
+                      key={index}
+                      className="hover:bg-gray-50/50 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-slate-50">
+                          {item.products?.name ?? "Producto no disponible"}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-lg font-bold text-sm">
-                        <FaCubes className="text-xs" />
-                        {item.quantity}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-700 dark:text-slate-200">
-                      ${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-green-600">
-                      ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          {item.products?.sku && (
+                            <span className="text-xs text-gray-500 dark:text-slate-400 font-mono">
+                              SKU: {item.products.sku}
+                            </span>
+                          )}
+                          {hasPromo && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                              <FaGift size={10} /> Promoción: Cada {promo.buyQuantity}, regalar {promo.giftQuantityPerPromotion || promo.giftQuantity}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 rounded-lg font-bold text-sm w-fit">
+                            <FaCubes className="text-xs" />
+                            {item.quantity} compradas
+                          </span>
+                          {hasPromo && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 rounded text-xs font-bold w-fit">
+                              <FaGift className="text-xs" /> +{promo.totalGiftQuantity} de regalo (Total: {item.quantity + promo.totalGiftQuantity})
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-700 dark:text-slate-200">
+                        ${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-green-600">
+                        ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
                 <tr>
@@ -318,60 +337,76 @@ export default function OrderDetailsClient({
 
           {/* Vista de Tarjetas - Mobile */}
           <div className="sm:hidden space-y-3 mb-6">
-            {order.order_items?.map((item: any, index: number) => (
-              <div
-                key={index}
-                className="bg-white dark:bg-slate-900 rounded-xl p-4 space-y-3 shadow-md border border-gray-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <FaBox className="text-purple-600 text-lg" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm text-gray-900 dark:text-slate-50 line-clamp-2">
-                      {item.products?.name ?? "Producto no disponible"}
+            {(order.order_items || []).map((item: any, index: number) => {
+              const promo = item.promotion;
+              const hasPromo = promo && promo.applied && promo.totalGiftQuantity > 0;
+              return (
+                <div
+                  key={index}
+                  className="bg-white dark:bg-slate-900 rounded-xl p-4 space-y-3 shadow-md border border-gray-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-950/40 rounded-lg flex items-center justify-center">
+                      <FaBox className="text-purple-600 dark:text-purple-400 text-lg" />
                     </div>
-                    {item.products?.sku && (
-                      <div className="text-xs text-gray-500 dark:text-slate-400 font-mono mt-1">
-                        SKU: {item.products.sku}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm text-gray-900 dark:text-slate-50 line-clamp-2">
+                        {item.products?.name ?? "Producto no disponible"}
                       </div>
-                    )}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {item.products?.sku && (
+                          <span className="text-xs text-gray-500 dark:text-slate-400 font-mono">
+                            SKU: {item.products.sku}
+                          </span>
+                        )}
+                        {hasPromo && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                            <FaGift size={9} /> Promo: Cada {promo.buyQuantity}, regalar {promo.giftQuantityPerPromotion || promo.giftQuantity}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="flex items-center gap-2 bg-blue-50 rounded-lg p-2">
-                    <FaCubes className="text-blue-600" />
-                    <div>
-                      <div className="text-gray-500 dark:text-slate-400 text-[10px]">Cantidad</div>
-                      <div className="font-bold text-blue-800">
-                        {item.quantity}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-2">
+                      <FaCubes className="text-blue-600 dark:text-blue-400" />
+                      <div>
+                        <div className="text-gray-500 dark:text-slate-400 text-[10px]">Cantidad</div>
+                        <div className="font-bold text-blue-800 dark:text-blue-300">
+                          {item.quantity} compradas
+                        </div>
+                        {hasPromo && (
+                          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            +{promo.totalGiftQuantity} regalo
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-950 rounded-lg p-2">
+                      <FaDollarSign className="text-gray-600 dark:text-slate-300" />
+                      <div>
+                        <div className="text-gray-500 dark:text-slate-400 text-[10px]">
+                          Precio Unit.
+                        </div>
+                        <div className="font-bold text-gray-800 dark:text-slate-100">
+                          ${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-950 rounded-lg p-2">
-                    <FaDollarSign className="text-gray-600 dark:text-slate-300" />
-                    <div>
-                      <div className="text-gray-500 dark:text-slate-400 text-[10px]">
-                        Precio Unit.
-                      </div>
-                      <div className="font-bold text-gray-800 dark:text-slate-100">
-                        ${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="pt-2 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between">
-                  <span className="text-xs text-gray-600 dark:text-slate-300 font-semibold">
-                    Subtotal:
-                  </span>
-                  <span className="text-base font-bold text-green-600">
-                    ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                  <div className="pt-2 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                    <span className="text-xs text-gray-600 dark:text-slate-300 font-semibold">
+                      Subtotal:
+                    </span>
+                    <span className="text-base font-bold text-green-600">
+                      ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Totales Mobile */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 space-y-3 border-2 border-green-300 shadow-lg">

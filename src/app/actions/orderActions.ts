@@ -7,6 +7,7 @@ type OrderItemInput = {
   product_id: string;
   quantity: number;
   price: number;
+  promotion?: any;
 };
 
 export async function updateOrder(
@@ -63,6 +64,7 @@ export async function updateOrder(
       product_id: item.product_id,
       quantity: item.quantity,
       price: item.price,
+      promotion: item.promotion || { applied: false },
     }));
 
     console.log(`[Server Action] Items a insertar: ${orderItems.length}`, orderItems);

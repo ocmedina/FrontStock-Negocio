@@ -1,4 +1,8 @@
--- Función para manejar el cambio de estado de un pedido y actualizar el stock (con promociones por cantidad)
+-- Agregar columna promotion a la tabla order_items si no existe
+ALTER TABLE public.order_items 
+ADD COLUMN IF NOT EXISTS promotion JSONB DEFAULT NULL;
+
+-- Actualizar la función para manejar el cambio de estado de un pedido y actualizar el stock considerando promociones
 CREATE OR REPLACE FUNCTION handle_order_status_change(
   order_id_param UUID,
   new_status_param TEXT
@@ -13,6 +17,7 @@ DECLARE
   v_gift_product_id UUID;
   v_total_stock_needed INTEGER;
   v_gift_current_stock INTEGER;
+  v_gift_product_name TEXT;
 BEGIN
   SELECT status INTO current_status FROM orders WHERE id = order_id_param;
 
@@ -34,6 +39,7 @@ BEGIN
         v_gift_product_id := item.product_id;
       END IF;
 
+      -- Determinar stock necesario del producto principal
       IF v_promo_applied AND v_total_gift_qty > 0 AND v_gift_product_id = item.product_id THEN
         v_total_stock_needed := item.quantity + v_total_gift_qty;
       ELSE
@@ -46,6 +52,7 @@ BEGIN
       SET stock = stock - v_total_stock_needed 
       WHERE id = item.product_id;
 
+      -- Registrar movimiento (Venta)
       INSERT INTO stock_movements (
         product_id,
         user_id,
@@ -66,6 +73,7 @@ BEGIN
         'Entrega de pedido #' || left(order_id_param::text, 8)
       );
 
+      -- Si hay regalo del mismo producto
       IF v_promo_applied AND v_total_gift_qty > 0 AND v_gift_product_id = item.product_id THEN
         INSERT INTO stock_movements (
           product_id,
@@ -88,6 +96,7 @@ BEGIN
         );
       END IF;
 
+      -- Si el regalo es un producto DISTINTO
       IF v_promo_applied AND v_total_gift_qty > 0 AND v_gift_product_id != item.product_id THEN
         SELECT stock INTO v_gift_current_stock FROM products WHERE id = v_gift_product_id FOR UPDATE;
 

@@ -17,6 +17,16 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    id: "2026-08-13-v2-6-quantity-promotions",
+    date: "13 Ago 2026",
+    title: "🎁 Promociones por Cantidad en Productos, Ventas y Pedidos",
+    description:
+      "Llegaron las promociones automáticas del tipo 'Cada X unidades vendidas, regalar Y unidades' (ej: cada 10 bolsas regalar 1). Configúralas en la creación o edición de productos. El sistema calcula las unidades de regalo automáticamente en el carrito de Ventas y Pedidos de Reparto, valida el stock total necesario antes del cobro y registra los movimientos de regalo en el Kardex de Inventario.",
+    icon: "🎁",
+    isNew: true,
+    type: "feature",
+  },
+  {
     id: "2026-08-05-v2-5-price-and-suppliers",
     date: "5 Ago 2026",
     title: "💲 Aumento Seleccionable de Precios y Proveedores ➔ Marcas",

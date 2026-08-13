@@ -23,11 +23,12 @@ import {
   FaListOl,
   FaCheckDouble,
   FaRegLightbulb,
+  FaGift,
 } from "react-icons/fa";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
-const VERSION_KEY = "system_updates_v2_5_views_count";
+const VERSION_KEY = "system_updates_v2_6_views_count";
 const MAX_AUTO_SHOWS = 3;
 
 export default function SystemUpdatesModal({
@@ -85,6 +86,16 @@ export default function SystemUpdatesModal({
   };
 
   const steps = [
+    {
+      id: "promociones",
+      title: "Promociones por Cantidad Automáticas",
+      subtitle: "Cada X unidades vendidas, regalar Y unidades (Ventas y Pedidos)",
+      icon: FaGift,
+      color: "from-amber-500 to-orange-600",
+      accent: "text-amber-500",
+      bgAccent: "bg-amber-50 dark:bg-amber-950/50",
+      borderAccent: "border-amber-200 dark:border-amber-800",
+    },
     {
       id: "precios",
       title: "Listas de Precios y Selección Individual",
@@ -162,7 +173,7 @@ export default function SystemUpdatesModal({
                     {systemName}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-sm flex items-center gap-1">
-                    <HiSparkles size={11} /> Versión 2.5
+                    <HiSparkles size={11} /> Versión 2.6
                   </span>
                 </div>
                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">
@@ -226,8 +237,65 @@ export default function SystemUpdatesModal({
             </span>
           </div>
 
-          {/* SLIDE 1: Listas de Precios y Selección Individual */}
+          {/* SLIDE 0: Promociones por Cantidad */}
           {activeStep === 0 && (
+            <div className="space-y-4 animate-fadeIn">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Llegaron las <strong>Promociones por Cantidad Automáticas</strong> del tipo <em>"Cada X unidades vendidas, regalar Y unidades"</em> (ejemplo: cada 10 bolsas vendidas, regalar 1 bolsa sin costo adicional).
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-amber-300 dark:hover:border-amber-800 transition-all group">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
+                    1
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
+                    Configuración Simple
+                  </h4>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Activa el switch en la creación o edición de productos, ingresa la cantidad vendida requerida y las unidades de regalo.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-amber-300 dark:hover:border-amber-800 transition-all group">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
+                    2
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
+                    Ventas y Pedidos
+                  </h4>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    El carrito de Ventas y Pedidos de Reparto desglosa automáticamente las unidades cobradas y regaladas, cobrando $0 por los artículos de regalo.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-amber-300 dark:hover:border-amber-800 transition-all group">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
+                    3
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
+                    Control de Stock y Kardex
+                  </h4>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    El sistema valida stock suficiente previa transacción, descuenta las unidades regaladas y registra las salidas por promoción en el inventario.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Link
+                  href="/dashboard/products"
+                  onClick={handleClose}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                >
+                  Ir a Productos <FaArrowRight />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 1: Listas de Precios y Selección Individual */}
+          {activeStep === 1 && (
             <div className="space-y-4 animate-fadeIn">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Ahora el módulo de <strong>Clasificación y Precios</strong> ofrece un control total sobre cómo aumentan tus precios. Puedes aplicar aumentos masivos por porcentaje o monto fijo, o modificar artículos de forma individual sin alterar el resto del inventario.
@@ -284,7 +352,7 @@ export default function SystemUpdatesModal({
           )}
 
           {/* SLIDE 2: Proveedores y Marcas */}
-          {activeStep === 1 && (
+          {activeStep === 2 && (
             <div className="space-y-4 animate-fadeIn">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Incorporamos la jerarquía completa <strong>Proveedores ➔ Marcas ➔ Productos</strong>. Ahora puedes agrupar tus marcas bajo cada proveedor que te abastece y ajustar precios a nivel de distribuidor.
@@ -325,7 +393,7 @@ export default function SystemUpdatesModal({
           )}
 
           {/* SLIDE 3: Limpieza y Seguridad */}
-          {activeStep === 2 && (
+          {activeStep === 3 && (
             <div className="space-y-4 animate-fadeIn">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Nueva herramienta de <strong>Limpieza y Mantenimiento del Sistema</strong> ubicada dentro de <strong>Configuración</strong> (`/dashboard/configuracion`), diseñada para mantener tu base de datos optimizada y libre de registros obsoletos.
@@ -364,7 +432,7 @@ export default function SystemUpdatesModal({
           )}
 
           {/* SLIDE 4: Memoria de Paginación */}
-          {activeStep === 3 && (
+          {activeStep === 4 && (
             <div className="space-y-4 animate-fadeIn">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Hemos optimizado la navegación en todas las listas del sistema (**Productos**, **Pedidos**, **Clientes**). Ahora la aplicación recuerda automáticamente tu posición sin reiniciar la vista a la página 1.

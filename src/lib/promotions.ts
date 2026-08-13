@@ -41,7 +41,7 @@ export function calculateGiftQuantity(
  */
 export function getAppliedPromotion(
   quantitySold: number,
-  product: { id?: string; promotion?: ProductPromotion | null }
+  product?: { id?: string; promotion?: ProductPromotion | null } | null
 ): AppliedPromotion | null {
   if (!product?.promotion?.enabled) return null;
   const buyQty = product.promotion.buyQuantity;

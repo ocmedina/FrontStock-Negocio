@@ -13,8 +13,10 @@ import {
   FaTrash,
   FaSearch,
   FaCheckCircle,
+  FaGift,
 } from "react-icons/fa";
 import { updateOrder } from "@/app/actions/orderActions";
+import { getAppliedPromotion } from "@/lib/promotions";
 
 type Product = {
   id: string;
@@ -23,6 +25,7 @@ type Product = {
   stock: number | null;
   price_mayorista: number | null;
   price_minorista: number | null;
+  promotion?: any;
 };
 
 type OrderItem = {
@@ -227,9 +230,26 @@ export default function EditOrderPage({
       return;
     }
 
-    if (items.length === 0) {
-      toast.error("Agrega al menos un producto");
-      return;
+    // Validar stock disponible considerando regalo
+    for (const item of items) {
+      if (item.products) {
+        const promo = getAppliedPromotion(item.quantity, item.products);
+        const giftQty = promo?.totalGiftQuantity || 0;
+        if (giftQty > 0) {
+          const totalNeeded = item.quantity + giftQty;
+          if ((item.products.stock || 0) < totalNeeded) {
+            toast.error(
+              `⚠️ Stock insuficiente para las unidades de regalo de "${item.products.name}". Disponible: ${item.products.stock || 0}, Requerido total: ${totalNeeded}`
+            );
+            return;
+          }
+        } else if ((item.products.stock || 0) < item.quantity) {
+          toast.error(
+            `⚠️ Stock insuficiente para "${item.products.name}". Disponible: ${item.products.stock || 0}, Requerido: ${item.quantity}`
+          );
+          return;
+        }
+      }
     }
 
     setSaving(true);
@@ -260,11 +280,15 @@ export default function EditOrderPage({
         id,
         selectedCustomerId,
         total,
-        items.map((item) => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price: item.price,
-        })),
+        items.map((item) => {
+          const promoPayload = getAppliedPromotion(item.quantity, item.products);
+          return {
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+            promotion: promoPayload || { applied: false },
+          };
+        }),
         paymentMethod,
         amountReceived,
         total - amountReceived
@@ -571,61 +595,77 @@ export default function EditOrderPage({
             </div>
           ) : (
             <div className="space-y-3">
-              {items.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 dark:bg-slate-950 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-slate-700 gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-slate-50 text-sm sm:text-base">
-                      {item.products?.name}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
-                      ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} c/u
-                      {item.products?.sku && ` • SKU: ${item.products.sku}`}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg border border-gray-300 dark:border-slate-600">
-                      <button
-                        onClick={() => updateQuantity(index, -1)}
-                        className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:text-slate-50 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 rounded-l-lg transition-all"
-                        disabled={saving}
-                        title="Disminuir cantidad"
-                      >
-                        <FaMinus size={12} />
-                      </button>
-                      <span className="px-2 sm:px-3 font-bold text-gray-900 dark:text-slate-50 min-w-[2.5rem] sm:min-w-[3rem] text-center text-sm sm:text-base">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => updateQuantity(index, 1)}
-                        className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:text-slate-50 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 rounded-r-lg transition-all"
-                        disabled={saving}
-                        title="Aumentar cantidad"
-                      >
-                        <FaPlus size={12} />
-                      </button>
+              {items.map((item, index) => {
+                const promo = getAppliedPromotion(item.quantity, item.products);
+                const giftQty = promo?.totalGiftQuantity || 0;
+                return (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 dark:bg-slate-950 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-slate-700 gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 dark:text-slate-50 text-sm sm:text-base">
+                        {item.products?.name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                        <span>
+                          ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} c/u
+                        </span>
+                        {item.products?.sku && <span>• SKU: {item.products.sku}</span>}
+                        {item.products?.promotion?.enabled && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                            <FaGift size={9} /> Promo: Cada {item.products.promotion.buyQuantity}, regalar {item.products.promotion.giftQuantity}
+                          </span>
+                        )}
+                      </div>
+                      {giftQty > 0 && (
+                        <div className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/50 w-fit mt-1">
+                          <span className="font-bold">{item.quantity} cobradas</span> + <span className="font-bold">{giftQty} regalo</span> (Total entregado: {item.quantity + giftQty})
+                        </div>
+                      )}
                     </div>
 
-                    <div className="text-right min-w-[5rem] sm:min-w-[6rem]">
-                      <p className="font-bold text-gray-900 dark:text-slate-50 text-sm sm:text-base">
-                        ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
+                      <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg border border-gray-300 dark:border-slate-600">
+                        <button
+                          onClick={() => updateQuantity(index, -1)}
+                          className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:text-slate-50 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 rounded-l-lg transition-all"
+                          disabled={saving}
+                          title="Disminuir cantidad"
+                        >
+                          <FaMinus size={12} />
+                        </button>
+                        <span className="px-2 sm:px-3 font-bold text-gray-900 dark:text-slate-50 min-w-[2.5rem] sm:min-w-[3rem] text-center text-sm sm:text-base">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(index, 1)}
+                          className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:text-slate-50 hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 rounded-r-lg transition-all"
+                          disabled={saving}
+                          title="Aumentar cantidad"
+                        >
+                          <FaPlus size={12} />
+                        </button>
+                      </div>
 
-                    <button
-                      onClick={() => removeItem(index)}
-                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
-                      disabled={saving}
-                      title="Eliminar"
-                    >
-                      <FaTrash size={14} />
-                    </button>
+                      <div className="text-right min-w-[5rem] sm:min-w-[6rem]">
+                        <p className="font-bold text-gray-900 dark:text-slate-50 text-sm sm:text-base">
+                          ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => removeItem(index)}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                        disabled={saving}
+                        title="Eliminar"
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

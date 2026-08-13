@@ -20,10 +20,12 @@ import {
   FaBarcode,
   FaMoneyBillWave,
   FaChevronDown,
+  FaGift,
 } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { getAppliedPromotion } from "@/lib/promotions";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -324,6 +326,33 @@ export default function NewOrderPage() {
       toast.error("Sesión de usuario no válida");
       return;
     }
+    // Validar stock disponible considerando unidades vendidas + unidades de regalo por promoción
+    for (const item of cart) {
+      const isSuelto =
+        item.name.toLowerCase().includes("alimento suelto") ||
+        item.name.toLowerCase().includes("alimento a granel") ||
+        ["SUELTO", "GRANEL"].includes(item.sku?.toUpperCase() || "");
+
+      if (!isSuelto) {
+        const promo = getAppliedPromotion(item.quantity, item);
+        const giftQty = promo?.totalGiftQuantity || 0;
+
+        if (giftQty > 0) {
+          const totalStockNeeded = item.quantity + giftQty;
+          if ((item.stock || 0) < totalStockNeeded) {
+            toast.error(
+              `⚠️ Stock insuficiente para las unidades de regalo de "${item.name}". Stock disponible: ${item.stock || 0}, Requerido total: ${totalStockNeeded} (${item.quantity} compradas + ${giftQty} de regalo).`
+            );
+            return;
+          }
+        } else if ((item.stock || 0) < item.quantity) {
+          toast.error(
+            `⚠️ Stock insuficiente para "${item.name}". Stock disponible: ${item.stock || 0}, Requerido: ${item.quantity}.`
+          );
+          return;
+        }
+      }
+    }
 
     setIsSubmitting(true);
     const loadToast = toast.loading("Registrando pedido...");
@@ -370,12 +399,16 @@ export default function NewOrderPage() {
         throw new Error(orderError?.message || "Fallo en registro de cabecera de pedido.");
       }
 
-      const itemsPayload = cart.map((item) => ({
-        order_id: orderData.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.customPrice !== undefined ? item.customPrice : getProductPrice(item),
-      }));
+      const itemsPayload = cart.map((item) => {
+        const promoPayload = getAppliedPromotion(item.quantity, item);
+        return {
+          order_id: orderData.id,
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.customPrice !== undefined ? item.customPrice : getProductPrice(item),
+          promotion: promoPayload || { applied: false },
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from("order_items")
@@ -730,44 +763,72 @@ export default function NewOrderPage() {
                           const price = item.customPrice !== undefined ? item.customPrice : getProductPrice(item);
                           const subtotal = price * item.quantity;
                           const stockLimit = item.stock || 0;
+                          const promo = getAppliedPromotion(item.quantity, item);
+                          const giftQty = promo?.totalGiftQuantity || 0;
 
                           return (
                             <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/30 transition-colors">
-                              <td className="px-6 py-3 whitespace-nowrap">
-                                <div className="flex flex-col">
+                              <td className="px-6 py-3">
+                                <div className="flex flex-col gap-1">
                                   <span className="font-semibold text-slate-800 dark:text-slate-100">
                                     {item.name}
                                   </span>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                  <div className="flex flex-wrap items-center gap-1.5">
                                     {item.sku && (
                                       <span className="text-[10px] text-slate-450 dark:text-slate-500 font-mono">
                                         SKU: {item.sku}
                                       </span>
                                     )}
                                     <span className={`text-[10px] font-bold ${stockLimit < 10 ? "text-amber-600" : "text-emerald-600"}`}>
-                                      • Stock disponible: {stockLimit} u.
+                                      • Stock: {stockLimit} u.
                                     </span>
+                                    {item.promotion?.enabled && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                                        <FaGift size={10} /> Cada {item.promotion.buyQuantity}, regalar {item.promotion.giftQuantity}
+                                      </span>
+                                    )}
                                   </div>
+                                  {giftQty > 0 && (
+                                    <div className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/50 w-fit">
+                                      <span className="font-bold">{item.quantity} cobradas</span> + <span className="font-bold">{giftQty} regalo</span>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                               <td className="px-6 py-3 whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdateQuantity(item.id, -1)}
-                                    className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors"
-                                  >
-                                    <FaMinus className="w-2 h-2" />
-                                  </button>
-                                  <span className="w-8 text-center font-bold text-slate-800 dark:text-white">
-                                    {item.quantity}
-                                  </span>
-                                  <button
-                                    onClick={() => handleUpdateQuantity(item.id, 1)}
-                                    disabled={item.quantity >= stockLimit}
-                                    className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                  >
-                                    <FaPlus className="w-2 h-2" />
-                                  </button>
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleUpdateQuantity(item.id, -1)}
+                                      className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors"
+                                    >
+                                      <FaMinus className="w-2 h-2" />
+                                    </button>
+                                    <span className="w-8 text-center font-bold text-slate-800 dark:text-white">
+                                      {item.quantity}
+                                    </span>
+                                    <button
+                                      onClick={() => handleUpdateQuantity(item.id, 1)}
+                                      disabled={item.quantity + giftQty >= stockLimit}
+                                      className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      <FaPlus className="w-2 h-2" />
+                                    </button>
+                                  </div>
+                                  {giftQty > 0 ? (
+                                    <div className="flex flex-col items-center text-[10px]">
+                                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                                        <FaGift size={9} /> +{giftQty} regalo
+                                      </span>
+                                      <span className="text-slate-400">Total: {item.quantity + giftQty} u.</span>
+                                    </div>
+                                  ) : (
+                                    item.promotion?.enabled && (
+                                      <span className="text-[10px] text-slate-400">
+                                        Faltan {item.promotion.buyQuantity - (item.quantity % item.promotion.buyQuantity)} para regalo
+                                      </span>
+                                    )
+                                  )}
                                 </div>
                               </td>
                               <td className="px-6 py-3 whitespace-nowrap text-right">
