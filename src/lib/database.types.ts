@@ -164,6 +164,8 @@ export type Database = {
           stock: number
           stock_minimo: number | null
           cost_price: number | null
+          barcode?: string | null
+          promotion?: any
         }
         Insert: {
           brand_id?: number | null
@@ -178,6 +180,8 @@ export type Database = {
           stock?: number
           stock_minimo?: number | null
           cost_price?: number | null
+          barcode?: string | null
+          promotion?: any
         }
         Update: {
           brand_id?: number | null
@@ -192,6 +196,8 @@ export type Database = {
           stock?: number
           stock_minimo?: number | null
           cost_price?: number | null
+          barcode?: string | null
+          promotion?: any
         }
         Relationships: [
           {
@@ -238,6 +244,7 @@ export type Database = {
           product_id: string
           quantity: number
           sale_id: string
+          promotion?: any
         }
         Insert: {
           id?: number
@@ -245,6 +252,7 @@ export type Database = {
           product_id: string
           quantity: number
           sale_id: string
+          promotion?: any
         }
         Update: {
           id?: number
@@ -252,6 +260,7 @@ export type Database = {
           product_id?: string
           quantity?: number
           sale_id?: string
+          promotion?: any
         }
         Relationships: [
           {

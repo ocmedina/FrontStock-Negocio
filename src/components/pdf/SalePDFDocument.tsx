@@ -296,18 +296,27 @@ export default function SalePDFDocument({ sale }: { sale: any }) {
               Subtotal
             </Text>
           </View>
-          {(sale.sale_items || []).map((item: any, index: number) => (
-            <View key={index} style={styles.tableRow}>
-              <Text style={styles.tdProduct}>
-                {item.products?.name ?? "N/A"}
-              </Text>
-              <Text style={styles.tdQty}>{item.quantity}</Text>
-              <Text style={styles.tdPrice}>${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-              <Text style={styles.tdTotal}>
-                ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-            </View>
-          ))}
+          {(sale.sale_items || []).map((item: any, index: number) => {
+            const promo = item.promotion;
+            const hasPromo = promo && promo.applied && promo.totalGiftQuantity > 0;
+            return (
+              <View key={index} style={styles.tableRow}>
+                <View style={styles.tdProduct}>
+                  <Text>{item.products?.name ?? "N/A"}</Text>
+                  {hasPromo && (
+                    <Text style={{ fontSize: 7, color: "#047857", fontWeight: "bold", marginTop: 2 }}>
+                      +{promo.totalGiftQuantity} regalo (Promoción: Cada {promo.buyQuantity}, regalar {promo.giftQuantityPerPromotion || promo.giftQuantity})
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.tdQty}>{item.quantity}</Text>
+                <Text style={styles.tdPrice}>${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                <Text style={styles.tdTotal}>
+                  ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            );
+          })}
         </View>
 
         {/* Total */}

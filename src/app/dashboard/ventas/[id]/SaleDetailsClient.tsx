@@ -15,6 +15,7 @@ import {
   FaDollarSign,
   FaReceipt,
   FaBoxes,
+  FaGift,
 } from "react-icons/fa";
 import { createInvoiceFromSale } from "@/app/actions/invoiceActions";
 import toast from "react-hot-toast";
@@ -264,27 +265,56 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
-                {(sale.sale_items || []).map((item: any, index: number) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-slate-50">
-                      {item.products?.name ?? "Producto borrado"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                        {item.quantity} unidades
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300 font-medium">
-                      ${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-gray-900 dark:text-slate-50">
-                      ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
+                {(sale.sale_items || []).map((item: any, index: number) => {
+                  const promo = item.promotion;
+                  const hasPromo = promo && promo.applied && promo.totalGiftQuantity > 0;
+                  const giftQty = hasPromo ? promo.totalGiftQuantity : 0;
+                  const buyQty = promo?.buyQuantity;
+                  const giftQtyPerPromo = promo?.giftQuantityPerPromotion || promo?.giftQuantity;
+
+                  return (
+                    <tr
+                      key={index}
+                      className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-slate-50">
+                        <div className="flex flex-col gap-1">
+                          <span>{item.products?.name ?? "Producto borrado"}</span>
+                          {hasPromo && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60 w-fit">
+                              <FaGift size={11} /> Promoción: Cada {buyQty}, {giftQtyPerPromo} de regalo
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300">
+                              Vendidas: {item.quantity}
+                            </span>
+                            {hasPromo && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300">
+                                Regalo: {giftQty}
+                              </span>
+                            )}
+                          </div>
+                          {hasPromo && (
+                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                              Total entregado: <strong className="text-slate-800 dark:text-slate-200">{item.quantity + giftQty}</strong>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300 font-medium">
+                        ${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-gray-900 dark:text-slate-50">
+                        ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
                 <tr>

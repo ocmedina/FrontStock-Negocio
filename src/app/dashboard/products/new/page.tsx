@@ -16,6 +16,7 @@ import {
   FaWarehouse,
   FaArrowLeft,
   FaLayerGroup,
+  FaGift,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
@@ -35,6 +36,13 @@ export default function NewProductPage() {
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
 
+  // Promoción por cantidad
+  const [promoEnabled, setPromoEnabled] = useState(false);
+  const [promoBuyQty, setPromoBuyQty] = useState("10");
+  const [promoGiftQty, setPromoGiftQty] = useState("1");
+  const [promoGiftProductId, setPromoGiftProductId] = useState("same");
+  const [productList, setProductList] = useState<{ id: string; name: string }[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       const { data: brandsData } = await supabase
@@ -45,9 +53,14 @@ export default function NewProductPage() {
         .from("categories")
         .select("id, name")
         .order("name");
+      const { data: productsData } = await supabase
+        .from("products")
+        .select("id, name")
+        .order("name");
 
       if (brandsData) setBrands(brandsData);
       if (categoriesData) setCategories(categoriesData);
+      if (productsData) setProductList(productsData);
     };
     fetchData();
   }, []);
@@ -76,6 +89,29 @@ export default function NewProductPage() {
       return;
     }
 
+    if (promoEnabled) {
+      const buyQty = parseInt(promoBuyQty, 10);
+      const giftQty = parseInt(promoGiftQty, 10);
+      if (isNaN(buyQty) || buyQty <= 0 || isNaN(giftQty) || giftQty <= 0) {
+        toast.error("Los valores 'Cada X unidades' y 'Regalar Y unidades' deben ser enteros mayores a 0.");
+        return;
+      }
+    }
+
+    const promotionPayload = promoEnabled
+      ? {
+          enabled: true,
+          buyQuantity: parseInt(promoBuyQty, 10),
+          giftQuantity: parseInt(promoGiftQty, 10),
+          giftProductId: promoGiftProductId === "same" ? null : promoGiftProductId,
+        }
+      : {
+          enabled: false,
+          buyQuantity: 0,
+          giftQuantity: 0,
+          giftProductId: null,
+        };
+
     const loadingToast = toast.loading("Creando producto...");
 
     const { data, error } = await supabase.from("products").insert([
@@ -89,6 +125,7 @@ export default function NewProductPage() {
         stock: parseInt(stock, 10),
         brand_id: selectedBrand ? parseInt(selectedBrand) : null,
         category_id: selectedCategory ? parseInt(selectedCategory) : null,
+        promotion: promotionPayload,
       },
     ]);
 
@@ -353,6 +390,95 @@ export default function NewProductPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* SECCIÓN 3: PROMOCIÓN POR CANTIDAD */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-3xs flex-shrink-0 text-sm">
+                  <FaGift />
+                </span>
+                <div>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-350">
+                    Promoción por cantidad
+                  </h2>
+                  <p className="text-[10px] text-slate-450 dark:text-slate-500 font-medium">
+                    Configurar regla de regalo ("Cada X unidades vendidas, regalar Y unidades")
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={promoEnabled}
+                  onChange={(e) => setPromoEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-amber-500"></div>
+                <span className="ml-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Activar promoción
+                </span>
+              </label>
+            </div>
+
+            {promoEnabled && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1 animate-in fade-in duration-200">
+                {/* Cada X unidades */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                    Cada X unidades *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={promoBuyQty}
+                    onChange={(e) => setPromoBuyQty(e.target.value)}
+                    required={promoEnabled}
+                    placeholder="Ej: 10"
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Cantidad vendida requerida</p>
+                </div>
+
+                {/* Regalar Y unidades */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                    Regalar Y unidades *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={promoGiftQty}
+                    onChange={(e) => setPromoGiftQty(e.target.value)}
+                    required={promoEnabled}
+                    placeholder="Ej: 1"
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Cantidad entregada de regalo</p>
+                </div>
+
+                {/* Selector de producto de regalo */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                    Producto de regalo
+                  </label>
+                  <select
+                    value={promoGiftProductId}
+                    onChange={(e) => setPromoGiftProductId(e.target.value)}
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="same">El mismo producto</option>
+                    {productList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">Por defecto: El mismo producto</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* BOTONES DE ACCIÓN */}

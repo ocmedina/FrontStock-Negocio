@@ -21,6 +21,7 @@ import ProductSearchModal from "./components/ProductSearchModal";
 import CartList from "./components/CartList";
 import SaleTabs from "./components/SaleTabs";
 import ShortcutsBar from "./components/ShortcutsBar";
+import { getAppliedPromotion } from "@/lib/promotions";
 
 export default function NewSalePage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -532,6 +533,36 @@ export default function NewSalePage() {
       if (!confirmOverpay) return;
     }
 
+    // Validar stock disponible considerando unidades vendidas + unidades de regalo por promoción
+    for (const item of cart) {
+      const isSuelto =
+        item.name.toLowerCase().includes("alimento suelto") ||
+        item.name.toLowerCase().includes("alimento a granel") ||
+        ["SUELTO", "GRANEL"].includes(item.sku?.toUpperCase() || "");
+
+      if (!isSuelto) {
+        const promo = getAppliedPromotion(item.quantity, item);
+        const giftQty = promo?.totalGiftQuantity || 0;
+
+        if (giftQty > 0) {
+          const totalStockNeeded = item.quantity + giftQty;
+          if (item.stock < totalStockNeeded) {
+            toast.error(
+              `⚠️ Stock insuficiente para las unidades de regalo de "${item.name}". Stock disponible: ${item.stock}, Requerido total: ${totalStockNeeded} (${item.quantity} compradas + ${giftQty} de regalo).`
+            );
+            setLoading(false);
+            return;
+          }
+        } else if (item.stock < item.quantity) {
+          toast.error(
+            `⚠️ Stock insuficiente para "${item.name}". Stock disponible: ${item.stock}, Requerido: ${item.quantity}.`
+          );
+          setLoading(false);
+          return;
+        }
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -554,6 +585,7 @@ export default function NewSalePage() {
                
         const qty = item.quantity;
         const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
+        const appliedPromo = getAppliedPromotion(qty, item);
         
         return {
           product_id: item.id,
@@ -561,7 +593,8 @@ export default function NewSalePage() {
           price: itemPrice,
           tax_rate_id: 1, // default tax rate ID
           subtotal_neto: round(itemPrice * qty),
-          iva_amount: 0
+          iva_amount: 0,
+          promotion: appliedPromo || { applied: false }
         };
       });
 

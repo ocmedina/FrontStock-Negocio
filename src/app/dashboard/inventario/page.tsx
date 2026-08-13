@@ -14,6 +14,7 @@ import {
   FaFileExcel,
   FaChevronDown,
   FaChevronUp,
+  FaGift,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import AdjustmentModal from "./components/AdjustmentModal";
@@ -119,6 +120,8 @@ export default function InventoryKardexPage() {
     switch (type) {
       case "venta":
         return <FaArrowDown className="text-red-500" />;
+      case "promocion":
+        return <FaGift className="text-amber-500" />;
       case "compra":
         return <FaArrowUp className="text-green-500" />;
       case "devolucion":
@@ -138,6 +141,12 @@ export default function InventoryKardexPage() {
         return (
           <span className="text-red-700 bg-red-100 px-2 py-1 rounded text-xs font-bold">
             Venta
+          </span>
+        );
+      case "promocion":
+        return (
+          <span className="text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-1 rounded text-xs font-bold">
+            Promoción
           </span>
         );
       case "compra":

@@ -275,18 +275,27 @@ export default function ThermalSalePDFDocument({ sale }: { sale: any }) {
                     <Text style={styles.colTotal}>Total</Text>
                 </View>
 
-                {(sale.sale_items || []).map((item: any, index: number) => (
-                    <View key={index} style={styles.tableRow}>
-                        <Text style={styles.colProduct}>
-                            {item.products?.name ?? "N/A"}
-                        </Text>
-                        <Text style={styles.colQty}>{item.quantity}</Text>
-                        <Text style={styles.colPrice}>${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-                        <Text style={styles.colTotal}>
-                            ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </Text>
-                    </View>
-                ))}
+                {(sale.sale_items || []).map((item: any, index: number) => {
+                    const promo = item.promotion;
+                    const hasPromo = promo && promo.applied && promo.totalGiftQuantity > 0;
+                    return (
+                        <View key={index} style={styles.tableRow}>
+                            <View style={styles.colProduct}>
+                                <Text>{item.products?.name ?? "N/A"}</Text>
+                                {hasPromo && (
+                                    <Text style={{ fontSize: 6, color: "#047857", fontWeight: "bold" }}>
+                                        +{promo.totalGiftQuantity} regalo (Promoción)
+                                    </Text>
+                                )}
+                            </View>
+                            <Text style={styles.colQty}>{item.quantity}</Text>
+                            <Text style={styles.colPrice}>${item.price?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                            <Text style={styles.colTotal}>
+                                ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </Text>
+                        </View>
+                    );
+                })}
 
                 {/* Total */}
                 <View style={styles.totalSection}>

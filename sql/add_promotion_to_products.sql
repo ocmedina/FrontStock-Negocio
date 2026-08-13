@@ -1,5 +1,12 @@
--- Atomic sale finalization: sale + items + stock + customer debt + payments + optional supplier payment + promotions
-create or replace function public.finalize_sale_transaction(
+-- Agregar columna promotion a la tabla products y sale_items si no existen
+ALTER TABLE public.products 
+ADD COLUMN IF NOT EXISTS promotion JSONB DEFAULT NULL;
+
+ALTER TABLE public.sale_items 
+ADD COLUMN IF NOT EXISTS promotion JSONB DEFAULT NULL;
+
+-- Actualizar la función de transacción atómica de cierre de venta
+CREATE OR REPLACE FUNCTION public.finalize_sale_transaction(
   p_customer_id uuid,
   p_profile_id uuid,
   p_total_amount numeric,
@@ -117,6 +124,7 @@ begin
       v_gift_product_id := v_item.product_id;
     end if;
 
+    -- Determinar stock necesario del producto vendido
     if v_promo_applied and v_total_gift_qty > 0 and v_gift_product_id = v_item.product_id then
       v_total_stock_needed := v_item.quantity + v_total_gift_qty;
     else
@@ -133,6 +141,7 @@ begin
       raise exception 'Producto no encontrado: %', v_item.product_id;
     end if;
 
+    -- Validar y descontar stock del producto principal
     if not (
       coalesce(lower(v_product_name), '') like '%alimento suelto%'
       or coalesce(lower(v_product_name), '') like '%alimento a granel%'
@@ -151,6 +160,7 @@ begin
       set stock = stock - v_total_stock_needed
       where id = v_item.product_id;
 
+      -- Movimiento de stock por la venta
       insert into public.stock_movements (
         product_id,
         user_id,
@@ -172,6 +182,7 @@ begin
         'Venta #' || left(v_sale_id::text, 8)
       );
 
+      -- Movimiento de stock por el regalo (mismo producto)
       if v_promo_applied and v_total_gift_qty > 0 and v_gift_product_id = v_item.product_id then
         insert into public.stock_movements (
           product_id,
@@ -196,6 +207,7 @@ begin
       end if;
     end if;
 
+    -- Si el regalo es un producto DISTINTO
     if v_promo_applied and v_total_gift_qty > 0 and v_gift_product_id <> v_item.product_id then
       select name, sku, stock
         into v_gift_product_name, v_gift_product_sku, v_gift_current_stock
@@ -368,24 +380,3 @@ begin
   );
 end;
 $$;
-
-grant execute on function public.finalize_sale_transaction(
-  uuid,
-  uuid,
-  numeric,
-  text,
-  numeric,
-  timestamptz,
-  jsonb,
-  boolean,
-  jsonb,
-  boolean,
-  uuid,
-  text,
-  text,
-  integer,
-  text,
-  numeric,
-  numeric,
-  jsonb
-) to authenticated;
