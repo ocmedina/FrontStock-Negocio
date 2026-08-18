@@ -199,7 +199,7 @@ export async function createInvoiceFromSale(
     }
 
     // Si da error de columna inexistente (por si no se corrió la migración en algún ambiente), reintentar sin las nuevas columnas
-    if (insertError && (insertError.code === '42703' || String(insertError.message || '').includes('column') || String(insertError).includes('column'))) {
+    if (insertError && ((insertError as any).code === '42703' || String((insertError as any).message || '').includes('column') || String(insertError).includes('column'))) {
       const retryResult = await supabaseAdmin
         .from('invoices')
         .insert({
@@ -216,7 +216,7 @@ export async function createInvoiceFromSale(
       insertError = retryResult.error;
     }
 
-    if (insertError) return { success: false, message: `Error al guardar la factura: ${insertError.message}` };
+    if (insertError) return { success: false, message: `Error al guardar la factura: ${(insertError as any).message}` };
 
     // 6. Revalidar rutas
     revalidatePath('/dashboard/ventas');
@@ -229,4 +229,156 @@ export async function createInvoiceFromSale(
     return { success: false, message: 'Error inesperado al crear la factura.' };
   }
 }
+
+export async function createDirectInvoice(params: {
+  customerData: {
+    full_name: string;
+    cuit?: string;
+    iva_condition?: string;
+    address?: string;
+    locality?: string;
+    province?: string;
+  };
+  itemsData: Array<{
+    name: string;
+    sku?: string;
+    quantity: number;
+    price: number;
+  }>;
+  invoiceType?: string;
+  taxRateVal?: number;
+  observations?: string;
+}) {
+  try {
+    const supabaseAdmin = createLooseAdminClient();
+    const { customerData, itemsData, invoiceType = 'B', taxRateVal = 21.00, observations } = params;
+
+    if (!customerData.full_name || customerData.full_name.trim() === '') {
+      return { success: false, message: 'El nombre / Razón Social del cliente es obligatorio.' };
+    }
+
+    if (!itemsData || itemsData.length === 0) {
+      return { success: false, message: 'Debe ingresar al menos un producto o ítem en la factura.' };
+    }
+
+    if (invoiceType === 'A' && !customerData.cuit?.trim()) {
+      return { success: false, message: 'La Factura A requiere ingresar el CUIT del cliente.' };
+    }
+
+    // 1. Generar número de factura
+    let invoiceNumber = '';
+    const { data: invoiceNumData, error: numError } = await supabaseAdmin.rpc('generate_invoice_number');
+    if (numError || !invoiceNumData) {
+      invoiceNumber = `FAC-${Date.now().toString().slice(-8)}`;
+    } else {
+      invoiceNumber = invoiceNumData as string;
+    }
+
+    const resolvedInvoiceType = invoiceType || 'B';
+    const resolvedVoucherName = `Factura ${resolvedInvoiceType}`;
+    const selectedRate = taxRateVal !== undefined ? taxRateVal : 21.00;
+
+    let totalAmount = 0;
+    const itemsSnapshot = itemsData.map((item) => {
+      const itemPrice = Number(item.price) || 0;
+      const qty = Number(item.quantity) || 1;
+      const totalItemAmount = itemPrice * qty;
+      totalAmount += totalItemAmount;
+
+      let itemNet = totalItemAmount;
+      let itemIva = 0;
+
+      if (resolvedInvoiceType === 'A' || resolvedInvoiceType === 'B') {
+        if (selectedRate > 0) {
+          const unitNet = itemPrice / (1 + selectedRate / 100);
+          itemNet = unitNet * qty;
+          itemIva = totalItemAmount - itemNet;
+        }
+      }
+
+      const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
+
+      return {
+        name: item.name || 'Producto / Servicio',
+        sku: item.sku || 'MANUAL',
+        quantity: qty,
+        price: itemPrice,
+        tax_rate_id: selectedRate === 10.5 ? 2 : selectedRate === 27 ? 3 : selectedRate === 0 ? 4 : 1,
+        subtotal_neto: round(itemNet),
+        iva_amount: round(itemIva)
+      };
+    });
+
+    const fullCustomerSnapshot = {
+      full_name: customerData.full_name.trim(),
+      cuit: customerData.cuit?.trim() || null,
+      iva_condition: customerData.iva_condition || 'Consumidor Final',
+      invoice_type: resolvedInvoiceType,
+      voucher_name: resolvedVoucherName,
+      address: customerData.address || null,
+      locality: customerData.locality || null,
+      province: customerData.province || null,
+      observations: observations || null
+    };
+
+    let newInvoice = null;
+    let insertError = null;
+
+    try {
+      const result = await supabaseAdmin
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          sale_id: null,
+          customer_data: fullCustomerSnapshot,
+          items_data: itemsSnapshot,
+          total_amount: totalAmount,
+          invoice_type: resolvedInvoiceType,
+          customer_cuit: fullCustomerSnapshot.cuit,
+          customer_iva_condition: fullCustomerSnapshot.iva_condition
+        })
+        .select()
+        .single();
+
+      newInvoice = result.data;
+      insertError = result.error;
+    } catch (err) {
+      insertError = err;
+    }
+
+    if (insertError && ((insertError as any).code === '42703' || String((insertError as any).message || '').includes('column') || String(insertError).includes('column'))) {
+      const retryResult = await supabaseAdmin
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          sale_id: null,
+          customer_data: fullCustomerSnapshot,
+          items_data: itemsSnapshot,
+          total_amount: totalAmount
+        })
+        .select()
+        .single();
+
+      newInvoice = retryResult.data;
+      insertError = retryResult.error;
+    }
+
+    if (insertError) {
+      console.error('Error al insertar factura directa:', insertError);
+      return { success: false, message: `Error al guardar la factura: ${(insertError as any).message}` };
+    }
+
+    revalidatePath('/dashboard/facturas');
+
+    return {
+      success: true,
+      message: `Factura ${invoiceNumber} generada exitosamente.`,
+      invoiceData: newInvoice
+    };
+  } catch (error: any) {
+    console.error('Error inesperado al crear factura directa:', error);
+    return { success: false, message: 'Error inesperado al crear la factura.' };
+  }
+}
+
 
