@@ -21,7 +21,6 @@ import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
   HiOutlineCash,
-  HiOutlineTerminal,
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -142,14 +141,6 @@ const navSections = {
       adminOnly: true,
       colorClass: "text-amber-500",
       activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
-    },
-    {
-      href: "/dashboard/dev-monitor",
-      label: "Monitor Dev",
-      icon: HiOutlineTerminal,
-      adminOnly: true,
-      colorClass: "text-purple-500",
-      activeBg: "bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400 border-purple-500",
     },
   ],
 };
