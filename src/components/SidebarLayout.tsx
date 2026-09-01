@@ -6,6 +6,7 @@ import MobileBottomNav from "./MobileBottomNav";
 import TimeWeatherIndicator from "./TimeWeatherIndicator";
 import MaintenanceBanner from "./MaintenanceBanner";
 import SystemUpdatesModal from "./SystemUpdatesModal";
+import PassiveMaintenanceBadge from "./PassiveMaintenanceBadge";
 import { HiSparkles } from "react-icons/hi";
 
 // Sidebar Layout Component with System Updates Modal integration
@@ -36,14 +37,19 @@ export default function SidebarLayout({
 
                 {/* Desktop top header utility bar */}
                 <header className="hidden lg:flex bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 h-16 items-center justify-between px-8 shrink-0">
-                    <button
-                        onClick={() => setShowUpdatesModal(true)}
-                        className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 hover:from-amber-500/20 hover:to-indigo-500/20 dark:bg-slate-800 border border-indigo-500/30 rounded-xl text-xs font-black text-indigo-600 dark:text-indigo-400 transition-all flex items-center gap-2 shadow-xs group"
-                    >
-                        <HiSparkles className="text-amber-400 animate-pulse group-hover:rotate-12 transition-transform text-base" />
-                        <span>Novedades del Sistema v2.6</span>
-                        <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full text-[9px] font-black uppercase">Nuevo</span>
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowUpdatesModal(true)}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 hover:from-amber-500/20 hover:to-indigo-500/20 dark:bg-slate-800 border border-indigo-500/30 rounded-xl text-xs font-black text-indigo-600 dark:text-indigo-400 transition-all flex items-center gap-2 shadow-xs group"
+                        >
+                            <HiSparkles className="text-amber-400 animate-pulse group-hover:rotate-12 transition-transform text-base" />
+                            <span>Novedades del Sistema v2.6</span>
+                            <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full text-[9px] font-black uppercase">Nuevo</span>
+                        </button>
+
+                        {/* Cartel de Mantenimiento Pasivo */}
+                        <PassiveMaintenanceBadge />
+                    </div>
 
                     <div className="flex items-center gap-4">
                         <TimeWeatherIndicator />
