@@ -4,9 +4,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import MobileBottomNav from "./MobileBottomNav";
 import TimeWeatherIndicator from "./TimeWeatherIndicator";
-import MaintenanceBanner from "./MaintenanceBanner";
 import SystemUpdatesModal from "./SystemUpdatesModal";
-import PassiveMaintenanceBadge from "./PassiveMaintenanceBadge";
 import { HiSparkles } from "react-icons/hi";
 
 // Sidebar Layout Component with System Updates Modal integration
@@ -32,9 +30,6 @@ export default function SidebarLayout({
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {/* Maintenance Banner */}
-                <MaintenanceBanner />
-
                 {/* Desktop top header utility bar */}
                 <header className="hidden lg:flex bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 h-16 items-center justify-between px-8 shrink-0">
                     <div className="flex items-center gap-3">
@@ -46,9 +41,6 @@ export default function SidebarLayout({
                             <span>Novedades del Sistema v2.6</span>
                             <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full text-[9px] font-black uppercase">Nuevo</span>
                         </button>
-
-                        {/* Cartel de Mantenimiento Pasivo */}
-                        <PassiveMaintenanceBadge />
                     </div>
 
                     <div className="flex items-center gap-4">
