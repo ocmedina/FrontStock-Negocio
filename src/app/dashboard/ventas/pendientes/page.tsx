@@ -44,7 +44,7 @@ export default function VentasPendientesPage() {
     setLoading(true);
 
     // Obtener TODAS las ventas con deuda pendiente (incluso de clientes inactivos)
-    const { data: salesData, error: salesError } = await supabase
+    const { data: salesData, error: salesError } = await (supabase as any)
       .from("sales")
       .select(
         `
@@ -56,30 +56,36 @@ export default function VentasPendientesPage() {
         payment_method,
         customer_id,
         customers ( full_name ),
-        profiles ( full_name )
-      let salesRows = (salesData || []) as any[];
-      if (!salesError && salesRows.length > 0) {
-        salesRows = salesRows.filter((s) => !s.is_cancelled);
-      } else if (salesError) {
-        const { data: fallbackData } = await (supabase as any)
-          .from("sales")
-          .select(
-            `
-            id,
-            created_at,
-            total_amount,
-            amount_paid,
-            amount_pending,
-            payment_method,
-            customer_id,
-            customers ( full_name ),
-            profiles ( full_name )
+        profiles ( full_name ),
+        is_cancelled
+      `
+      )
+      .gt("amount_pending", 0)
+      .order("created_at", { ascending: false });
+
+    let salesRows = (salesData || []) as any[];
+    if (!salesError && salesRows.length > 0) {
+      salesRows = salesRows.filter((s) => !s.is_cancelled);
+    } else if (salesError) {
+      const { data: fallbackData } = await (supabase as any)
+        .from("sales")
+        .select(
           `
-          )
-          .gt("amount_pending", 0)
-          .order("created_at", { ascending: false });
-        salesRows = (fallbackData || []) as any[];
-      }
+          id,
+          created_at,
+          total_amount,
+          amount_paid,
+          amount_pending,
+          payment_method,
+          customer_id,
+          customers ( full_name ),
+          profiles ( full_name )
+        `
+        )
+        .gt("amount_pending", 0)
+        .order("created_at", { ascending: false });
+      salesRows = (fallbackData || []) as any[];
+    }
 
     const ventasFormateadas = salesRows.map((sale: any) => ({
       id: sale.id,
