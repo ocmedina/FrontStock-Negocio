@@ -125,10 +125,6 @@ begin
           raise exception 'No se puede aplicar pago a una venta cancelada (%).', v_allocation.item_id;
         end if;
 
-        if coalesce(v_sale.payment_method, '') <> 'cuenta_corriente' then
-          raise exception 'La venta % no es de cuenta corriente', v_allocation.item_id;
-        end if;
-
         if coalesce(v_allocation.amount, 0) - coalesce(v_sale.amount_pending, 0) > v_tolerance then
           raise exception 'Monto excede saldo pendiente de la venta %', v_allocation.item_id;
         end if;
@@ -174,7 +170,6 @@ begin
       select id, amount_pending
       from public.sales
       where customer_id = p_customer_id
-        and coalesce(payment_method, '') = 'cuenta_corriente'
         and coalesce(is_cancelled, false) = false
         and coalesce(amount_pending, 0) > 0
       order by created_at asc
@@ -246,7 +241,6 @@ begin
       select sum(coalesce(s.amount_pending, 0))
       from public.sales s
       where s.customer_id = p_customer_id
-        and coalesce(s.payment_method, '') = 'cuenta_corriente'
         and coalesce(s.is_cancelled, false) = false
         and coalesce(s.amount_pending, 0) > 0
     ), 0)

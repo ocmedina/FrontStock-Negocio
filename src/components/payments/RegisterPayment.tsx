@@ -49,31 +49,52 @@ export default function RegisterPayment({
   }, [customerId]);
 
   const fetchPendingItems = async () => {
-    // 1. Fetch pending orders
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("id, amount_pending, total_amount, created_at")
-      .eq("customer_id", customerId)
-      .gt("amount_pending", 0)
-      .neq("status", "cancelado")
-      .order("created_at", { ascending: true });
+    try {
+      // 1. Fetch pending orders
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("id, amount_pending, total_amount, created_at")
+        .eq("customer_id", customerId)
+        .gt("amount_pending", 0)
+        .neq("status", "cancelado")
+        .order("created_at", { ascending: true });
 
-    // 2. Fetch pending sales (current account)
-    const { data: sales } = await supabase
-      .from("sales")
-      .select("id, amount_pending, total_amount, created_at, description, payment_method")
-      .eq("customer_id", customerId)
-      .eq("payment_method", "cuenta_corriente")
-      .eq("is_cancelled", false)
-      .gt("amount_pending", 0)
-      .order("created_at", { ascending: true });
+      // 2. Fetch pending sales (unpaid or partially paid sales)
+      const { data: sales, error: salesErr } = await (supabase as any)
+        .from("sales")
+        .select("id, amount_pending, total_amount, created_at, payment_method, is_cancelled")
+        .eq("customer_id", customerId)
+        .gt("amount_pending", 0)
+        .order("created_at", { ascending: true });
 
-    const unitedItems: PendingItem[] = [
-      ...(orders?.map(o => ({ ...o, type: 'order' as const })) || []),
-      ...(sales?.map(s => ({ ...s, type: 'sale' as const })) || [])
-    ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      let validSales = (sales || []) as any[];
+      if (!salesErr && validSales.length > 0) {
+        validSales = validSales.filter((s) => !s.is_cancelled);
+      } else if (salesErr) {
+        // Fallback without is_cancelled if column missing
+        const { data: fallbackSales } = await (supabase as any)
+          .from("sales")
+          .select("id, amount_pending, total_amount, created_at, payment_method")
+          .eq("customer_id", customerId)
+          .gt("amount_pending", 0)
+          .order("created_at", { ascending: true });
+        validSales = (fallbackSales || []) as any[];
+      }
 
-    setPendingItems(unitedItems);
+      const unitedItems: PendingItem[] = [
+        ...(orders?.map(o => ({ ...o, type: 'order' as const })) || []),
+        ...(validSales.map(s => ({ ...s, type: 'sale' as const })))
+      ].sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return timeA - timeB;
+      });
+
+      setPendingItems(unitedItems);
+    } catch (e) {
+      console.error("Error fetching pending items in RegisterPayment:", e);
+      setPendingItems([]);
+    }
   };
 
   const handleAddMixedPayment = () => {

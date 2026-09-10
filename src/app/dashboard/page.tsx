@@ -174,12 +174,10 @@ async function getDashboardData() {
       .select("amount_pending, customer_id")
       .gt("amount_pending", 0)
       .neq("status", "cancelado"),
-    supabase
+    (supabase as any)
       .from("sales")
       .select("amount_pending, customer_id")
-      .eq("payment_method", "cuenta_corriente")
-      .gt("amount_pending", 0)
-      .eq("is_cancelled", false),
+      .gt("amount_pending", 0),
     supabase
       .from("suppliers")
       .select("id, name, debt")

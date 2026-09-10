@@ -68,7 +68,6 @@ begin
       select 'sale'::text as item_type, s.id as item_id, s.created_at
       from public.sales s
       where s.customer_id = v_payment.customer_id
-        and coalesce(s.payment_method, '') = 'cuenta_corriente'
         and coalesce(s.is_cancelled, false) = false
     ) x
     order by created_at desc
@@ -152,7 +151,6 @@ begin
       select sum(coalesce(s.amount_pending, 0))
       from public.sales s
       where s.customer_id = v_payment.customer_id
-        and coalesce(s.payment_method, '') = 'cuenta_corriente'
         and coalesce(s.is_cancelled, false) = false
         and coalesce(s.amount_pending, 0) > 0
     ), 0)

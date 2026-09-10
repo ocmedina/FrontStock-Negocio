@@ -124,7 +124,7 @@ function buildSyntheticMovements(
   );
 
   const hasOrderPurchaseMovement = (orderId: string) => {
-    const shortId = orderId.slice(0, 8).toLowerCase();
+    const shortId = String(orderId || "").slice(0, 8).toLowerCase();
     return payments.some((p) => {
       if (p.type !== "compra" || !p.comment) return false;
       const comment = p.comment.toLowerCase();
@@ -156,11 +156,11 @@ function buildSyntheticMovements(
     synthetic.push({
       id: `order-${order.id}`,
       amount: movementAmount,
-      created_at: order.created_at,
+      created_at: order.created_at || new Date().toISOString(),
       type: "compra",
       customer_id: customerId,
       payment_method: order.payment_method,
-      comment: `Pedido #${order.id.slice(0, 8)} - saldo pendiente`,
+      comment: `Pedido #${String(order.id || "").slice(0, 8)} - saldo pendiente`,
     });
   }
 
@@ -178,16 +178,16 @@ function buildSyntheticMovements(
       : currentPending;
 
     if (movementAmount <= 0.01) continue;
-    if (saleIdsWithPurchaseMovement.has(sale.id)) continue;
+    if (saleIdsWithPurchaseMovement.has(String(sale.id))) continue;
 
     synthetic.push({
       id: `sale-${sale.id}`,
       amount: movementAmount,
-      created_at: sale.created_at,
+      created_at: sale.created_at || new Date().toISOString(),
       type: "compra",
       customer_id: customerId,
       payment_method: sale.payment_method,
-      comment: `Venta #${sale.id.slice(0, 8)} - cuenta corriente`,
+      comment: `Venta #${String(sale.id || "").slice(0, 8)} - saldo pendiente`,
     });
   }
 
@@ -257,42 +257,62 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
   }
 
   // Fetch orders
-  const { data: ordersHistoryData, error: ordersHistoryError } = await supabase
-    .from("orders")
-    .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
-    .eq("customer_id", normalizedId)
-    .neq("status", "cancelado")
-    .order("created_at", { ascending: false });
-
-  const ordersHistory = ordersHistoryError
-    ? ((
-        await adminClient
-          .from("orders")
-          .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
-          .eq("customer_id", normalizedId)
-          .neq("status", "cancelado")
-          .order("created_at", { ascending: false })
-      ).data as OrderHistoryRow[] | null)
-    : (ordersHistoryData as unknown as OrderHistoryRow[] | null);
+  const ordersHistory = await (async () => {
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
+        .eq("customer_id", normalizedId)
+        .neq("status", "cancelado")
+        .order("created_at", { ascending: false });
+      if (!error && data) return data as unknown as OrderHistoryRow[];
+    } catch (e) {}
+    try {
+      const { data } = await adminClient
+        .from("orders")
+        .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
+        .eq("customer_id", normalizedId)
+        .neq("status", "cancelado")
+        .order("created_at", { ascending: false });
+      if (data) return data as unknown as OrderHistoryRow[];
+    } catch (e) {}
+    return [] as OrderHistoryRow[];
+  })();
 
   // Fetch sales
-  const { data: salesHistoryData, error: salesHistoryError } = await supabase
-    .from("sales")
-    .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending, is_cancelled")
-    .eq("customer_id", normalizedId)
-    .eq("is_cancelled", false)
-    .order("created_at", { ascending: false });
-
-  const salesHistory = salesHistoryError
-    ? ((
-        await adminClient
+  const salesHistory = await (async () => {
+    const fetchWithClient = async (client: any) => {
+      try {
+        const { data, error } = await client
           .from("sales")
           .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending, is_cancelled")
           .eq("customer_id", normalizedId)
-          .eq("is_cancelled", false)
-          .order("created_at", { ascending: false })
-      ).data as SaleHistoryRow[] | null)
-    : (salesHistoryData as unknown as SaleHistoryRow[] | null);
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          return (data as any[]).filter((s) => !s.is_cancelled) as SaleHistoryRow[];
+        }
+      } catch (e) {}
+      try {
+        const { data, error } = await client
+          .from("sales")
+          .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending")
+          .eq("customer_id", normalizedId)
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          return data as SaleHistoryRow[];
+        }
+      } catch (e) {}
+      return null;
+    };
+
+    const primarySales = await fetchWithClient(supabase as any);
+    if (primarySales !== null) return primarySales;
+
+    const adminSales = await fetchWithClient(adminClient as any);
+    if (adminSales !== null) return adminSales;
+
+    return [] as SaleHistoryRow[];
+  })();
 
   const customerReference = (customer as any).reference as string | null;
 
@@ -302,7 +322,6 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
 
   const salesData = (salesHistory || []).filter(
     (sale) =>
-      (sale.payment_method || "") === "cuenta_corriente" &&
       Number(sale.amount_pending || 0) > 0 &&
       !sale.is_cancelled
   );

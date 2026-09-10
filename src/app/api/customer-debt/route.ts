@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
     const salesDebt = (salesResult.data || [])
       .filter(
         (s: any) =>
-          (s.payment_method || '').toLowerCase() === 'cuenta_corriente' &&
-          !s.is_cancelled
+          !s.is_cancelled &&
+          Number(s.amount_pending || 0) > 0
       )
       .reduce((sum: number, s: any) => sum + Number(s.amount_pending || 0), 0);
 

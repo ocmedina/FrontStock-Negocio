@@ -280,18 +280,17 @@ export async function getCustomerRealDebt(
     const pendingOrders = ordersResult.data || [];
     const allSales = salesResult.data || [];
 
-    // filtrar igual que la pagina del cliente
-    const cuentaCorrienteSales = allSales.filter(
+    const pendingSales = allSales.filter(
       (s: any) =>
-        (s.payment_method || '').toLowerCase() === 'cuenta_corriente' &&
-        !s.is_cancelled
+        !s.is_cancelled &&
+        Number(s.amount_pending || 0) > 0
     );
 
     const ordersDebt = pendingOrders.reduce(
       (sum: number, o: any) => sum + Number(o.amount_pending || 0),
       0
     );
-    const salesDebt = cuentaCorrienteSales.reduce(
+    const salesDebt = pendingSales.reduce(
       (sum: number, s: any) => sum + Number(s.amount_pending || 0),
       0
     );

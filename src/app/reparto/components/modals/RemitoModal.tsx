@@ -80,7 +80,6 @@ export default function RemitoModal({
                 .filter(
                   (sv: any) =>
                     !sv.is_cancelled &&
-                    (sv.payment_method || "").toLowerCase() === "cuenta_corriente" &&
                     Number(sv.amount_pending || 0) > 0
                 )
                 .reduce((s: number, sv: any) => s + Number(sv.amount_pending), 0);

@@ -62,27 +62,38 @@ export default function DeudoresPage() {
   const fetchDeudores = async () => {
     setLoading(true);
     try {
-      // Carga global para evitar N+1 queries por cliente.
-      const [customersRes, ordersDebtRes, salesDebtRes] = await Promise.all([
-        supabase
-          .from("customers")
-          .select("id, full_name, phone, email, customer_type"),
-        supabase
-          .from("orders")
-          .select("customer_id, amount_pending")
-          .gt("amount_pending", 0)
-          .neq("status", "cancelado"),
-        supabase
-          .from("sales")
-          .select("customer_id, amount_pending")
-          .eq("payment_method", "cuenta_corriente")
-          .eq("is_cancelled", false)
-          .gt("amount_pending", 0),
-      ]);
+      const { data: customersData, error: customersError } = await supabase
+        .from("customers")
+        .select("id, full_name, phone, email, customer_type");
 
-      if (customersRes.error) throw customersRes.error;
-      if (ordersDebtRes.error) throw ordersDebtRes.error;
-      if (salesDebtRes.error) throw salesDebtRes.error;
+      if (customersError) throw customersError;
+
+      const { data: ordersDebtData } = await supabase
+        .from("orders")
+        .select("customer_id, amount_pending")
+        .gt("amount_pending", 0)
+        .neq("status", "cancelado");
+
+      let salesDebtRows: PendingDebtRow[] = [];
+      try {
+        const res = await (supabase as any)
+          .from("sales")
+          .select("customer_id, amount_pending, is_cancelled")
+          .gt("amount_pending", 0);
+        if (!res.error && res.data) {
+          salesDebtRows = (res.data as any[]).filter((s) => !s.is_cancelled);
+        } else {
+          const fallback = await (supabase as any)
+            .from("sales")
+            .select("customer_id, amount_pending")
+            .gt("amount_pending", 0);
+          if (!fallback.error && fallback.data) {
+            salesDebtRows = fallback.data;
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching sales debt in deudores:", e);
+      }
 
       const debtStatsByCustomer = new Map<
         string,
@@ -108,21 +119,21 @@ export default function DeudoresPage() {
         return created;
       };
 
-      for (const row of (ordersDebtRes.data || []) as PendingDebtRow[]) {
+      for (const row of (ordersDebtData || []) as PendingDebtRow[]) {
         if (!row.customer_id) continue;
         const stats = ensureStats(row.customer_id);
         stats.ordersDebt += Number(row.amount_pending || 0);
         stats.ordersCount += 1;
       }
 
-      for (const row of (salesDebtRes.data || []) as PendingDebtRow[]) {
+      for (const row of salesDebtRows) {
         if (!row.customer_id) continue;
         const stats = ensureStats(row.customer_id);
         stats.salesDebt += Number(row.amount_pending || 0);
         stats.salesCount += 1;
       }
 
-      const deudoresData = ((customersRes.data || []) as CustomerListRow[]).map(
+      const deudoresData = ((customersData || []) as CustomerListRow[]).map(
         (customer) => {
           const stats = debtStatsByCustomer.get(customer.id) || {
             ordersDebt: 0,

@@ -92,22 +92,32 @@ function CustomersPageContent() {
 
         if (customersError) throw customersError;
 
-        const [ordersDebtRes, salesDebtRes] = await Promise.all([
-          supabase
-            .from("orders")
-            .select("customer_id, amount_pending")
-            .gt("amount_pending", 0)
-            .neq("status", "cancelado"),
-          supabase
-            .from("sales")
-            .select("customer_id, amount_pending")
-            .eq("payment_method", "cuenta_corriente")
-            .eq("is_cancelled", false)
-            .gt("amount_pending", 0),
-        ]);
+        const { data: ordersDebtData } = await supabase
+          .from("orders")
+          .select("customer_id, amount_pending")
+          .gt("amount_pending", 0)
+          .neq("status", "cancelado");
 
-        if (ordersDebtRes.error) throw ordersDebtRes.error;
-        if (salesDebtRes.error) throw salesDebtRes.error;
+        let salesDebtRows: { customer_id: string | null; amount_pending: number | null }[] = [];
+        try {
+          const res = await (supabase as any)
+            .from("sales")
+            .select("customer_id, amount_pending, is_cancelled")
+            .gt("amount_pending", 0);
+          if (!res.error && res.data) {
+            salesDebtRows = (res.data as any[]).filter((s) => !s.is_cancelled);
+          } else {
+            const fallback = await (supabase as any)
+              .from("sales")
+              .select("customer_id, amount_pending")
+              .gt("amount_pending", 0);
+            if (!fallback.error && fallback.data) {
+              salesDebtRows = fallback.data;
+            }
+          }
+        } catch (e) {
+          console.error("Error fetching sales debt:", e);
+        }
 
         const debtByCustomer = new Map<string, number>();
         const addDebt = (customerId: string | null, amountPending: number | null) => {
@@ -116,10 +126,10 @@ function CustomersPageContent() {
           debtByCustomer.set(customerId, current + Number(amountPending || 0));
         };
 
-        (ordersDebtRes.data || []).forEach((row) => {
+        (ordersDebtData || []).forEach((row) => {
           addDebt(row.customer_id, row.amount_pending as number | null);
         });
-        (salesDebtRes.data || []).forEach((row) => {
+        salesDebtRows.forEach((row) => {
           addDebt(row.customer_id, row.amount_pending as number | null);
         });
 

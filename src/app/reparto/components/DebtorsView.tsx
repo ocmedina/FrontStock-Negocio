@@ -78,18 +78,32 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
           0
         );
 
-        // Pending Sales (Current Account)
-        const { data: salesData } = await supabase
-          .from("sales")
-          .select("id, created_at, total_amount, amount_pending, description")
-          .eq("customer_id", customer.id)
-          .eq("payment_method", "cuenta_corriente")
-          .gt("amount_pending", 0)
-          .eq("is_cancelled", false)
-          .order('created_at', { ascending: false });
+        // Pending Sales (Unpaid or partially paid)
+        let salesList: any[] = [];
+        try {
+          const { data: sData, error: sErr } = await (supabase as any)
+            .from("sales")
+            .select("id, created_at, total_amount, amount_pending, is_cancelled")
+            .eq("customer_id", customer.id)
+            .gt("amount_pending", 0)
+            .order('created_at', { ascending: false });
+          if (!sErr && sData) {
+            salesList = sData.filter((s: any) => !s.is_cancelled);
+          } else {
+            const { data: fbData } = await (supabase as any)
+              .from("sales")
+              .select("id, created_at, total_amount, amount_pending")
+              .eq("customer_id", customer.id)
+              .gt("amount_pending", 0)
+              .order('created_at', { ascending: false });
+            salesList = fbData || [];
+          }
+        } catch (e) {
+          salesList = [];
+        }
 
-        const salesDebt = (salesData || []).reduce(
-          (sum, sale) => sum + ((sale as any).amount_pending || 0),
+        const salesDebt = salesList.reduce(
+          (sum, sale) => sum + (Number(sale.amount_pending) || 0),
           0
         );
 

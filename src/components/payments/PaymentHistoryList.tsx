@@ -179,10 +179,19 @@ export default function PaymentHistoryList({ initialPayments }: PaymentHistoryLi
                                     {isCancelled && <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full no-underline">ANULADO</span>}
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                                    {new Date(payment.created_at).toLocaleString("es-AR", {
-                                        dateStyle: "medium",
-                                        timeStyle: "short",
-                                    })}
+                                    {(() => {
+                                        try {
+                                            const d = new Date(payment.created_at);
+                                            return isNaN(d.getTime())
+                                                ? "Fecha no disponible"
+                                                : d.toLocaleString("es-AR", {
+                                                      dateStyle: "medium",
+                                                      timeStyle: "short",
+                                                  });
+                                        } catch {
+                                            return "Fecha no disponible";
+                                        }
+                                    })()}
                                 </p>
                                 {payment.comment && (
                                     <p className="text-xs text-gray-400 italic mt-1">

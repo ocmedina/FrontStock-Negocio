@@ -57,20 +57,31 @@ export default function VentasPendientesPage() {
         customer_id,
         customers ( full_name ),
         profiles ( full_name )
-      `
-      )
-      .eq("payment_method", "cuenta_corriente")
-      .gt("amount_pending", 0)
-      .eq("is_cancelled", false)
-      .order("created_at", { ascending: false });
+      let salesRows = (salesData || []) as any[];
+      if (!salesError && salesRows.length > 0) {
+        salesRows = salesRows.filter((s) => !s.is_cancelled);
+      } else if (salesError) {
+        const { data: fallbackData } = await (supabase as any)
+          .from("sales")
+          .select(
+            `
+            id,
+            created_at,
+            total_amount,
+            amount_paid,
+            amount_pending,
+            payment_method,
+            customer_id,
+            customers ( full_name ),
+            profiles ( full_name )
+          `
+          )
+          .gt("amount_pending", 0)
+          .order("created_at", { ascending: false });
+        salesRows = (fallbackData || []) as any[];
+      }
 
-    if (salesError) {
-      console.error("Error fetching pending sales:", salesError);
-      setLoading(false);
-      return;
-    }
-
-    const ventasFormateadas = (salesData || []).map((sale: any) => ({
+    const ventasFormateadas = salesRows.map((sale: any) => ({
       id: sale.id,
       created_at: sale.created_at,
       total_amount: sale.total_amount,

@@ -2,8 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function proxy(req: NextRequest) {
-  const res = NextResponse.next()
+export async function proxy(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,11 +15,17 @@ export async function proxy(req: NextRequest) {
     {
       cookies: {
         getAll() {
-          return req.cookies.getAll()
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          response = NextResponse.next({
+            request,
+          })
           cookiesToSet.forEach(({ name, value, options }) =>
-            res.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           )
         },
       },
@@ -23,38 +33,38 @@ export async function proxy(req: NextRequest) {
   )
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (!session) {
-    return NextResponse.redirect(new URL('/login', req.url))
+  if (!user) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // Prioriza metadata de Auth para evitar una query por request cuando el rol ya existe
-  let role = session.user.user_metadata?.role as string | undefined
+  let role = user.user_metadata?.role as string | undefined
 
   if (!role) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     role = profile?.role
   }
 
-  if (role === 'repartidor' && req.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/reparto', req.url))
+  if (role === 'repartidor' && request.nextUrl.pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/reparto', request.url))
   }
 
   if (
     (role === 'administrador' || role === 'vendedor' || role === 'supervendedor') &&
-    req.nextUrl.pathname.startsWith('/reparto')
+    request.nextUrl.pathname.startsWith('/reparto')
   ) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  return res
+  return response
 }
 
 export const config = {
