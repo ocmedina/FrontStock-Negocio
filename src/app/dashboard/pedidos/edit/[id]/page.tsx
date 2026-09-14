@@ -452,7 +452,7 @@ export default function EditOrderPage({
                 : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:border-gray-400 dark:hover:border-slate-500"
                 }`}
             >
-              📋 Fiado
+              📋 Cuenta Corriente (Fiado)
             </button>
             <button
               type="button"

@@ -273,7 +273,7 @@ function OrderDetailsModal({
                     <p className="text-slate-400 mb-1">Medio de Pago</p>
                     {(orderData as any).payment_method === "fiado" ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200/50 dark:bg-orange-950/20 dark:text-orange-400">
-                        <FaFileInvoice className="w-2.5 h-2.5" /> Fiado / Cta. Cte.
+                        <FaFileInvoice className="w-2.5 h-2.5" /> Cta. Cte. (Fiado)
                       </span>
                     ) : (orderData as any).payment_method === "transferencia" ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400">
@@ -1254,7 +1254,7 @@ export default function OrdersPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {(order as any).payment_method === "fiado" ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
-                          Fiado
+                          Cta. Cte. (Fiado)
                         </span>
                       ) : (order as any).payment_method === "transferencia" ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
@@ -1368,7 +1368,7 @@ export default function OrdersPage() {
                 <div className="flex flex-col items-end gap-2 shrink-0 scale-95 origin-right">
                   <OrderStatusChanger order={order} onStatusUpdate={fetchOrders} />
                   {(order as any).payment_method === "fiado" ? (
-                    <span className="px-2 py-0.5 rounded-lg text-[9px] font-black bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">Fiado</span>
+                    <span className="px-2 py-0.5 rounded-lg text-[9px] font-black bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">Cta. Cte. (Fiado)</span>
                   ) : (order as any).payment_method === "transferencia" ? (
                     <span className="px-2 py-0.5 rounded-lg text-[9px] font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Transf</span>
                   ) : (order as any).payment_method === "mixto" ? (

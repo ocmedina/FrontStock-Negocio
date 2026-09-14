@@ -207,20 +207,42 @@ export default function DeudoresPage() {
             >
               <FaArrowLeft /> Volver a Clientes
             </Link>
-            <h1 className="text-xl font-black text-gray-900 dark:text-slate-55 flex items-center gap-2">
-              <FaExclamationTriangle className="text-rose-500 text-lg animate-pulse" /> Cartera de Clientes Deudores
+            <h1 className="text-xl font-black text-gray-900 dark:text-slate-50 flex items-center gap-2">
+              <FaExclamationTriangle className="text-rose-500 text-lg animate-pulse" /> Cartera Unificada de Cuentas Corrientes (Fiados)
             </h1>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-              Todos los clientes activos que poseen deudas pendientes en facturación o pedidos fiados ({deudores.length} clientes).
+              Todos los clientes activos con saldo deudor en ventas de mostrador y pedidos de reparto unificados ({deudores.length} clientes).
             </p>
           </div>
 
-          <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/40 rounded-xl px-5 py-3.5 flex flex-col justify-center min-w-[200px]">
-            <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">Deuda Total Consolidada</span>
-            <span className="text-2xl font-black text-rose-600 dark:text-rose-450 mt-0.5">
+          <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/40 rounded-xl px-5 py-3.5 flex flex-col justify-center min-w-[220px]">
+            <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">Total en Cuentas Corrientes</span>
+            <span className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-0.5">
               {formatCurrency(totalDebtSum)}
             </span>
           </div>
+        </div>
+
+        {/* PESTAÑAS DE NAVEGACIÓN RÁPIDA */}
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/clientes/deudores"
+            className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 text-center"
+          >
+            <FaUser className="text-xs shrink-0" /> Cartera Unificada ({deudores.length})
+          </Link>
+          <Link
+            href="/dashboard/pedidos/pendientes"
+            className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-center"
+          >
+            <FaShoppingCart className="text-amber-500 text-xs shrink-0" /> Pedidos con Saldo
+          </Link>
+          <Link
+            href="/dashboard/ventas/pendientes"
+            className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-center"
+          >
+            <FaFileInvoiceDollar className="text-rose-500 text-xs shrink-0" /> Ventas Mostrador con Saldo
+          </Link>
         </div>
 
         {/* LISTA DE DEUDORES */}
@@ -231,7 +253,7 @@ export default function DeudoresPage() {
               ¡Sin clientes deudores!
             </h3>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-              Perfecto. Todos los clientes se encuentran al día con sus cuentas corrientes y pedidos.
+              Perfecto. Todos los clientes se encuentran al día con sus cuentas corrientes y pedidos fiados.
             </p>
           </div>
         ) : (
@@ -239,14 +261,14 @@ export default function DeudoresPage() {
             {deudores.map((deudor) => (
               <div
                 key={deudor.id}
-                className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-150 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden p-6"
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-150 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden p-4 sm:p-6"
               >
                 <div className="flex flex-col lg:flex-row justify-between gap-6">
                   
                   {/* INFO DEL CLIENTE */}
                   <div className="flex-1 space-y-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-rose-50 dark:bg-rose-950/15 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center font-bold text-lg border border-rose-100/50 dark:border-rose-900/30">
+                      <div className="w-10 h-10 bg-rose-50 dark:bg-rose-950/15 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center font-bold text-lg border border-rose-100/50 dark:border-rose-900/30 shrink-0">
                         {deudor.full_name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -268,11 +290,14 @@ export default function DeudoresPage() {
                           >
                             {deudor.customer_type === "mayorista" ? "Mayorista" : "Minorista"}
                           </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            • {deudor.ordersCount + deudor.salesCount} comprobante(s) con saldo
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* DETALLE DE DEUDAS */}
+                    {/* DETALLE DE DEUDAS UNIFICADO */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       
                       {/* Pedidos */}
@@ -280,39 +305,39 @@ export default function DeudoresPage() {
                         <div className="flex items-center gap-1.5 mb-1">
                           <FaShoppingCart className="text-amber-600 text-xs" />
                           <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                            En Pedidos Fiados
+                            Pedidos en Cta. Cte.
                           </span>
                         </div>
                         <span className="text-base font-extrabold text-amber-600 block">
                           {formatCurrency(deudor.ordersDebt)}
                         </span>
                         <span className="text-3xs text-amber-500 block mt-0.5">
-                          {deudor.ordersCount} pedido(s) cargado(s)
+                          {deudor.ordersCount} pedido(s) de reparto
                         </span>
                       </div>
 
-                      {/* Ventas */}
+                      {/* Ventas Mostrador */}
                       <div className="bg-rose-50/40 dark:bg-rose-950/10 rounded-xl p-3 border border-rose-100/50 dark:border-rose-900/30">
                         <div className="flex items-center gap-1.5 mb-1">
                           <FaFileInvoiceDollar className="text-rose-600 text-xs" />
                           <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">
-                            En Cuenta Corriente
+                            Ventas Mostrador en Cta. Cte.
                           </span>
                         </div>
                         <span className="text-base font-extrabold text-rose-600 block">
                           {formatCurrency(deudor.salesDebt)}
                         </span>
                         <span className="text-3xs text-rose-500 block mt-0.5">
-                          {deudor.salesCount} venta(s) pendiente(s)
+                          {deudor.salesCount} venta(s) de mostrador
                         </span>
                       </div>
 
-                      {/* Total */}
+                      {/* Total Consolidado */}
                       <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-3 border border-slate-800 flex flex-col justify-center">
                         <div className="flex items-center gap-1.5 mb-1">
                           <FaDollarSign className="text-rose-400 text-xs" />
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Deuda Total Acumulada
+                            Saldo Total Cuenta Corriente
                           </span>
                         </div>
                         <span className="text-lg font-black text-white block">
@@ -324,16 +349,16 @@ export default function DeudoresPage() {
                   </div>
 
                   {/* ACCIONES DEL CLIENTE */}
-                  <div className="flex flex-row lg:flex-col gap-2.5 items-end justify-end lg:w-48 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800 lg:pl-6">
+                  <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 items-stretch justify-end lg:w-48 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800 lg:pl-6">
                     <button
                       onClick={() => handleOpenPayment(deudor)}
-                      className="flex-1 w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+                      className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
                     >
-                      <FaDollarSign /> Registrar Pago
+                      <FaDollarSign /> Cobrar Cta. Cte.
                     </button>
                     <Link
                       href={`/dashboard/clientes/${deudor.id}`}
-                      className="flex-1 w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 border"
+                      className="w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 border"
                     >
                       Ver Detalle Ficha
                     </Link>
@@ -355,7 +380,7 @@ export default function DeudoresPage() {
             <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
               <div>
                 <h3 className="text-sm font-bold text-slate-850 dark:text-slate-100">
-                  Registrar Cobro de Deuda
+                  Registrar Cobro en Cuenta Corriente (Fiado)
                 </h3>
                 <p className="text-[10px] text-slate-450 dark:text-slate-400 mt-0.5">
                   Cliente: {selectedCustomer.full_name}
@@ -374,15 +399,15 @@ export default function DeudoresPage() {
               <div className="bg-rose-50/50 dark:bg-rose-950/15 rounded-xl p-4 border border-rose-100 dark:border-rose-900/30 flex justify-between items-center text-xs">
                 <div>
                   <span className="font-extrabold text-rose-800 dark:text-rose-450 block uppercase tracking-wider text-[9px]">
-                    Deuda Total Pendiente
+                    Saldo Total en Cuenta Corriente
                   </span>
                   <span className="text-2xl font-black text-rose-600 dark:text-rose-450 mt-1 block">
                     {formatCurrency(selectedCustomer.totalDebt)}
                   </span>
                 </div>
                 <div className="text-right space-y-0.5 text-slate-450 dark:text-slate-400 text-[10px] font-medium">
-                  <div>En Pedidos: {formatCurrency(selectedCustomer.ordersDebt)}</div>
-                  <div>En Cta. Cte.: {formatCurrency(selectedCustomer.salesDebt)}</div>
+                  <div>Pedidos: {formatCurrency(selectedCustomer.ordersDebt)}</div>
+                  <div>Mostrador: {formatCurrency(selectedCustomer.salesDebt)}</div>
                 </div>
               </div>
 

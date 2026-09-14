@@ -1,35 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   HiSparkles,
   HiOutlineChevronRight,
   HiOutlineChevronLeft,
-  HiOutlineCheck,
 } from "react-icons/hi";
 import {
   FaTimes,
-  FaDollarSign,
-  FaTruck,
-  FaBroom,
-  FaHistory,
   FaCheckCircle,
   FaArrowRight,
-  FaTag,
-  FaBoxes,
-  FaShieldAlt,
-  FaCalculator,
   FaLayerGroup,
-  FaListOl,
-  FaCheckDouble,
+  FaBolt,
+  FaFileInvoiceDollar,
+  FaTable,
+  FaMobileAlt,
   FaRegLightbulb,
-  FaGift,
+  FaShoppingCart,
+  FaCalculator,
+  FaMoneyBillWave,
+  FaExchangeAlt,
+  FaShieldAlt,
+  FaUserCheck,
+  FaCompass,
+  FaRegEye,
 } from "react-icons/fa";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
-const VERSION_KEY = "system_updates_v2_6_views_count";
+const VERSION_KEY = "system_updates_v2_7_views_count";
 const MAX_AUTO_SHOWS = 3;
+
+interface StepItem {
+  id: string;
+  tag: string;
+  title: string;
+  shortTitle: string;
+  subtitle: string;
+  icon: any;
+  color: string;
+  glowColor: string;
+  accent: string;
+  bgAccent: string;
+  borderAccent: string;
+  actionHref?: string;
+  actionLabel?: string;
+}
 
 export default function SystemUpdatesModal({
   forceOpen = false,
@@ -41,11 +57,93 @@ export default function SystemUpdatesModal({
   const [isOpen, setIsOpen] = useState(false);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const [systemLogo, setSystemLogo] = useState<string>("/favicon.png");
+  const [systemLogo, setSystemLogo] = useState<string>(
+    "https://i.ibb.co/sJc1Tq7g/DALL-E-2025-02-05-18-50-59-A-modern-and-minimalist-round-app-logo-icon-for-a-supermarket-management.webp"
+  );
   const [systemName, setSystemName] = useState<string>("FrontStock");
 
+  const steps: StepItem[] = [
+    {
+      id: "unificacion",
+      tag: "Finanzas & Clientes",
+      title: "Unificación Total de Cuentas Corrientes y Fiados",
+      shortTitle: "Cuenta Corriente Unificada",
+      subtitle:
+        "Pedidos de reparto y ventas de mostrador ahora forman una sola cuenta transparente por cliente.",
+      icon: FaLayerGroup,
+      color: "from-indigo-600 to-blue-600",
+      glowColor: "rgba(79, 70, 229, 0.15)",
+      accent: "text-indigo-500",
+      bgAccent: "bg-indigo-50 dark:bg-indigo-950/40",
+      borderAccent: "border-indigo-200 dark:border-indigo-800",
+      actionHref: "/dashboard/clientes/deudores",
+      actionLabel: "Explorar Cartera de Deudores",
+    },
+    {
+      id: "alerta-deuda",
+      tag: "Control en Vivo",
+      title: "Alertas de Deuda en Tiempo Real y Proyección al Fiar",
+      shortTitle: "Alertas & Proyección",
+      subtitle:
+        "Detección instantánea de saldo pendiente al seleccionar cliente y cálculo del saldo proyectado.",
+      icon: FaBolt,
+      color: "from-amber-500 to-orange-600",
+      glowColor: "rgba(245, 158, 11, 0.15)",
+      accent: "text-amber-500",
+      bgAccent: "bg-amber-50 dark:bg-amber-950/40",
+      borderAccent: "border-amber-200 dark:border-amber-800",
+      actionHref: "/dashboard/ventas/nueva",
+      actionLabel: "Probar en Nueva Venta",
+    },
+    {
+      id: "hub-comprobantes",
+      tag: "Cobranzas Centralizadas",
+      title: "Hub Centralizado de Comprobantes con Saldo",
+      shortTitle: "Hub de Comprobantes",
+      subtitle:
+        "Consulta y cobra pedidos fiados y ventas mostrador en una pantalla unificada con filtros rápidos.",
+      icon: FaFileInvoiceDollar,
+      color: "from-purple-600 to-pink-600",
+      glowColor: "rgba(168, 85, 247, 0.15)",
+      accent: "text-purple-500",
+      bgAccent: "bg-purple-50 dark:bg-purple-950/40",
+      borderAccent: "border-purple-200 dark:border-purple-800",
+      actionHref: "/dashboard/pedidos/pendientes",
+      actionLabel: "Abrir Hub de Comprobantes",
+    },
+    {
+      id: "extracto-contable",
+      tag: "Libro Mayor",
+      title: "Extracto Contable: Debe, Haber y Saldo Acumulado",
+      shortTitle: "Extracto Contable",
+      subtitle:
+        "Historial financiero cronológico con cálculo matemático acumulado en la ficha de cada cliente.",
+      icon: FaTable,
+      color: "from-emerald-600 to-teal-600",
+      glowColor: "rgba(16, 185, 129, 0.15)",
+      accent: "text-emerald-500",
+      bgAccent: "bg-emerald-50 dark:bg-emerald-950/40",
+      borderAccent: "border-emerald-200 dark:border-emerald-800",
+      actionHref: "/dashboard/clientes",
+      actionLabel: "Ver Ficha de un Cliente",
+    },
+    {
+      id: "responsive",
+      tag: "Experiencia Móvil",
+      title: "Diseño 100% Responsivo en Celulares, Tablets y PC",
+      shortTitle: "Diseño Móvil & Tablet",
+      subtitle:
+        "Tarjetas táctiles nativas, botones ampliados y flujos ágiles para operar desde cualquier teléfono.",
+      icon: FaMobileAlt,
+      color: "from-cyan-600 to-blue-600",
+      glowColor: "rgba(6, 182, 212, 0.15)",
+      accent: "text-cyan-500",
+      bgAccent: "bg-cyan-50 dark:bg-cyan-950/40",
+      borderAccent: "border-cyan-200 dark:border-cyan-800",
+    },
+  ];
+
   useEffect(() => {
-    // Fetch system logo from settings if available
     const fetchSettings = async () => {
       try {
         const { data } = await supabase.from("settings").select("key, value");
@@ -75,7 +173,7 @@ export default function SystemUpdatesModal({
     }
   }, [forceOpen]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (dontShowAgain) {
       try {
         localStorage.setItem(VERSION_KEY, MAX_AUTO_SHOWS.toString());
@@ -83,83 +181,53 @@ export default function SystemUpdatesModal({
     }
     setIsOpen(false);
     if (onClose) onClose();
-  };
+  }, [dontShowAgain, onClose]);
 
-  const steps = [
-    {
-      id: "promociones",
-      title: "Promociones por Cantidad Automáticas",
-      subtitle: "Cada X unidades vendidas, regalar Y unidades (Ventas y Pedidos)",
-      icon: FaGift,
-      color: "from-amber-500 to-orange-600",
-      accent: "text-amber-500",
-      bgAccent: "bg-amber-50 dark:bg-amber-950/50",
-      borderAccent: "border-amber-200 dark:border-amber-800",
-    },
-    {
-      id: "precios",
-      title: "Listas de Precios y Selección Individual",
-      subtitle: "Nuevas opciones para aumentos masivos o por productos específicos",
-      icon: FaDollarSign,
-      color: "from-indigo-600 to-blue-600",
-      accent: "text-indigo-500",
-      bgAccent: "bg-indigo-50 dark:bg-indigo-950/50",
-      borderAccent: "border-indigo-200 dark:border-indigo-800",
-    },
-    {
-      id: "proveedores",
-      title: "Estructura Proveedores ➔ Marcas",
-      subtitle: "Organización por distribuidor y aumentos masivos de catálogo",
-      icon: FaTruck,
-      color: "from-emerald-600 to-teal-600",
-      accent: "text-emerald-500",
-      bgAccent: "bg-emerald-50 dark:bg-emerald-950/50",
-      borderAccent: "border-emerald-200 dark:border-emerald-800",
-    },
-    {
-      id: "mantenimiento",
-      title: "Mantenimiento y Diagnóstico de Seguridad",
-      icon: FaBroom,
-      subtitle: "Escáner de residuos en Configuración con protección Antierrores",
-      color: "from-purple-600 to-pink-600",
-      accent: "text-purple-500",
-      bgAccent: "bg-purple-50 dark:bg-purple-950/50",
-      borderAccent: "border-purple-200 dark:border-purple-800",
-    },
-    {
-      id: "paginacion",
-      title: "Memoria Inteligente de Navegación",
-      subtitle: "El sistema recuerda exactamente tu página y filtros al volver",
-      icon: FaHistory,
-      color: "from-blue-600 to-cyan-600",
-      accent: "text-blue-500",
-      bgAccent: "bg-blue-50 dark:bg-blue-950/50",
-      borderAccent: "border-blue-200 dark:border-blue-800",
-    },
-  ];
+  // Keyboard navigation (Escape, Left, Right)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+      if (e.key === "Escape") {
+        handleClose();
+      } else if (e.key === "ArrowRight" && activeStep < steps.length - 1) {
+        setActiveStep((prev) => prev + 1);
+      } else if (e.key === "ArrowLeft" && activeStep > 0) {
+        setActiveStep((prev) => prev - 1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, activeStep, steps.length, handleClose]);
 
   if (!isOpen) return null;
 
-  const currentStepInfo = steps[activeStep];
+  const currentStep = steps[activeStep];
+  const progressPercentage = ((activeStep + 1) / steps.length) * 100;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] animate-scaleIn">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-50 flex items-center justify-center p-3 sm:p-5 animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl border border-slate-200/90 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] transition-all duration-300">
         
-        {/* Header Principal con Logotipo Oficial y Efecto Neón Glassmorphic */}
-        <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-950 text-white p-5 sm:p-6 relative overflow-hidden border-b border-slate-800 shrink-0">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none animate-pulse" />
-          
+        {/* ============================================================ */}
+        {/* HEADER MODERNO CON BRANDING, PROGRESO Y CONTROLES */}
+        {/* ============================================================ */}
+        <div className="bg-slate-950 text-white px-5 sm:px-7 py-4 sm:py-5 relative overflow-hidden border-b border-slate-800 shrink-0">
+          {/* Ambient Glow mesh */}
+          <div
+            className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none transition-colors duration-700 -mr-24 -mt-24"
+            style={{ backgroundColor: currentStep.glowColor }}
+          />
+
           <div className="flex justify-between items-center relative z-10">
+            {/* Logo & Version */}
             <div className="flex items-center gap-3.5">
-              {/* Logo Oficial de la Empresa / App con Fondo Claro de Alto Contraste */}
               <div className="relative group shrink-0">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-purple-500 to-indigo-500 rounded-2xl blur-md opacity-85 group-hover:opacity-100 transition-opacity" />
-                <div className="relative p-2 bg-white border border-white/60 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/30">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-indigo-500 to-cyan-500 rounded-2xl blur-md opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="relative p-2 bg-white rounded-2xl shadow-lg ring-1 ring-white/20 flex items-center justify-center">
                   <img
                     src={systemLogo}
                     alt={systemName}
-                    className="w-10 h-10 sm:w-11 sm:h-11 object-contain rounded-xl"
+                    className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-xl"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = "none";
                     }}
@@ -169,315 +237,473 @@ export default function SystemUpdatesModal({
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-xs text-slate-200 tracking-wide">
+                  <span className="font-black text-xs text-slate-200 tracking-wider uppercase">
                     {systemName}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-sm flex items-center gap-1">
-                    <HiSparkles size={11} /> Versión 2.6
+                    <HiSparkles size={11} /> Versión 2.7
                   </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">
-                  Novedades y Actualizaciones del Sistema
+                <h2 className="text-base sm:text-lg font-black text-white tracking-tight mt-0.5">
+                  Novedades del Sistema: Cuenta Corriente Unificada
                 </h2>
               </div>
             </div>
 
+            {/* Close Button */}
             <button
               onClick={handleClose}
-              className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all border border-slate-700/50"
-              title="Cerrar modal"
+              className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all border border-slate-700/60 active:scale-95"
+              title="Cerrar (Esc)"
             >
-              <FaTimes size={16} />
+              <FaTimes size={15} />
             </button>
           </div>
 
-          {/* Stepper Tabs Bar con Efectos Visuales */}
-          <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-2 relative z-10">
-            {steps.map((step, idx) => (
-              <button
-                key={step.id}
-                onClick={() => setActiveStep(idx)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition-all duration-300 border ${
-                  activeStep === idx
-                    ? "bg-indigo-600 text-white border-indigo-400 shadow-lg shadow-indigo-600/40 scale-[1.03]"
-                    : "bg-slate-800/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200"
-                }`}
-              >
-                <step.icon size={13} className={activeStep === idx ? "text-amber-300 animate-bounce" : ""} />
-                <span className="hidden sm:inline">Novedad {idx + 1}</span>
-              </button>
-            ))}
+          {/* Barra de Progreso Lineal Fina */}
+          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-4 text-xs relative z-10">
+            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400">
+              <span>Paso {activeStep + 1} de {steps.length}</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-amber-400 font-extrabold">{currentStep.tag}</span>
+            </div>
+
+            <div className="w-36 sm:w-48 bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-amber-400 to-indigo-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Dynamic Slide Content Container with Animated Transitions */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        {/* ============================================================ */}
+        {/* MOBILE STEPPER (CHIPS EN MÓVILES) */}
+        {/* ============================================================ */}
+        <div className="md:hidden px-3 pt-3 bg-slate-50/90 dark:bg-slate-950/80 border-b border-slate-150 dark:border-slate-800 overflow-x-auto flex items-center gap-1.5 no-scrollbar shrink-0">
+          {steps.map((s, idx) => (
+            <button
+              key={s.id}
+              onClick={() => setActiveStep(idx)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                activeStep === idx
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              <s.icon size={11} className={activeStep === idx ? "text-amber-300" : ""} />
+              <span>{idx + 1}. {s.shortTitle}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ============================================================ */}
+        {/* CUERPO DEL MODAL (SIDEBAR + SHOWCASE) */}
+        {/* ============================================================ */}
+        <div className="flex flex-1 overflow-hidden">
           
-          {/* Subheader Banner for Current Step */}
-          <div className={`p-4 rounded-2xl border ${currentStepInfo.bgAccent} ${currentStepInfo.borderAccent} flex items-center justify-between gap-4 transition-all duration-500`}>
-            <div className="flex items-center gap-3">
-              <div className={`p-3 bg-gradient-to-r ${currentStepInfo.color} text-white rounded-2xl shadow-md`}>
-                <currentStepInfo.icon size={22} />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Novedad {activeStep + 1} de {steps.length}
-                </span>
-                <h3 className="text-base font-black text-slate-900 dark:text-slate-100 leading-tight">
-                  {currentStepInfo.title}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {currentStepInfo.subtitle}
-                </p>
-              </div>
-            </div>
-
-            <span className="hidden md:inline-flex items-center gap-1 px-3 py-1 bg-white/80 dark:bg-slate-900/80 rounded-xl text-xs font-bold border text-slate-600 dark:text-slate-300">
-              <FaRegLightbulb className="text-amber-400" /> Guía Informativa
+          {/* SIDEBAR DE NAVEGACIÓN (ESCRITORIO) */}
+          <div className="hidden md:flex flex-col w-72 bg-slate-50/80 dark:bg-slate-950/60 p-4 border-r border-slate-200/80 dark:border-slate-800 shrink-0 space-y-2 overflow-y-auto">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2 block mb-1">
+              Índice de Novedades
             </span>
+
+            {steps.map((step, idx) => {
+              const isActive = activeStep === idx;
+              const Icon = step.icon;
+
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => setActiveStep(idx)}
+                  className={`w-full text-left p-3 rounded-2xl transition-all duration-200 flex items-start gap-3 border ${
+                    isActive
+                      ? "bg-white dark:bg-slate-900 border-indigo-400 dark:border-indigo-600 shadow-md ring-2 ring-indigo-500/15 scale-[1.02]"
+                      : "bg-transparent border-transparent hover:bg-white/60 dark:hover:bg-slate-900/40 text-slate-600 dark:text-slate-400"
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-black transition-all ${
+                      isActive
+                        ? `bg-gradient-to-r ${step.color} text-white shadow-sm`
+                        : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                    }`}
+                  >
+                    <Icon />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-mono font-bold text-slate-400">
+                        0{idx + 1}
+                      </span>
+                      {isActive && (
+                        <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          Activo
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`text-xs font-black truncate mt-0.5 ${
+                        isActive
+                          ? "text-slate-900 dark:text-slate-100"
+                          : "text-slate-600 dark:text-slate-400"
+                      }`}
+                    >
+                      {step.shortTitle}
+                    </p>
+                    <span className="text-[10px] text-slate-450 dark:text-slate-500 block truncate">
+                      {step.tag}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          {/* SLIDE 0: Promociones por Cantidad */}
-          {activeStep === 0 && (
-            <div className="space-y-4 animate-fadeIn">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Llegaron las <strong>Promociones por Cantidad Automáticas</strong> del tipo <em>"Cada X unidades vendidas, regalar Y unidades"</em> (ejemplo: cada 10 bolsas vendidas, regalar 1 bolsa sin costo adicional).
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-amber-300 dark:hover:border-amber-800 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                    1
+          {/* MAIN SHOWCASE CANVAS (CONTENIDO DINÁMICO) */}
+          <div className="flex-1 p-5 sm:p-7 overflow-y-auto space-y-5">
+            
+            {/* Hero Card de la novedad activa */}
+            <div
+              className={`p-5 rounded-3xl border ${currentStep.bgAccent} ${currentStep.borderAccent} relative overflow-hidden transition-all duration-300`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-black uppercase tracking-wider bg-white/90 dark:bg-slate-900/90 shadow-xs border ${currentStep.borderAccent} ${currentStep.accent}`}
+                    >
+                      <currentStep.icon className="text-xs" /> {currentStep.tag}
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-450 dark:text-slate-400">
+                      Novedad 0{activeStep + 1}
+                    </span>
                   </div>
-                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
-                    Configuración Simple
-                  </h4>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Activa el switch en la creación o edición de productos, ingresa la cantidad vendida requerida y las unidades de regalo.
+
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-50 leading-tight">
+                    {currentStep.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                    {currentStep.subtitle}
                   </p>
                 </div>
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-amber-300 dark:hover:border-amber-800 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                    2
-                  </div>
-                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
-                    Ventas y Pedidos
-                  </h4>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    El carrito de Ventas y Pedidos de Reparto desglosa automáticamente las unidades cobradas y regaladas, cobrando $0 por los artículos de regalo.
-                  </p>
-                </div>
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-amber-300 dark:hover:border-amber-800 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                    3
-                  </div>
-                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
-                    Control de Stock y Kardex
-                  </h4>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    El sistema valida stock suficiente previa transacción, descuenta las unidades regaladas y registra las salidas por promoción en el inventario.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <Link
-                  href="/dashboard/products"
-                  onClick={handleClose}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-                >
-                  Ir a Productos <FaArrowRight />
-                </Link>
               </div>
             </div>
-          )}
 
-          {/* SLIDE 1: Listas de Precios y Selección Individual */}
-          {activeStep === 1 && (
-            <div className="space-y-4 animate-fadeIn">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Ahora el módulo de <strong>Clasificación y Precios</strong> ofrece un control total sobre cómo aumentan tus precios. Puedes aplicar aumentos masivos por porcentaje o monto fijo, o modificar artículos de forma individual sin alterar el resto del inventario.
-              </p>
+            {/* ============================================================ */}
+            {/* WIDGETS INTERACTIVOS DE DEMOSTRACIÓN VISUAL SEGÚN EL PASO */}
+            {/* ============================================================ */}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                    1
+            {/* SLIDE 0: UNIFICACIÓN DE CUENTAS CORRIENTES */}
+            {activeStep === 0 && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Visual Sandbox / Mockup */}
+                <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xs">
+                        JP
+                      </div>
+                      <div>
+                        <span className="font-black text-xs block text-slate-100">Juan Pérez</span>
+                        <span className="text-[10px] text-slate-400">Cliente Mayorista · Ficha Unificada</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-rose-950/80 text-rose-300 border border-rose-900/60">
+                      Saldo Total Cta. Cte.: $37.500,00
+                    </span>
                   </div>
-                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
-                    Casillas por Producto
-                  </h4>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Cada producto incluye una casilla de verificación. Si solo aumentaron algunos artículos, desmarca los demás para mantener su precio original.
-                  </p>
-                </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                    2
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-950/80 text-amber-300 border border-amber-900/50">
+                          📦 Pedido #7A3B
+                        </span>
+                        <span className="text-[11px] text-slate-300">Reparto semanal</span>
+                      </div>
+                      <span className="font-black text-amber-400">$25.000,00</span>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-purple-950/80 text-purple-300 border border-purple-900/50">
+                          🏪 Mostrador #4C19
+                        </span>
+                        <span className="text-[11px] text-slate-300">Venta rápida</span>
+                      </div>
+                      <span className="font-black text-purple-400">$12.500,00</span>
+                    </div>
                   </div>
-                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
-                    Sobrescritura Manual
-                  </h4>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Puedes escribir directamente el nuevo precio final en los campos numéricos de la previsualización antes de guardar.
-                  </p>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all group">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                    3
+                {/* 3 Value propositions */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                      1
+                    </div>
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Saldo Consolidado</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Se acabó la división confusa. El cliente y el negocio ven un solo número real adeudado.
+                    </p>
                   </div>
-                  <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs">
-                    Redondeo Inteligente
-                  </h4>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Aplica reglas de redondeo superior hacia números enteros, múltiplos de $10, $50 o $100 para evitar decimales o números irregulares.
+
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                      2
+                    </div>
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Trazabilidad Total</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Cada comprobante mantiene su identidad original con badges claros de pedido o mostrador.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                      3
+                    </div>
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Cobro Dual</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Imputación automática a la deuda más antigua o selección de comprobantes específicos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 1: ALERTAS DE DEUDA EN VIVO Y PROYECCIÓN */}
+            {activeStep === 1 && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Mini Simulator Mockup */}
+                <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                      <FaBolt /> Simulador de Alerta y Proyección al Vender
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">Nueva Venta / Nuevo Pedido</span>
+                  </div>
+
+                  <div className="p-3.5 bg-amber-950/40 border border-amber-900/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">
+                        Alerta: Cliente con deuda previa detectada
+                      </span>
+                      <span className="font-extrabold text-white mt-0.5 block">
+                        Saldo Previo: <span className="text-amber-400 font-black">$18.000,00</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 font-black text-sm">
+                      <span>+ Venta: $7.000,00</span>
+                      <FaArrowRight className="text-amber-400 text-xs" />
+                      <span className="px-2.5 py-1 bg-amber-500 text-slate-950 rounded-lg shadow-sm">
+                        Nuevo Saldo: $25.000,00
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center font-bold text-xs">
+                      <FaBolt />
+                    </div>
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Sin Sorpresas al Cobrar</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      El cajero o vendedor conoce al instante si el cliente adeuda entregas previas antes de confirmar una nueva entrega fiada.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center font-bold text-xs">
+                      <FaCalculator />
+                    </div>
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Cálculo Matemático en Vivo</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Al presionar "Cuenta Corriente (Fiado)", el modal proyecta la suma exacta para informarle al cliente su nuevo saldo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 2: HUB CENTRALIZADO DE COMPROBANTES CON SALDO */}
+            {activeStep === 2 && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Visual tabs mockup */}
+                <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl w-fit text-xs font-bold border border-slate-800">
+                    <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg shadow-xs">
+                      Todos (14)
+                    </span>
+                    <span className="px-3 py-1 text-slate-400 hover:text-white">
+                      📦 Pedidos (8)
+                    </span>
+                    <span className="px-3 py-1 text-slate-400 hover:text-white">
+                      🏪 Mostrador (6)
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-purple-950 text-purple-300 border border-purple-900">
+                        🏪 Mostrador #9921
+                      </span>
+                      <div>
+                        <span className="font-bold text-slate-100 block">Distribuidora Norte</span>
+                        <span className="text-[10px] text-slate-400">Total: $42.000 · Pagado: $20.000</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-rose-400 text-sm">$22.000,00 adeudado</span>
+                      <span className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-black">
+                        Cobrar
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <span className="font-extrabold text-purple-600 block">Pestañas Instantáneas</span>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Alterna entre pedidos y ventas sin recargar la página ni perder el foco.
+                    </p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <span className="font-extrabold text-purple-600 block">Búsqueda en Vivo</span>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Escribe el nombre del cliente, vendedor o código para encontrar comprobantes al segundo.
+                    </p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <span className="font-extrabold text-purple-600 block">Cobro en 1 Clic</span>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Modal de liquidación rápida que actualiza el comprobante y genera el registro en caja.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 3: EXTRACTO CONTABLE (DEBE / HABER / SALDO) */}
+            {activeStep === 3 && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Visual Ledger table preview */}
+                <div className="bg-slate-950 text-white rounded-2xl p-4 border border-slate-800 space-y-2 font-mono text-xs">
+                  <div className="grid grid-cols-4 text-[10px] font-bold text-slate-400 border-b border-slate-800 pb-1.5">
+                    <span>Concepto</span>
+                    <span className="text-right text-rose-400">Debe (+)</span>
+                    <span className="text-right text-emerald-400">Haber (-)</span>
+                    <span className="text-right text-indigo-400">Saldo</span>
+                  </div>
+                  <div className="grid grid-cols-4 py-1 border-b border-slate-900 text-[11px]">
+                    <span className="font-sans truncate">🛒 Pedido #1024</span>
+                    <span className="text-right text-rose-400">+$15.000</span>
+                    <span className="text-right text-slate-500">-</span>
+                    <span className="text-right font-black">$15.000</span>
+                  </div>
+                  <div className="grid grid-cols-4 py-1 border-b border-slate-900 text-[11px]">
+                    <span className="font-sans truncate">💰 Cobro Efectivo</span>
+                    <span className="text-right text-slate-500">-</span>
+                    <span className="text-right text-emerald-400">-$10.000</span>
+                    <span className="text-right font-black">$5.000</span>
+                  </div>
+                  <div className="grid grid-cols-4 py-1 text-[11px]">
+                    <span className="font-sans truncate">🏪 Venta Mostrador</span>
+                    <span className="text-right text-rose-400">+$8.000</span>
+                    <span className="text-right text-slate-500">-</span>
+                    <span className="text-right font-black text-amber-400">$13.000</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-xs space-y-1.5">
+                  <strong className="text-emerald-800 dark:text-emerald-300 font-extrabold block">
+                    Libro Mayor de Partida Doble
+                  </strong>
+                  <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+                    Visualiza exactamente cómo evoluciona la deuda en cada paso. Además, cuenta con botones para anular pagos de forma segura restaurando la deuda automáticamente.
                   </p>
                 </div>
               </div>
+            )}
 
-              <div className="pt-2 flex justify-end">
-                <Link
-                  href="/dashboard/clasificacion"
-                  onClick={handleClose}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-                >
-                  Ir a Clasificación y Precios <FaArrowRight />
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* SLIDE 2: Proveedores y Marcas */}
-          {activeStep === 2 && (
-            <div className="space-y-4 animate-fadeIn">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Incorporamos la jerarquía completa <strong>Proveedores ➔ Marcas ➔ Productos</strong>. Ahora puedes agrupar tus marcas bajo cada proveedor que te abastece y ajustar precios a nivel de distribuidor.
-              </p>
-
-              <div className="space-y-3">
-                <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl space-y-2">
-                  <span className="font-extrabold text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-1.5">
-                    <FaCheckDouble /> ¿Cómo utilizar la nueva estructura?
-                  </span>
-                  <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-emerald-500 shrink-0" />
-                      1. En la pestaña <strong>Proveedores</strong>, crea tus proveedores (ej: Distribuidora Central).
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-emerald-500 shrink-0" />
-                      2. Haz clic en <strong>"Ver / Asignar Marcas"</strong> para vincular las marcas que vende cada proveedor.
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <FaCheckCircle className="text-emerald-500 shrink-0" />
-                      3. Utiliza el botón <strong>"Cambiar Precios del Proveedor"</strong> para actualizar el catálogo completo de ese distribuidor en un solo paso.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <Link
-                  href="/dashboard/clasificacion"
-                  onClick={handleClose}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-                >
-                  Ver Proveedores y Marcas <FaArrowRight />
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* SLIDE 3: Limpieza y Seguridad */}
-          {activeStep === 3 && (
-            <div className="space-y-4 animate-fadeIn">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Nueva herramienta de <strong>Limpieza y Mantenimiento del Sistema</strong> ubicada dentro de <strong>Configuración</strong> (`/dashboard/configuracion`), diseñada para mantener tu base de datos optimizada y libre de registros obsoletos.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
-                  <span className="font-extrabold text-purple-600 flex items-center gap-1.5">
-                    <FaBoxes /> Escáner de Residuos
-                  </span>
-                  <p className="text-slate-500 leading-relaxed">
-                    Diagnostica automáticamente categorías y marcas vacías (con 0 productos), productos inactivos sin ventas, registros cancelados antiguos y contactos en desuso.
-                  </p>
+            {/* SLIDE 4: DISEÑO 100% RESPONSIVO EN MÓVILES */}
+            {activeStep === 4 && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="text-xs font-black text-cyan-400 uppercase tracking-wider block">
+                      📱 Experiencia de App Nativa en Teléfonos
+                    </span>
+                    <p className="text-xs text-slate-300 leading-relaxed max-w-md">
+                      En pantallas estrechas (320px a 768px), las tablas financieras de 6 columnas se transforman en <strong>tarjetas táctiles autoajustables</strong> con botones anchos y tipografía nítida.
+                    </p>
+                  </div>
+                  <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-3xl shrink-0">
+                    <FaMobileAlt />
+                  </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
-                  <span className="font-extrabold text-green-600 flex items-center gap-1.5">
-                    <FaShieldAlt /> Protección Antierrores (Cascade Check)
-                  </span>
-                  <p className="text-slate-500 leading-relaxed">
-                    Garantía total: el sistema verifica dependencias y **bloquea la eliminación** de cualquier artículo, cliente o movimiento que posea historial comercial o saldo activo.
-                  </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Cero Desplazamientos Rotos</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Sin tablas cortadas ni botones que se salen del ancho útil de la pantalla.
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+                    <strong className="text-slate-900 dark:text-slate-100 font-extrabold block">Operativa Cómoda a Una Mano</strong>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">
+                      Áreas táctiles generosas para registrar cobros y consultar saldos en movimiento.
+                    </p>
+                  </div>
                 </div>
               </div>
+            )}
 
+            {/* Action link button at bottom of active step */}
+            {currentStep.actionHref && (
               <div className="pt-2 flex justify-end">
                 <Link
-                  href="/dashboard/configuracion"
+                  href={currentStep.actionHref}
                   onClick={handleClose}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-sm hover:scale-[1.02]"
                 >
-                  Abrir Mantenimiento en Configuración <FaArrowRight />
+                  <FaCompass className="text-indigo-400 dark:text-indigo-600" />
+                  <span>{currentStep.actionLabel || "Ir a la sección"}</span>
+                  <FaArrowRight className="text-xs" />
                 </Link>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* SLIDE 4: Memoria de Paginación */}
-          {activeStep === 4 && (
-            <div className="space-y-4 animate-fadeIn">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Hemos optimizado la navegación en todas las listas del sistema (**Productos**, **Pedidos**, **Clientes**). Ahora la aplicación recuerda automáticamente tu posición sin reiniciar la vista a la página 1.
-              </p>
-
-              <div className="p-4 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-2xl space-y-2 text-xs text-blue-950 dark:text-blue-200">
-                <strong className="font-bold block text-sm text-blue-700 dark:text-blue-300">
-                  ¿Cómo te beneficia este cambio?
-                </strong>
-                <p className="leading-relaxed">
-                  Si estás revisando los artículos en la <strong>Página 38</strong> y editas un producto, al presionar <strong>"Guardar"</strong>, <strong>"Volver"</strong> o usar la flecha <strong>"Atrás"</strong> del navegador, regresarás exactamente a la <strong>Página 38</strong> conservando tus búsquedas y filtros activos.
-                </p>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <Link
-                  href="/dashboard/products"
-                  onClick={handleClose}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-                >
-                  Ir a Productos <FaArrowRight />
-                </Link>
-              </div>
-            </div>
-          )}
+          </div>
 
         </div>
 
-        {/* Footer con Controles de Navegación de Carrusel */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
-          <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+        {/* ============================================================ */}
+        {/* FOOTER BAR CON TOGGLE Y BOTONES DE NAVEGACIÓN */}
+        {/* ============================================================ */}
+        <div className="px-5 sm:px-7 py-3.5 sm:py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+          {/* Modern Toggle Switch */}
+          <label className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={dontShowAgain}
               onChange={(e) => setDontShowAgain(e.target.checked)}
-              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
             />
-            No volver a mostrar automáticamente en el inicio
+            <span>No volver a mostrar automáticamente al iniciar</span>
           </label>
 
+          {/* Controls Prev / Next */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             {activeStep > 0 && (
               <button
                 onClick={() => setActiveStep(activeStep - 1)}
-                className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
+                className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-xs"
               >
                 <HiOutlineChevronLeft /> Anterior
               </button>
@@ -486,14 +712,14 @@ export default function SystemUpdatesModal({
             {activeStep < steps.length - 1 ? (
               <button
                 onClick={() => setActiveStep(activeStep + 1)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02]"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95"
               >
                 Siguiente Novedad <HiOutlineChevronRight />
               </button>
             ) : (
               <button
                 onClick={handleClose}
-                className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs shadow-md transition-all flex items-center gap-2 hover:scale-[1.02]"
+                className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs shadow-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95"
               >
                 <FaCheckCircle /> ¡Entendido / Explorar Sistema!
               </button>

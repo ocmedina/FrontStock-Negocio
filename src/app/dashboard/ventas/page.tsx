@@ -374,7 +374,7 @@ export default function SalesHistoryPage() {
               </select>
               {paymentFilter === "cuenta_corriente" && (
                 <span className="w-full sm:w-auto text-sm font-semibold text-orange-600 bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 whitespace-nowrap flex items-center gap-2">
-                  <FaFileInvoice /> Solo fiadas
+                  <FaFileInvoice /> Solo Cta. Cte. (Fiado)
                 </span>
               )}
             </div>
@@ -499,7 +499,7 @@ export default function SalesHistoryPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {sale.payment_method === "cuenta_corriente" ? (
                         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300">
-                          <FaFileInvoice /> Fiado
+                          <FaFileInvoice /> Cta. Cte. (Fiado)
                         </span>
                       ) : sale.payment_method === "efectivo" ? (
                         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300">
@@ -678,7 +678,7 @@ export default function SalesHistoryPage() {
                 <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
                   <FaCreditCard className="text-amber-500" />
                   {sale.payment_method === "cuenta_corriente"
-                    ? "Cuenta corriente"
+                    ? "Cta. Cte. (Fiado)"
                     : sale.payment_method === "mercado_pago"
                       ? "Mercado Pago"
                       : sale.payment_method?.replace("_", " ") ?? "N/A"}

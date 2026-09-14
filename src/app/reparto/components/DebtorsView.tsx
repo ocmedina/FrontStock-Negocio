@@ -126,9 +126,9 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
           salesDebt,
           totalDebt: ordersDebt + salesDebt,
           ordersCount: ordersData?.length || 0,
-          salesCount: salesData?.length || 0,
+          salesCount: salesList?.length || 0,
           orders: ordersData || [],
-          sales: salesData || [],
+          sales: salesList || [],
           payments: paymentsData || []
         };
       })
@@ -358,8 +358,8 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
                   {/* Sección: Pedidos Pendientes */}
                   {deudor.orders.length > 0 && (
                     <div>
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
-                        Pedidos con Saldo
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                        <FaShoppingBag className="text-amber-500" /> Pedidos de Reparto en Cta. Cte.
                       </p>
                       <div className="space-y-3">
                         {deudor.orders.map((order: any) => (
@@ -407,8 +407,8 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
                   {/* Sección: Cuenta Corriente (Ventas directas) */}
                   {deudor.sales.length > 0 && (
                     <div>
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
-                        Cuenta Corriente (Ventas)
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                        <FaUser className="text-indigo-500" /> Ventas Mostrador en Cta. Cte.
                       </p>
                       <div className="space-y-2">
                         {deudor.sales.map((sale: any) => (
@@ -440,7 +440,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
               {/* Botón de Pago Rápido en Footer de Tarjeta */}
               <div className="p-4 flex items-center justify-between bg-slate-50/10 dark:bg-slate-950/5">
                 <div>
-                  <p className="text-[9px] text-rose-600 dark:text-rose-400 font-black uppercase tracking-wider">Deuda Total</p>
+                  <p className="text-[9px] text-rose-600 dark:text-rose-400 font-black uppercase tracking-wider">Saldo Total Cta. Cte.</p>
                   <p className="text-base font-black text-rose-700 dark:text-rose-400">
                     ${deudor.totalDebt.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </p>
@@ -449,7 +449,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
                   onClick={() => handleOpenPayment(deudor)}
                   className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-sm text-xs font-black uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all"
                 >
-                  <FaDollarSign /> Cobrar Deuda
+                  <FaDollarSign /> Cobrar Cta. Cte.
                 </button>
               </div>
             </div>

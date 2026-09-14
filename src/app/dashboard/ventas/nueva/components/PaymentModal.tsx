@@ -35,6 +35,7 @@ interface PaymentModalProps {
   selectedSupplierId: string | null;
   setSelectedSupplierId: (id: string | null) => void;
   suppliers: Supplier[];
+  customerPriorDebt?: number;
 }
 
 export default function PaymentModal({
@@ -62,6 +63,7 @@ export default function PaymentModal({
   selectedSupplierId,
   setSelectedSupplierId,
   suppliers,
+  customerPriorDebt = 0,
 }: PaymentModalProps) {
   if (!isOpen) return null;
 
@@ -131,14 +133,32 @@ export default function PaymentModal({
               </div>
             </div>
 
-            {debtDifference > 0 && (
+            {paymentMethod === "cuenta_corriente" ? (
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4 space-y-2">
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">
+                  Cuenta Corriente (Fiado)
+                </p>
+                <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
+                  <span>Saldo anterior en cuenta:</span>
+                  <span>{formatCurrency(customerPriorDebt)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-amber-700 dark:text-amber-400">
+                  <span>Esta venta a cuenta:</span>
+                  <span>+{formatCurrency(total)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-black text-amber-900 dark:text-amber-200 border-t border-amber-200/60 dark:border-amber-800/50 pt-1.5 mt-1">
+                  <span>Nuevo saldo a cobrar:</span>
+                  <span>{formatCurrency(customerPriorDebt + total)}</span>
+                </div>
+              </div>
+            ) : debtDifference > 0 ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
                 <p className="text-sm font-semibold text-red-700">Saldo pendiente</p>
                 <p className="text-2xl font-bold text-red-600 mt-1">
                   {formatCurrency(debtDifference)}
                 </p>
               </div>
-            )}
+            ) : null}
 
             {debtDifference < 0 && (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">

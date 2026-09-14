@@ -175,7 +175,7 @@ export default function OrderDetailsClient({
             </div>
             {order.payment_method === "fiado" ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800 border border-orange-300">
-                <FaFileInvoice /> Fiado
+                <FaFileInvoice /> Cuenta Corriente (Fiado)
               </span>
             ) : order.payment_method === "transferencia" ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-300">

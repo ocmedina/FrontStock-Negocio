@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { formatCurrency } from "@/lib/numberFormat";
@@ -114,6 +115,81 @@ export default function NewSalePage() {
   const setSelectedCustomer = (customer: Customer | null) => {
     updateActiveTab({ selectedCustomer: customer });
   };
+
+  // Estado de deuda unificada en cuenta corriente en tiempo real
+  const [customerDebtInfo, setCustomerDebtInfo] = useState<{
+    ordersDebt: number;
+    salesDebt: number;
+    totalDebt: number;
+    pendingCount: number;
+    loading: boolean;
+  }>({ ordersDebt: 0, salesDebt: 0, totalDebt: 0, pendingCount: 0, loading: false });
+
+  useEffect(() => {
+    if (!selectedCustomer?.id || selectedCustomer.full_name === "Consumidor Final") {
+      setCustomerDebtInfo({ ordersDebt: 0, salesDebt: 0, totalDebt: 0, pendingCount: 0, loading: false });
+      return;
+    }
+
+    let isMounted = true;
+    setCustomerDebtInfo((prev) => ({ ...prev, loading: true }));
+
+    async function fetchCustomerDebt() {
+      try {
+        const [ordersRes, salesRes] = await Promise.all([
+          supabase
+            .from("orders")
+            .select("amount_pending")
+            .eq("customer_id", selectedCustomer!.id)
+            .gt("amount_pending", 0)
+            .neq("status", "cancelado"),
+          (supabase as any)
+            .from("sales")
+            .select("amount_pending, is_cancelled")
+            .eq("customer_id", selectedCustomer!.id)
+            .gt("amount_pending", 0),
+        ]);
+
+        if (!isMounted) return;
+
+        const orders = ordersRes.data || [];
+        const ordersDebt = orders.reduce(
+          (sum, o: any) => sum + Number(o.amount_pending || 0),
+          0
+        );
+
+        let validSales = (salesRes.data || []) as any[];
+        if (!salesRes.error && validSales.length > 0) {
+          validSales = validSales.filter((s) => !s.is_cancelled);
+        }
+
+        const salesDebt = validSales.reduce(
+          (sum, s: any) => sum + Number(s.amount_pending || 0),
+          0
+        );
+        const totalDebt = ordersDebt + salesDebt;
+        const pendingCount = orders.length + validSales.length;
+
+        setCustomerDebtInfo({
+          ordersDebt,
+          salesDebt,
+          totalDebt,
+          pendingCount,
+          loading: false,
+        });
+      } catch (e) {
+        if (isMounted) {
+          setCustomerDebtInfo((prev) => ({ ...prev, loading: false }));
+        }
+      }
+    }
+
+    fetchCustomerDebt();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCustomer?.id]);
 
   const setCart = (cart: CartItem[]) => {
     updateActiveTab({ cart });
@@ -933,20 +1009,63 @@ export default function NewSalePage() {
                   </div>
                 )}
                 {selectedCustomer && (
-                  <div className="mt-4 p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
-                    <p className="text-sm font-bold text-emerald-900 dark:text-emerald-50 mb-1.5">
-                      {selectedCustomer.full_name}
-                    </p>
-                    <p className="text-xs text-emerald-800 dark:text-emerald-200">
-                      <span className="font-semibold">Tipo:</span>{" "}
-                      <span className="capitalize">
+                  <div className="mt-4 p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/40 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-emerald-900 dark:text-emerald-50">
+                        {selectedCustomer.full_name}
+                      </p>
+                      <span className="px-2 py-0.5 rounded-lg text-3xs font-extrabold uppercase bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
                         {selectedCustomer.customer_type}
                       </span>
-                    </p>
-                    <p className="text-xs text-emerald-800 dark:text-emerald-200 mt-1">
-                      <span className="font-semibold">Deuda Actual:</span> $
-                      {formatCurrency(selectedCustomer.debt || 0).replace("$", "")}
-                    </p>
+                    </div>
+
+                    {/* ESTADO EN CUENTA CORRIENTE */}
+                    {selectedCustomer.full_name !== "Consumidor Final" && (
+                      <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-900/50 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-3xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Saldo en Cta. Cte. (Fiado):
+                          </span>
+                          {customerDebtInfo.loading ? (
+                            <span className="text-3xs text-slate-400 animate-pulse">Consultando...</span>
+                          ) : customerDebtInfo.totalDebt > 0 ? (
+                            <span className="text-xs font-black text-rose-600 dark:text-rose-400">
+                              {formatCurrency(customerDebtInfo.totalDebt)}
+                            </span>
+                          ) : (
+                            <span className="text-3xs font-bold text-emerald-600 dark:text-emerald-400">
+                              Al día ($0,00)
+                            </span>
+                          )}
+                        </div>
+
+                        {customerDebtInfo.totalDebt > 0 && (
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 flex justify-between items-center">
+                            <span>
+                              {customerDebtInfo.pendingCount} comp. ({formatCurrency(customerDebtInfo.salesDebt)} mostrador + {formatCurrency(customerDebtInfo.ordersDebt)} pedidos)
+                            </span>
+                            <Link
+                              href={`/dashboard/clientes/${selectedCustomer.id}`}
+                              target="_blank"
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
+                            >
+                              Ver ficha →
+                            </Link>
+                          </div>
+                        )}
+
+                        {paymentMethod === "cuenta_corriente" && total > 0 && (
+                          <div className="mt-2 p-2.5 bg-amber-500/10 dark:bg-amber-500/20 rounded-lg border border-amber-500/30 text-xs">
+                            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 block uppercase tracking-wide">
+                              Nuevo saldo tras esta venta:
+                            </span>
+                            <span className="text-sm font-black text-amber-700 dark:text-amber-400 block mt-0.5">
+                              {formatCurrency(customerDebtInfo.totalDebt + total)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1031,6 +1150,7 @@ export default function NewSalePage() {
         selectedSupplierId={selectedSupplierId}
         setSelectedSupplierId={setSelectedSupplierId}
         suppliers={suppliers}
+        customerPriorDebt={customerDebtInfo.totalDebt}
       />
 
       <ProductSearchModal

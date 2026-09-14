@@ -331,7 +331,7 @@ function CustomersPageContent() {
                 href="/dashboard/clientes/deudores"
                 className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 hover:bg-rose-50/40 dark:hover:bg-rose-950/10 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
               >
-                <FaExclamationTriangle className="text-rose-500" /> Ver Deudores
+                <FaExclamationTriangle className="text-rose-500" /> Cuentas Corrientes (Deudores)
               </Link>
 
               <Link
@@ -407,7 +407,7 @@ function CustomersPageContent() {
                     <span className="flex items-center gap-1.5"><FaUserTag /> Tipo de Cliente</span>
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-44">
-                    <span className="flex items-center justify-end gap-1.5"><FaDollarSign /> Deuda Acumulada</span>
+                    <span className="flex items-center justify-end gap-1.5"><FaDollarSign /> Saldo Cta. Cte.</span>
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-24">
                     Acciones

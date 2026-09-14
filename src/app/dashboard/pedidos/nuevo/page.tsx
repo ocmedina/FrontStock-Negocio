@@ -69,6 +69,81 @@ export default function NewOrderPage() {
   const [amountCash, setAmountCash] = useState<number>(0);
   const [amountTransfer, setAmountTransfer] = useState<number>(0);
 
+  // Estado de deuda unificada en cuenta corriente en tiempo real
+  const [customerDebtInfo, setCustomerDebtInfo] = useState<{
+    ordersDebt: number;
+    salesDebt: number;
+    totalDebt: number;
+    pendingCount: number;
+    loading: boolean;
+  }>({ ordersDebt: 0, salesDebt: 0, totalDebt: 0, pendingCount: 0, loading: false });
+
+  useEffect(() => {
+    if (!selectedCustomer?.id) {
+      setCustomerDebtInfo({ ordersDebt: 0, salesDebt: 0, totalDebt: 0, pendingCount: 0, loading: false });
+      return;
+    }
+
+    let isMounted = true;
+    setCustomerDebtInfo((prev) => ({ ...prev, loading: true }));
+
+    async function fetchCustomerDebt() {
+      try {
+        const [ordersRes, salesRes] = await Promise.all([
+          supabase
+            .from("orders")
+            .select("amount_pending")
+            .eq("customer_id", selectedCustomer!.id)
+            .gt("amount_pending", 0)
+            .neq("status", "cancelado"),
+          (supabase as any)
+            .from("sales")
+            .select("amount_pending, is_cancelled")
+            .eq("customer_id", selectedCustomer!.id)
+            .gt("amount_pending", 0),
+        ]);
+
+        if (!isMounted) return;
+
+        const orders = ordersRes.data || [];
+        const ordersDebt = orders.reduce(
+          (sum, o: any) => sum + Number(o.amount_pending || 0),
+          0
+        );
+
+        let validSales = (salesRes.data || []) as any[];
+        if (!salesRes.error && validSales.length > 0) {
+          validSales = validSales.filter((s) => !s.is_cancelled);
+        }
+
+        const salesDebt = validSales.reduce(
+          (sum, s: any) => sum + Number(s.amount_pending || 0),
+          0
+        );
+        const totalDebt = ordersDebt + salesDebt;
+        const pendingCount = orders.length + validSales.length;
+
+        setCustomerDebtInfo({
+          ordersDebt,
+          salesDebt,
+          totalDebt,
+          pendingCount,
+          loading: false,
+        });
+      } catch (e) {
+        if (isMounted) {
+          setCustomerDebtInfo((prev) => ({ ...prev, loading: false }));
+        }
+      }
+    }
+
+    fetchCustomerDebt();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCustomer?.id]);
+
   const customerMenuRef = useRef<HTMLDivElement>(null);
   const productSearchRef = useRef<HTMLDivElement>(null);
 
@@ -626,12 +701,25 @@ export default function NewOrderPage() {
                     />
                   </div>
 
-                  {/* Deuda Corriente */}
+                  {/* Deuda en Cuenta Corriente (Fiado) */}
                   <div className="flex flex-col justify-center bg-amber-500/10 dark:bg-amber-500/5 p-2 rounded-lg border border-amber-500/20">
-                    <span className="text-amber-850 dark:text-amber-500 font-medium">Deuda Corriente</span>
-                    <span className="font-extrabold text-amber-700 dark:text-amber-400 text-sm mt-0.5">
-                      {formatCurrency(selectedCustomer.debt || 0)}
-                    </span>
+                    <span className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Saldo Cta. Cte. (Fiado)</span>
+                    {customerDebtInfo.loading ? (
+                      <span className="text-3xs text-slate-400 animate-pulse mt-0.5">Consultando...</span>
+                    ) : customerDebtInfo.totalDebt > 0 ? (
+                      <div>
+                        <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm mt-0.5 block">
+                          {formatCurrency(customerDebtInfo.totalDebt)}
+                        </span>
+                        <span className="text-3xs text-slate-500 dark:text-slate-400 block">
+                          {customerDebtInfo.pendingCount} comp. ({formatCurrency(customerDebtInfo.ordersDebt)} pedidos + {formatCurrency(customerDebtInfo.salesDebt)} mostrador)
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                        Al día ($0,00)
+                      </span>
+                    )}
                   </div>
 
                 </div>
@@ -1051,7 +1139,7 @@ export default function NewOrderPage() {
                       { id: "efectivo", label: "💵 Efectivo" },
                       { id: "transferencia", label: "🏦 Transferencia" },
                       { id: "cheque", label: "🎫 Cheque" },
-                      { id: "fiado", label: "📋 Cuenta Cte." },
+                      { id: "fiado", label: "📋 Cuenta Corriente (Fiado)" },
                       { id: "mixto", label: "💳 Pago Mixto" },
                     ].map((method) => {
                       const isActive = paymentMethod === method.id;
@@ -1082,6 +1170,26 @@ export default function NewOrderPage() {
                     })}
                   </div>
                 </div>
+
+                {/* Proyección de saldo si elige Cuenta Corriente (Fiado) */}
+                {paymentMethod === "fiado" && selectedCustomer && (
+                  <div className="p-3 bg-amber-500/10 dark:bg-amber-500/15 rounded-xl border border-amber-500/30 text-xs space-y-1.5 animate-fadeIn">
+                    <div className="flex justify-between items-center text-amber-800 dark:text-amber-300">
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Saldo previo en Cta. Cte.:</span>
+                      <span className="font-bold">{formatCurrency(customerDebtInfo.totalDebt)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-amber-800 dark:text-amber-300">
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Este pedido a cuenta:</span>
+                      <span className="font-bold">+{formatCurrency(totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-amber-500/30 pt-1 text-amber-900 dark:text-amber-200">
+                      <span className="text-xs font-black uppercase">Nuevo saldo a cobrar:</span>
+                      <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                        {formatCurrency(customerDebtInfo.totalDebt + totalAmount)}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* splits de pago mixto */}
                 {paymentMethod === "mixto" ? (

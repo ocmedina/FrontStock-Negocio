@@ -279,34 +279,40 @@ export default function RegisterPayment({
   return (
     <div className="bg-white dark:bg-slate-900 rounded-lg">
       {/* Toggle Mode */}
-      <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 p-1 bg-gray-100 dark:bg-slate-800 rounded-xl">
         <button
           type="button"
           onClick={() => setPaymentMode("automatic")}
           className={`
-            flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-md transition-all
+            flex items-center justify-center gap-2 py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all
             ${paymentMode === "automatic"
               ? "bg-white dark:bg-slate-700 text-green-600 shadow-sm"
               : "text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
             }
           `}
         >
-          <span>⚡ Pago Automático</span>
+          <span>⚡ Imputación Automática</span>
         </button>
         <button
           type="button"
           onClick={() => setPaymentMode("specific")}
           className={`
-            flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-md transition-all
+            flex items-center justify-center gap-2 py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all
             ${paymentMode === "specific"
               ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm"
               : "text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
             }
           `}
         >
-          <span>📝 Seleccionar Pedidos</span>
+          <span>📝 Seleccionar Comprobantes</span>
         </button>
-      </div >
+      </div>
+
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 -mt-2 mb-4">
+        {paymentMode === "automatic"
+          ? "El pago se imputará automáticamente cancelando los pedidos y ventas más antiguos del cliente."
+          : "Selecciona individualmente los pedidos o ventas mostrador que deseas cancelar con este cobro."}
+      </p>
 
       <form onSubmit={handleRegisterPayment} className="space-y-6">
 
@@ -317,19 +323,19 @@ export default function RegisterPayment({
               className="bg-gray-50 dark:bg-slate-800 px-4 py-3 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-750 transition"
               onClick={() => setExpandedItems(!expandedItems)}
             >
-              <span className="font-bold text-gray-700 dark:text-slate-200 flex items-center gap-2">
+              <span className="font-bold text-gray-700 dark:text-slate-200 flex items-center gap-2 text-xs">
                 <FaReceipt className="text-gray-400" />
-                Deudas Pendientes ({pendingItems.length})
+                Comprobantes en Cta. Cte. ({pendingItems.length})
               </span>
               <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                 {expandedItems ? "Ocultar lista" : "Mostrar lista"}
               </span>
             </div>
 
-            <div className={`overflow-y-auto transition-all duration-300 ${!expandedItems && pendingItems.length > 3 ? 'max-h-[200px]' : 'max-h-[400px]'}`}>
+            <div className={`overflow-y-auto transition-all duration-300 ${!expandedItems && pendingItems.length > 3 ? 'max-h-[220px]' : 'max-h-[400px]'}`}>
               {pendingItems.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 dark:text-slate-400 text-sm">
-                  No hay pedidos pendientes.
+                  No hay comprobantes pendientes en cuenta corriente.
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-slate-800">
@@ -339,48 +345,50 @@ export default function RegisterPayment({
                       <div
                         key={item.id}
                         className={`
-                                p-4 flex items-center gap-4 transition-colors cursor-pointer
+                                p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors cursor-pointer
                                 ${isSelected ? 'bg-blue-50/50 dark:bg-slate-800/80' : 'hover:bg-gray-50 dark:hover:bg-slate-800/30'}
                             `}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggleItem(item)}
-                          className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                        />
+                        <div className="flex items-start gap-3 flex-1" onClick={() => !isSelected && handleToggleItem(item)}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleItem(item)}
+                            className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer mt-0.5 shrink-0"
+                          />
 
-                        <div className="flex-1" onClick={() => !isSelected && handleToggleItem(item)}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${item.type === 'order'
-                              ? 'bg-orange-50 border-orange-100 text-orange-700 dark:bg-orange-900/20 dark:border-orange-900/50 dark:text-orange-400'
-                              : 'bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-900/50 dark:text-indigo-400'
-                              }`}>
-                              {item.type === 'order' ? 'PEDIDO' : 'VENTA'}
-                            </span>
-                            <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-slate-400 flex justify-between w-full pr-2">
-                            <span>Total: {formatCurrency(item.total_amount)}</span>
-                            <span className="font-semibold text-gray-700 dark:text-slate-300">
-                              Pendiente: <span className="text-red-600">{formatCurrency(item.amount_pending)}</span>
-                            </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${item.type === 'order'
+                                ? 'bg-orange-50 border-orange-100 text-orange-700 dark:bg-orange-900/20 dark:border-orange-900/50 dark:text-orange-400'
+                                : 'bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-900/50 dark:text-indigo-400'
+                                }`}>
+                                {item.type === 'order' ? '📦 PEDIDO' : '🏪 VENTA MOSTRADOR'}
+                              </span>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-slate-100">
+                                {new Date(item.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-slate-400 flex justify-between w-full pr-2 flex-wrap gap-1">
+                              <span>Total: {formatCurrency(item.total_amount)}</span>
+                              <span className="font-semibold text-gray-700 dark:text-slate-300">
+                                Pendiente: <span className="text-red-600 font-bold">{formatCurrency(item.amount_pending)}</span>
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         {isSelected && (
-                          <div className="w-28 animate-in fade-in slide-in-from-right-4 duration-200">
-                            <label className="text-[10px] text-gray-500 mb-1 block">A pagar:</label>
+                          <div className="w-full sm:w-28 pl-8 sm:pl-0 animate-in fade-in slide-in-from-right-4 duration-200">
+                            <label className="text-[10px] font-bold text-gray-500 dark:text-slate-400 mb-1 block">Abonar ($):</label>
                             <div className="relative">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">$</span>
                               <input
                                 type="number"
                                 value={selectedItems[item.id]}
                                 onChange={(e) => handleItemAmountChange(item.id, e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full pl-5 pr-2 py-1.5 text-right text-sm font-semibold border border-blue-200 dark:border-blue-800 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900"
+                                className="w-full pl-5 pr-2 py-1.5 text-right text-sm font-bold border border-blue-200 dark:border-blue-800 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900"
                                 step="0.01"
                                 max={item.amount_pending}
                               />

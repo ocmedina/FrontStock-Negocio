@@ -17,214 +17,54 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
-    id: "2026-08-13-v2-6-quantity-promotions",
-    date: "13 Ago 2026",
-    title: "🎁 Promociones por Cantidad en Productos, Ventas y Pedidos",
+    id: "2026-09-14-v2-7-unification-cuentas-corrientes",
+    date: "14 Sep 2026",
+    title: "🤝 Unificación Total de Cuentas Corrientes y Fiados",
     description:
-      "Llegaron las promociones automáticas del tipo 'Cada X unidades vendidas, regalar Y unidades' (ej: cada 10 bolsas regalar 1). Configúralas en la creación o edición de productos. El sistema calcula las unidades de regalo automáticamente en el carrito de Ventas y Pedidos de Reparto, valida el stock total necesario antes del cobro y registra los movimientos de regalo en el Kardex de Inventario.",
-    icon: "🎁",
+      "Eliminamos la división entre ventas mostrador y pedidos de reparto. Ahora todos los fiados y operaciones a crédito se consolidan en una única Cuenta Corriente por cliente, con saldo consolidado transparente y sin confusiones.",
+    icon: "🤝",
     isNew: true,
     type: "feature",
   },
   {
-    id: "2026-08-05-v2-5-price-and-suppliers",
-    date: "5 Ago 2026",
-    title: "💲 Aumento Seleccionable de Precios y Proveedores ➔ Marcas",
+    id: "2026-09-14-v2-7-live-debt-feedback",
+    date: "14 Sep 2026",
+    title: "⚡ Alertas de Deuda en Vivo y Proyección al Fiar",
     description:
-      "Novedad v2.5: Aumentos por porcentaje o monto fijo con casillas de selección por producto, edición manual en caliente y redondeo inteligente ($10, $50, $100). Nueva jerarquía Proveedores ➔ Marcas para aumentar catálogos completos por distribuidor.",
-    icon: "💲",
+      "Al seleccionar un cliente en Nueva Venta o Nuevo Pedido, el sistema detecta al instante su deuda real consolidada. Al elegir pago en Cuenta Corriente (Fiado), se proyecta en tiempo real el nuevo saldo total resultante (Saldo previo + Venta actual).",
+    icon: "⚡",
     isNew: true,
     type: "feature",
   },
   {
-    id: "2026-08-05-v2-5-maintenance-and-pagination",
-    date: "5 Ago 2026",
-    title: "🧹 Limpieza del Sistema y Memoria de Paginación",
+    id: "2026-09-14-v2-7-unified-pending-vouchers-hub",
+    date: "14 Sep 2026",
+    title: "🗂️ Hub Centralizado de Comprobantes con Saldo",
     description:
-      "Nuevo módulo en Configuración para escanear y depurar categorías/marcas vacías, ventas canceladas y productos obsoletos con protección antierrores. Además, el sistema recuerda exactamente tu página (ej: pág. 38), búsquedas y filtros al editar productos o volver.",
-    icon: "🧹",
+      "Las pantallas de pedidos y ventas pendientes ahora están unificadas. Puedes alternar al instante entre Todos, Pedidos y Ventas Mostrador con búsqueda en tiempo real, ordenamiento por deuda y liquidación rápida en modal.",
+    icon: "🗂️",
     isNew: true,
     type: "feature",
   },
   {
-    id: "2026-07-07-invoice-types-argentina",
-    date: "7 Jul 2026",
-    title: "🇦🇷 Facturación Tipo A, B, C y Comprobantes de Venta",
+    id: "2026-09-14-v2-7-extracto-contable-ledger",
+    date: "14 Sep 2026",
+    title: "📊 Extracto Contable (Debe / Haber / Saldo Acumulado)",
     description:
-      "Implementamos soporte completo de facturas fiscales según la normativa argentina. Ahora puedes crear Facturas A, B y C directamente desde la sección de Facturas, con discriminación de IVA por alícuotas en el PDF, buscador inteligente de ventas pendientes y numeración secuencial.",
-    icon: "🇦🇷",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2026-06-11-updates",
-    date: "11 Jun 2026",
-    title: "🔄 Gestión de Pagos, Cierre de Caja y Búsqueda de Clientes",
-    description:
-      "Agregamos soporte para cobros con Cheque en todas las secciones, eliminando 'Otros' y valores NaN del Cierre de Caja. Implementamos el flujo atómico para anular y editar cobros por UUID en cuentas corrientes. También mejoramos el buscador de clientes en Ventas y creamos la sección inicial para Listas de Precios.",
-    icon: "🔄",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2026-06-05-delivery-dates-pagination",
-    date: "5 Jun 2026",
-    title: "🗓️ Fechas de Entrega, Paginación y Control de Pedidos",
-    description:
-      "Ahora puedes programar la fecha de entrega al crear pedidos. Añadimos paginación en deudores e historial para optimizar el rendimiento móvil, y un menú de control en pedidos para anular o eliminar depurando saldos.",
-    icon: "🗓️",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2026-06-01-supplier-accounts-redesign",
-    date: "1 Jun 2026",
-    title: "📋 Rediseño de Cuentas y Deudas de Proveedores",
-    description:
-      "Nueva interfaz limpia con avatares, deudas dinámicas mediante indicadores de color y botones de acción rápidos simplificados para pantallas pequeñas.",
-    icon: "📋",
-    isNew: true,
-    type: "improvement",
-  },
-  {
-    id: "2026-06-01-cash-closings-automation",
-    date: "1 Jun 2026",
-    title: "💰 Arqueo y Conciliación de Cierre de Caja",
-    description:
-      "Optimización del arqueo de caja con cálculos automáticos de balances, ingresos y control rápido de discrepancias.",
-    icon: "💰",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2026-06-01-login-landing-overhaul",
-    date: "1 Jun 2026",
-    title: "🎨 Nuevo Acceso y Portal de Bienvenida",
-    description:
-      "Rediseño visual de las páginas de inicio y login bajo una estética moderna en modo oscuro, con efectos de vidrio translúcido y luces ambientales azules corporativas.",
-    icon: "🎨",
-    isNew: true,
-    type: "improvement",
-  },
-  {
-    id: "2026-05-27-purchase-orders-system",
-    date: "27 May 2026",
-    title: "🧾 Sistema de Órdenes de Compra",
-    description:
-      "En desarrollo activo: gestión completa de órdenes (Borrador → Enviada → Recibida), actualización automática de stock al recibir, PDFs profesionales, y próximamente WhatsApp, email y seguimiento de entregas.",
-    icon: "🧾",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2026-05-26-price-list-pdf",
-    date: "26 May 2026",
-    title: "🧾 Lista de Precios en PDF",
-    description:
-      "Ahora puedes seleccionar productos y generar una lista de precios en PDF para compartir con tus clientes.",
-    icon: "🧾",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-finance-module",
-    date: "11 Dic 2025",
-    title: "💰 Nuevo Módulo de Finanzas",
-    description:
-      "Control total de tu negocio: Visualiza Ingresos, Costos, Gastos y Ganancia Neta en tiempo real. Gestiona tus gastos operativos y toma decisiones basadas en datos reales.",
-    icon: "💰",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-barcode-printing",
-    date: "11 Dic 2025",
-    title: "🏷️ Impresión de Etiquetas",
-    description:
-      "Genera e imprime etiquetas con códigos de barra para tus productos. Compatible con impresoras de etiquetas y hojas A4. Organiza tu stock profesionalmente.",
-    icon: "🏷️",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-counter-receipts",
-    date: "11 Dic 2025",
-    title: "🧾 Tickets de Venta (Mostrador)",
-    description:
-      "Ahora puedes emitir comprobantes térmicos (80mm) o A4 para tus ventas de mostrador. Agiliza el cobro y entrega un comprobante profesional a tus clientes.",
-    icon: "🧾",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-product-costs",
-    date: "11 Dic 2025",
-    title: "📉 Gestión de Costos y Márgenes",
-    description:
-      "Agregamos el campo 'Costo' a tus productos. Ahora puedes ver el margen de ganancia exacto y calcular la rentabilidad real de cada venta.",
-    icon: "📉",
-    isNew: true,
-    type: "improvement",
-  },
-  {
-    id: "2025-12-11-settings-redesign",
-    date: "11 Dic 2025",
-    title: "⚙️ Nueva Configuración",
-    description:
-      "Panel de configuración rediseñado y organizado por pestañas. Personaliza tu negocio, controla la apariencia y gestiona tus preferencias más fácilmente.",
-    icon: "⚙️",
-    isNew: true,
-    type: "improvement",
-  },
-  {
-    id: "2025-12-11-remitos-deuda",
-    date: "11 Dic 2025",
-    title: "📄 Generación de Remitos de Saldo",
-    description:
-      "Nueva funcionalidad en el panel de Deudores: Ahora puedes generar y descargar remitos PDF específicamente para pedidos con saldo pendiente, facilitando el control de cuentas corrientes.",
-    icon: "📄",
-    isNew: true,
-    type: "feature",
-  },
-  {
-    id: "2025-12-11-visual-fixes",
-    date: "11 Dic 2025",
-    title: "🎨 Ajustes Visuales & Modo Oscuro",
-    description:
-      "Refinamiento visual en tablas, modales y botones. Se solucionaron problemas de contraste en modo oscuro para una experiencia más consistente en toda la aplicación.",
-    icon: "🎨",
-    isNew: false,
-    type: "fix",
-  },
-  {
-    id: "2025-12-11-sidebar-redesign",
-    date: "11 Dic 2025",
-    title: "🧭 Nueva Navegación Lateral",
-    description:
-      "Reemplazamos la barra superior por un Sidebar lateral más intuitivo y espacioso, mejorando la organización de los módulos y el acceso rápido a todas las funciones.",
-    icon: "🧭",
-    isNew: true,
-    type: "improvement",
-  },
-  {
-    id: "2025-12-08-dark-mode-complete",
-    date: "8 Dic 2025",
-    title: "🌙 Modo Oscuro Completo",
-    description:
-      "Implementación completa de dark mode en toda la aplicación. Todos los elementos, botones, inputs y gradientes ahora se adaptan perfectamente al tema oscuro.",
-    icon: "🌙",
-    isNew: false,
-    type: "improvement",
-  },
-  {
-    id: "2025-12-08-top-products-chart",
-    date: "8 Dic 2025",
-    title: "📊 Gráfico Top 10 Productos Corregido",
-    description:
-      "Corregido el gráfico de productos más vendidos con visualización vertical mejorada y colores optimizados para mejor visibilidad en ambos modos.",
+      "En la ficha de cada cliente, nuevo extracto contable cronológico con cálculo matemático exacto: Compras a crédito (Debe +), Pagos recibidos (Haber -) y Saldo Acumulado tras cada movimiento. Incluye tarjetas de resumen financiero y vista móvil adaptada.",
     icon: "📊",
-    isNew: false,
-    type: "fix",
+    isNew: true,
+    type: "feature",
+  },
+  {
+    id: "2026-09-14-v2-7-mobile-responsive-overhaul",
+    date: "14 Sep 2026",
+    title: "📱 Diseño 100% Responsivo en Móviles, Tablets y PC",
+    description:
+      "Toda la operativa de cuentas corrientes, formularios de cobro, tarjetas contables y botones de acción fueron adaptados para operar cómodamente con botones táctiles grandes desde cualquier smartphone sin cortes de pantalla.",
+    icon: "📱",
+    isNew: true,
+    type: "improvement",
   },
 ];
 

@@ -19,6 +19,7 @@ import {
 import RegisterPayment from "@/components/payments/RegisterPayment";
 import PaymentHistoryList from "@/components/payments/PaymentHistoryList";
 import ExportCustomerMovementsButton from "@/components/exports/ExportCustomerMovementsButton";
+import CustomerPendingVouchers, { PendingVoucher } from "@/components/customers/CustomerPendingVouchers";
 
 export const dynamic = "force-dynamic";
 
@@ -352,6 +353,23 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
+  const unifiedPendingVouchers: PendingVoucher[] = [
+    ...(ordersData || []).map((order) => ({
+      id: String(order.id),
+      type: "order" as const,
+      created_at: order.created_at,
+      total_amount: Number(order.total_amount || 0),
+      amount_pending: Number(order.amount_pending || 0),
+    })),
+    ...(salesData || []).map((sale) => ({
+      id: String(sale.id),
+      type: "sale" as const,
+      created_at: sale.created_at,
+      total_amount: Number(sale.total_amount || 0),
+      amount_pending: Number(sale.amount_pending || 0),
+    })),
+  ];
+
   return (
     <div className="p-6 bg-slate-50 dark:bg-slate-950 min-h-full text-slate-800 dark:text-slate-100">
       <div className="max-w-[1250px] mx-auto space-y-6">
@@ -418,7 +436,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
 
           {/* DEUDA ACUMULADA */}
           <div className="bg-slate-50/60 dark:bg-slate-950/20 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-center min-w-[220px] w-full md:w-auto">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Saldo Pendiente Cuenta</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Saldo en Cuenta Corriente (Fiado)</span>
             <span
               className={`text-2xl font-black mt-1 block ${
                 currentDebt > 0 ? "text-rose-600" : "text-emerald-600"
@@ -427,7 +445,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
               {formatCurrency(currentDebt)}
             </span>
             <span className="text-3xs text-slate-450 dark:text-slate-500 block mt-1">
-              {currentDebt > 0 ? "Posee facturación o pedidos impagos" : "Cuenta corriente al día"}
+              {currentDebt > 0 ? "Deuda consolidada (pedidos y mostrador)" : "Cuenta corriente al día"}
             </span>
           </div>
         </div>
@@ -436,101 +454,15 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
         {currentDebt > 0 && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
-              <FaMoneyBillWave className="text-emerald-500" /> Registrar Entrega de Pago
+              <FaMoneyBillWave className="text-emerald-500" /> Registrar Pago en Cuenta Corriente
             </h2>
             <RegisterPayment customerId={customer.id} currentDebt={currentDebt} />
           </div>
         )}
 
-        {/* PEDIDOS / VENTAS FIADAS (Solo si debe) */}
-        {currentDebt > 0 && (ordersData?.length > 0 || salesData?.length > 0) && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
-              <FaExclamationTriangle className="text-amber-500" /> Comprobantes con Saldo Pendiente
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              {/* Pedidos con Deuda */}
-              {ordersData && ordersData.length > 0 && (
-                <div className="space-y-2.5">
-                  <span className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block flex items-center gap-1">
-                    <FaShoppingCart className="text-amber-550 w-3 h-3" /> Pedidos Pendientes
-                  </span>
-                  
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                    {ordersData.map((order: any) => (
-                      <div
-                        key={order.id}
-                        className="bg-amber-50/30 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/30 rounded-xl p-3.5 flex justify-between items-center text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            Pedido #{order.id?.substring(0, 8)}
-                          </span>
-                          <span className="text-3xs text-slate-500 block mt-0.5">
-                            Fecha: {new Date(order.created_at).toLocaleDateString("es-AR")}
-                          </span>
-                          <Link
-                            href={`/dashboard/pedidos/${order.id}`}
-                            className="text-3xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline block mt-1.5"
-                          >
-                            Ver Detalles Pedido →
-                          </Link>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-500 block">Saldo</span>
-                          <span className="font-extrabold text-amber-600 block mt-0.5">
-                            {formatCurrency(order.amount_pending)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Ventas con Deuda */}
-              {salesData && salesData.length > 0 && (
-                <div className="space-y-2.5">
-                  <span className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block flex items-center gap-1">
-                    <FaFileInvoiceDollar className="text-rose-550 w-3 h-3" /> Cuenta Corriente (Ventas)
-                  </span>
-
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                    {salesData.map((sale: any) => (
-                      <div
-                        key={sale.id}
-                        className="bg-rose-50/30 dark:bg-rose-950/10 border border-rose-100/50 dark:border-rose-900/30 rounded-xl p-3.5 flex justify-between items-center text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            Venta #{sale.id?.substring(0, 8)}
-                          </span>
-                          <span className="text-3xs text-slate-500 block mt-0.5">
-                            Fecha: {new Date(sale.created_at).toLocaleDateString("es-AR")}
-                          </span>
-                          <Link
-                            href={`/dashboard/ventas/${sale.id}`}
-                            className="text-3xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline block mt-1.5"
-                          >
-                            Ver Comprobante Venta →
-                          </Link>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-500 block">Saldo</span>
-                          <span className="font-extrabold text-rose-600 block mt-0.5">
-                            {formatCurrency(sale.amount_pending)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
+        {/* COMPROBANTES CON SALDO PENDIENTE EN CUENTA CORRIENTE */}
+        {currentDebt > 0 && unifiedPendingVouchers.length > 0 && (
+          <CustomerPendingVouchers vouchers={unifiedPendingVouchers} />
         )}
 
         {/* HISTORIAL COMPLETO DE MOVIMIENTOS */}
