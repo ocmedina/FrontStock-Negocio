@@ -1,18 +1,14 @@
 import { createClient } from "@/lib/server";
 import Link from "next/link";
-import { Database } from "@/lib/database.types";
 import {
   FaBoxes,
   FaUsers,
   FaDolly,
   FaCashRegister,
   FaArrowRight,
-  FaStore,
-  FaTruck,
-  FaChartPie,
-  FaBalanceScale,
   FaTruckLoading,
 } from "react-icons/fa";
+import { Scale, Store, Truck, PieChart } from "lucide-react";
 import QuickActionsHeader from "@/components/QuickActionsHeader";
 import ChristmasCountdown from "@/components/ChristmasCountdown";
 import WelcomeModal from "@/components/WelcomeModal";
@@ -132,11 +128,11 @@ async function getDashboardData() {
     supabase
       .from("products")
       .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
+      .eq("is_active" as any, true),
     supabase
       .from("customers")
       .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
+      .eq("is_active" as any, true),
     supabase
       .from("orders" as any)
       .select("id", { count: "exact", head: true }),
@@ -160,7 +156,7 @@ async function getDashboardData() {
     supabase
       .from("products")
       .select("name, stock, id")
-      .eq("is_active", true)
+      .eq("is_active" as any, true)
       .lte("stock", 5)
       .order("stock", { ascending: true })
       .limit(5),
@@ -370,167 +366,188 @@ export default async function DashboardPage() {
       <QuickActionsHeader />
 
       {/* Balance: Ventas Local vs Reparto */}
-      <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-purple-950/30 dark:via-blue-950/30 dark:to-cyan-950/30 p-6 rounded-2xl shadow-lg border border-purple-200 dark:border-purple-900">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
-            <FaBalanceScale className="text-white text-xl" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100">
-              Balance de Ventas del Mes
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-slate-300">{currentMonth}</p>
-          </div>
-        </div>
+      {(() => {
+        const grandTotal = totalSales + totalOrderSales;
+        const localPct = grandTotal > 0 ? (totalSales / grandTotal) * 100 : 0;
+        const orderPct = grandTotal > 0 ? (totalOrderSales / grandTotal) * 100 : 0;
+        const diff = Math.abs(totalSales - totalOrderSales);
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Ventas Local */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-md border-2 border-green-200 dark:border-green-900">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                <FaStore className="text-green-600 dark:text-green-400 text-lg" />
+        return (
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
+            {/* Header con título y pill de estado */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+                    Balance de Ventas del Mes
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+                    {currentMonth}
+                  </p>
+                </div>
               </div>
-              <h4 className="font-bold text-gray-800 dark:text-slate-100">Ventas Local</h4>
-            </div>
-            <p className="text-3xl font-bold text-green-600 mb-2">
-              $
-              {totalSales.toLocaleString("es-AR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-300 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 h-full rounded-full"
-                  style={{
-                    width: `${totalSales + totalOrderSales > 0
-                      ? (totalSales / (totalSales + totalOrderSales)) * 100
-                      : 0
-                      }%`,
-                  }}
-                />
-              </div>
-              <span className="text-sm font-bold text-gray-700 dark:text-slate-200">
-                {totalSales + totalOrderSales > 0
-                  ? (
-                    (totalSales / (totalSales + totalOrderSales)) *
-                    100
-                  ).toFixed(1)
-                  : 0}
-                %
-              </span>
-            </div>
-          </div>
 
-          {/* Ventas Reparto */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-md border-2 border-blue-200 dark:border-blue-900">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                <FaTruck className="text-blue-600 dark:text-blue-400 text-lg" />
-              </div>
-              <h4 className="font-bold text-gray-800 dark:text-slate-100">Ventas Reparto</h4>
-            </div>
-            <p className="text-3xl font-bold text-blue-600 mb-2">
-              $
-              {totalOrderSales.toLocaleString("es-AR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-300 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full"
-                  style={{
-                    width: `${totalSales + totalOrderSales > 0
-                      ? (totalOrderSales / (totalSales + totalOrderSales)) *
-                      100
-                      : 0
-                      }%`,
-                  }}
-                />
-              </div>
-              <span className="text-sm font-bold text-gray-700 dark:text-slate-200">
-                {totalSales + totalOrderSales > 0
-                  ? (
-                    (totalOrderSales / (totalSales + totalOrderSales)) *
-                    100
-                  ).toFixed(1)
-                  : 0}
-                %
-              </span>
-            </div>
-          </div>
-
-          {/* Total Combinado */}
-          <div className="bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl p-5 shadow-md text-white">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-lg flex items-center justify-center">
-                <FaChartPie className="text-purple-600 text-lg" />
-              </div>
-              <h4 className="font-bold">Total General</h4>
-            </div>
-            <p className="text-3xl font-bold mb-2">
-              $
-              {(totalSales + totalOrderSales).toLocaleString("es-AR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-1">
-                <FaStore className="text-xs" />
-                {totalSales > 0
-                  ? Math.round(
-                    (totalSales / (totalSales + totalOrderSales)) * 100
-                  )
-                  : 0}
-                %
-              </span>
-              <span>+</span>
-              <span className="flex items-center gap-1">
-                <FaTruck className="text-xs" />
-                {totalOrderSales > 0
-                  ? Math.round(
-                    (totalOrderSales / (totalSales + totalOrderSales)) * 100
-                  )
-                  : 0}
-                %
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Indicador de dominancia */}
-        {totalSales + totalOrderSales > 0 && (
-          <div className="mt-4 p-4 bg-white dark:bg-slate-900 rounded-xl border border-purple-200 dark:border-purple-900">
-            <p className="text-sm text-gray-700 dark:text-slate-300">
-              <span className="font-bold">
-                {totalSales > totalOrderSales ? (
-                  <span className="text-green-600">
-                    🏪 Las ventas locales dominan este mes
+              {grandTotal > 0 && (
+                <div className="inline-flex items-center self-start sm:self-auto gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      totalSales > totalOrderSales
+                        ? "bg-emerald-500"
+                        : totalOrderSales > totalSales
+                        ? "bg-blue-500"
+                        : "bg-slate-400"
+                    }`}
+                  />
+                  <span>
+                    {totalSales > totalOrderSales ? (
+                      <>
+                        Mayor volumen en <span className="font-semibold text-slate-800 dark:text-slate-200">Local</span> (+${diff.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </>
+                    ) : totalOrderSales > totalSales ? (
+                      <>
+                        Mayor volumen en <span className="font-semibold text-slate-800 dark:text-slate-200">Reparto</span> (+${diff.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </>
+                    ) : (
+                      "Ventas 50/50 equilibradas"
+                    )}
                   </span>
-                ) : totalOrderSales > totalSales ? (
-                  <span className="text-blue-600">
-                    🚚 Las ventas de reparto dominan este mes
+                </div>
+              )}
+            </div>
+
+            {/* 3 Tarjetas Minimalistas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-5">
+              {/* Tarjeta Ventas Local */}
+              <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-xl p-4 sm:p-5 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        <Store className="w-3.5 h-3.5" />
+                      </span>
+                      Ventas Local
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">
+                      {localPct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <p className="text-2xl sm:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-3 tabular-nums">
+                    $
+                    {totalSales.toLocaleString("es-AR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <div className="h-1.5 w-full bg-slate-200/80 dark:bg-slate-700/60 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${localPct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarjeta Ventas Reparto */}
+              <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-xl p-4 sm:p-5 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        <Truck className="w-3.5 h-3.5" />
+                      </span>
+                      Ventas Reparto
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/40">
+                      {orderPct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <p className="text-2xl sm:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-3 tabular-nums">
+                    $
+                    {totalOrderSales.toLocaleString("es-AR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <div className="h-1.5 w-full bg-slate-200/80 dark:bg-slate-700/60 rounded-full overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${orderPct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarjeta Total General */}
+              <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-xl p-4 sm:p-5 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      <span className="p-1.5 rounded-lg bg-slate-200/70 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300">
+                        <PieChart className="w-3.5 h-3.5" />
+                      </span>
+                      Total General
+                    </span>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50">
+                      100%
+                    </span>
+                  </div>
+                  <p className="text-2xl sm:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-3 tabular-nums">
+                    $
+                    {grandTotal.toLocaleString("es-AR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    Local {Math.round(localPct)}%
                   </span>
-                ) : (
-                  <span className="text-purple-600">
-                    ⚖️ Las ventas están equilibradas
+                  <span className="text-slate-300 dark:text-slate-600 font-light">+</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                    Reparto {Math.round(orderPct)}%
                   </span>
-                )}
-              </span>
-              {" - "}
-              Diferencia: $
-              {Math.abs(totalSales - totalOrderSales).toLocaleString("es-AR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de proporción combinada */}
+            {grandTotal > 0 && (
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-500 dark:text-slate-400 mb-2">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    Proporción de Facturación
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+                    {localPct.toFixed(1)}% Local vs {orderPct.toFixed(1)}% Reparto
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex gap-0.5">
+                  <div
+                    className="bg-emerald-500 h-full rounded-l-full transition-all duration-500"
+                    style={{ width: `${localPct}%` }}
+                    title={`Ventas Local: ${localPct.toFixed(1)}%`}
+                  />
+                  <div
+                    className="bg-blue-500 h-full rounded-r-full transition-all duration-500"
+                    style={{ width: `${orderPct}%` }}
+                    title={`Ventas Reparto: ${orderPct.toFixed(1)}%`}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Deudas: Clientes + Proveedores */}
       {(totalDebt > 0 || totalSupplierDebt > 0) && (
