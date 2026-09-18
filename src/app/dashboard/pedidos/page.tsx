@@ -36,6 +36,7 @@ import {
 import toast from "react-hot-toast";
 import OrderStatusChanger from "@/components/OrderStatusChanger";
 import PDFDownloadButton from "@/components/pdf/PDFDownloadButton";
+import OrderDetailsModal, { type FullOrderDetails } from "./components/OrderDetailsModal";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -65,35 +66,10 @@ type OrderRow = {
   order_items: OrderItemRow[];
 };
 
-type FullOrderDetails = {
-  id: string;
-  created_at: string;
-  total_amount: number;
-  status: string;
-  customers: {
-    id: string;
-    full_name: string;
-    phone?: string | null;
-    address?: string | null;
-    email?: string | null;
-    customer_type?: string;
-    delivery_day?: string | null;
-  };
-  order_items: {
-    id: string;
-    quantity: number;
-    price: number;
-    products: {
-      name: string;
-      sku?: string | null;
-    } | null;
-  }[];
-};
-
 const STATUS_CONFIG = {
   todos: {
     label: "Todos",
-    color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-750",
+    color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-700",
     activeColor: "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 font-semibold shadow-sm",
   },
   pendiente: {
@@ -132,265 +108,6 @@ const DAYS_OF_WEEK = [
   "Sábado",
   "Domingo",
 ];
-
-// --- Modal de Detalles del Pedido ---
-function OrderDetailsModal({
-  isOpen,
-  onClose,
-  orderId,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  orderId: string | null;
-}) {
-  const [orderData, setOrderData] = useState<FullOrderDetails | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isOpen && orderId) {
-      setLoading(true);
-      const fetchFullOrder = async () => {
-        try {
-          const { data: order, error } = await supabase
-            .from("orders")
-            .select("*, customers(*), order_items(*, products(*))")
-            .eq("id", orderId)
-            .single();
-
-          if (error) throw error;
-          if (order) {
-            setOrderData(order as FullOrderDetails);
-          }
-        } catch (error: any) {
-          toast.error("No se pudieron cargar los datos del pedido.");
-          console.error(error);
-          onClose();
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchFullOrder();
-    }
-  }, [isOpen, orderId, onClose]);
-
-  if (!isOpen) return null;
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      { label: string; color: string; icon: React.ReactNode }
-    > = {
-      pendiente: {
-        label: "Pendiente",
-        color: "bg-amber-50 text-amber-705 border-amber-200/30 dark:bg-amber-950/20 dark:text-amber-400",
-        icon: <FaClock className="w-2.5 h-2.5" />,
-      },
-      confirmado: {
-        label: "Confirmado",
-        color: "bg-sky-50 text-sky-705 border-sky-200/30 dark:bg-sky-950/20 dark:text-sky-400",
-        icon: <FaCheckCircle className="w-2.5 h-2.5" />,
-      },
-      enviado: {
-        label: "Enviado",
-        color: "bg-purple-50 text-purple-705 border-purple-200/30 dark:bg-purple-950/20 dark:text-purple-400",
-        icon: <FaTruck className="w-2.5 h-2.5" />,
-      },
-      entregado: {
-        label: "Entregado",
-        color: "bg-emerald-50 text-emerald-705 border-emerald-200/30 dark:bg-emerald-950/20 dark:text-emerald-400",
-        icon: <FaCheckCircle className="w-2.5 h-2.5" />,
-      },
-      cancelado: {
-        label: "Cancelado",
-        color: "bg-rose-50 text-rose-705 border-rose-200/30 dark:bg-rose-950/20 dark:text-rose-400",
-        icon: <FaBan className="w-2.5 h-2.5" />,
-      },
-    };
-
-    const config = statusConfig[status] || statusConfig.pendiente;
-
-    return (
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${config.color}`}
-      >
-        {config.icon} {config.label}
-      </span>
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg max-w-xl w-full max-h-[85vh] flex flex-col border border-slate-200/20 animate-fadeIn">
-        <div className="bg-slate-900 dark:bg-slate-950 px-5 py-4 rounded-t-xl flex justify-between items-center text-white">
-          <h2 className="text-sm font-bold flex items-center gap-1.5">
-            <FaInfoCircle /> Detalle de Pedido
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1 transition-all"
-            id="btn-close-details-modal"
-          >
-            <FaTimes size={14} />
-          </button>
-        </div>
-
-        <div className="p-5 flex-1 overflow-y-auto space-y-4">
-          {loading || !orderData ? (
-            <div className="flex flex-col items-center justify-center h-48">
-              <FaSpinner className="animate-spin text-2xl text-slate-500 mb-2" />
-              <p className="text-xs text-slate-500">Cargando...</p>
-            </div>
-          ) : (
-            <div className="space-y-4 text-xs">
-              {/* Info General */}
-              <div className="bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-850">
-                <div className="flex items-center justify-between mb-2 border-b border-slate-250/20 dark:border-slate-800/80 pb-1.5">
-                  <h3 className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
-                    Pedido
-                  </h3>
-                  {getStatusBadge(orderData.status)}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-slate-400 mb-0.5">ID Interno</p>
-                    <p className="font-mono font-bold text-slate-800 dark:text-slate-250">
-                      #{orderData.id.slice(0, 8)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-0.5">Fecha Registro</p>
-                    <p className="font-semibold text-slate-800 dark:text-slate-255">
-                      {new Date(orderData.created_at).toLocaleDateString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-slate-400 mb-1">Medio de Pago</p>
-                    {(orderData as any).payment_method === "fiado" ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200/50 dark:bg-orange-950/20 dark:text-orange-400">
-                        <FaFileInvoice className="w-2.5 h-2.5" /> Cta. Cte. (Fiado)
-                      </span>
-                    ) : (orderData as any).payment_method === "transferencia" ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400">
-                        <FaDollarSign className="w-2.5 h-2.5" /> Transferencia
-                      </span>
-                    ) : (orderData as any).payment_method === "mixto" ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200/50 dark:bg-purple-950/20 dark:text-purple-400">
-                        <FaExchangeAlt className="w-2.5 h-2.5" /> Pago Mixto
-                      </span>
-                    ) : (orderData as any).payment_method === "cheque" ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-50 text-yellow-700 border border-yellow-200/50 dark:bg-yellow-950/20 dark:text-yellow-400">
-                        <FaMoneyBillWave className="w-2.5 h-2.5" /> Cheque
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-950/20 dark:text-emerald-400">
-                        <FaMoneyBillWave className="w-2.5 h-2.5" /> Efectivo
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Cliente */}
-              <div className="bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-850">
-                <h3 className="font-bold text-[10px] uppercase tracking-wider text-slate-400 mb-2 border-b border-slate-250/20 dark:border-slate-800/80 pb-1.5">
-                  Cliente
-                </h3>
-                <div className="space-y-1">
-                  <p className="font-bold text-slate-850 dark:text-slate-100">
-                    {orderData.customers.full_name}
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-[10px] text-slate-500 pt-0.5">
-                    {orderData.customers.phone && <span>Tel: {orderData.customers.phone}</span>}
-                    {orderData.customers.address && <span>Dirección: {orderData.customers.address}</span>}
-                    {orderData.customers.delivery_day && (
-                      <span className="font-semibold text-indigo-650 dark:text-indigo-400">
-                        Reparto: {orderData.customers.delivery_day}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Artículos */}
-              <div className="space-y-1.5">
-                <h3 className="font-bold text-[10px] uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <FaBox className="w-2.5 h-2.5" /> Artículos ({orderData.order_items.length})
-                </h3>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  {orderData.order_items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between items-center p-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-lg text-2xs"
-                    >
-                      <div>
-                        <p className="font-bold text-slate-800 dark:text-slate-200">
-                          {item.products?.name || "Artículo sin nombre"}
-                        </p>
-                        <p className="text-slate-400 mt-0.5">
-                          Cant: <span className="font-bold text-slate-805 dark:text-slate-205">{item.quantity}</span>
-                        </p>
-                      </div>
-                      <div className="text-right font-semibold">
-                        <p className="text-slate-400">Unit: ${item.price.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</p>
-                        <p className="font-bold text-slate-850 dark:text-slate-100 mt-0.5">
-                          ${(item.price * item.quantity).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Caja de Totales */}
-              <div className="bg-slate-950 dark:bg-black text-white rounded-xl p-3 space-y-1.5">
-                <div className="flex justify-between items-center text-2xs opacity-80 border-b border-white/10 pb-1">
-                  <span>Importe Facturado:</span>
-                  <span className="font-bold">${orderData.total_amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-                </div>
-                
-                {(orderData as any).amount_paid !== undefined && (
-                  <div className="space-y-1 text-2xs">
-                    <div className="flex justify-between items-center opacity-70">
-                      <span>Monto Entregado:</span>
-                      <span>${((orderData as any).amount_paid || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    {((orderData as any).amount_pending || 0) > 0 ? (
-                      <div className="flex justify-between items-center text-amber-400 font-bold border-t border-white/5 pt-1">
-                        <span>Saldo Pendiente:</span>
-                        <span>${((orderData as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center text-emerald-400 font-semibold border-t border-white/5 pt-1">
-                        <span>Estado de cuenta:</span>
-                        <span>Totalmente Pagado</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 rounded-b-xl">
-          <button
-            id="btn-close-details-modal-footer"
-            onClick={onClose}
-            className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-bold rounded-lg transition-colors"
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // --- Modal de REMITO PDF ---
 function RemitoModal({
@@ -432,21 +149,28 @@ function RemitoModal({
                 supabase
                   .from("sales")
                   .select("amount_pending, payment_method, is_cancelled")
-                  .eq("customer_id", customerId)
+                  .eq("customer_id", customerId),
               ]);
 
               const ordersDebt = (ordersRes.data || [])
-                .filter((o: any) => o.status !== "cancelado" && Number(o.amount_pending || 0) > 0)
+                .filter(
+                  (o: any) =>
+                    o.status !== "cancelado" && Number(o.amount_pending || 0) > 0
+                )
                 .reduce((s: number, o: any) => s + Number(o.amount_pending), 0);
 
               const salesDebt = (salesRes.data || [])
                 .filter(
                   (sv: any) =>
                     !sv.is_cancelled &&
-                    (sv.payment_method || "").toLowerCase() === "cuenta_corriente" &&
+                    (sv.payment_method || "").toLowerCase() ===
+                      "cuenta_corriente" &&
                     Number(sv.amount_pending || 0) > 0
                 )
-                .reduce((s: number, sv: any) => s + Number(sv.amount_pending), 0);
+                .reduce(
+                  (s: number, sv: any) => s + Number(sv.amount_pending),
+                  0
+                );
 
               realDebt = ordersDebt + salesDebt;
             } catch (debtErr) {
@@ -456,7 +180,7 @@ function RemitoModal({
             setOrderData({
               ...order,
               customers: { ...order.customers, realDebt },
-            } as FullOrderDetails);
+            } as unknown as FullOrderDetails);
           }
         } catch (error: any) {
           toast.error("No se pudieron cargar los datos del remito.");
@@ -473,68 +197,85 @@ function RemitoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg max-w-sm w-full border border-slate-200/20 animate-fadeIn">
-        <div className="bg-slate-900 dark:bg-slate-950 px-5 py-4 rounded-t-xl flex justify-between items-center text-white">
-          <h2 className="text-xs font-bold flex items-center gap-1.5">
-            <FaPrint /> Generar Remito PDF
-          </h2>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full border border-slate-200/80 dark:border-slate-800 overflow-hidden animate-scaleIn">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/80">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <FaPrint className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-white">
+                Generar Remito PDF
+              </h2>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Impresión o exportación digital
+              </p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="text-white/80 hover:text-white rounded-lg p-1 hover:bg-white/10"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             id="btn-close-remito-modal"
           >
-            <FaTimes size={14} />
+            <FaTimes className="w-3.5 h-3.5" />
           </button>
         </div>
         <div className="p-5 space-y-4">
           {loading || !orderData ? (
-            <div className="flex flex-col items-center justify-center h-28">
-              <FaSpinner className="animate-spin text-xl text-slate-500 mb-1" />
-              <p className="text-2xs text-slate-500">Cargando...</p>
+            <div className="flex flex-col items-center justify-center py-10 space-y-2">
+              <FaSpinner className="animate-spin text-2xl text-indigo-600 dark:text-indigo-400" />
+              <p className="text-xs text-slate-500 dark:text-slate-400">Cargando...</p>
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-2xs text-slate-500 text-center leading-normal">
-                Exporta el remito comercial de <span className="font-bold text-slate-850 dark:text-white">{orderData.customers.full_name}</span>.
-              </p>
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Cliente: <strong className="text-slate-900 dark:text-white font-bold">{orderData.customers.full_name}</strong>
+                </p>
+                <p className="text-[11px] font-mono text-slate-500 mt-0.5">
+                  Pedido #{orderData.id.slice(0, 8).toUpperCase()}
+                </p>
+              </div>
 
               {/* Formato */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Formato de Salida
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setPrintFormat("thermal")}
-                    className={`p-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-0.5 ${
+                    className={`p-3 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 ${
                       printFormat === "thermal"
-                        ? "border-blue-500 bg-blue-50/10 text-blue-600 dark:text-blue-400"
-                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500"
+                        ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-300"
                     }`}
                   >
-                    <span className="text-xs font-bold">Ticket Térmico (80mm)</span>
+                    <span className="text-xs font-bold">Ticket Térmico</span>
+                    <span className="text-[10px] opacity-70">80 mm</span>
                   </button>
                   <button
                     onClick={() => setPrintFormat("A4")}
-                    className={`p-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-0.5 ${
+                    className={`p-3 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 ${
                       printFormat === "A4"
-                        ? "border-blue-500 bg-blue-50/10 text-blue-600 dark:text-blue-400"
-                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500"
+                        ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:border-slate-300"
                     }`}
                   >
-                    <span className="text-xs font-bold">Hoja A4 Estándar</span>
+                    <span className="text-xs font-bold">Hoja A4</span>
+                    <span className="text-[10px] opacity-70">Estándar</span>
                   </button>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-850 space-y-1.5">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
                 <PDFDownloadButton orderData={orderData} printFormat={printFormat} />
                 
                 <button
                   id="btn-close-remito-footer"
                   onClick={onClose}
-                  className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors"
+                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
@@ -871,6 +612,12 @@ export default function OrdersPage() {
         isOpen={isOrderDetailsModalOpen}
         onClose={() => setIsOrderDetailsModalOpen(false)}
         orderId={selectedOrderIdForDetails}
+        onOrderUpdated={fetchOrders}
+        onOpenRemito={(orderId) => {
+          setIsOrderDetailsModalOpen(false);
+          setSelectedOrderIdForRemito(orderId);
+          setIsRemitoModalOpen(true);
+        }}
       />
 
       <RemitoModal
@@ -881,7 +628,7 @@ export default function OrdersPage() {
 
       {/* Modal de Anulación / Eliminación Directa */}
       {showAccionModal && pedidoAccion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200/60 dark:border-slate-800/80 shadow-2xl p-6 space-y-6 animate-scaleIn">
             <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800/60 pb-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-500/20">
@@ -899,14 +646,14 @@ export default function OrdersPage() {
 
             <div className="space-y-2 text-xs">
               <p className="text-slate-600 dark:text-slate-300">
-                Selecciona la acción para el pedido de <strong className="text-slate-800 dark:text-white">{pedidoAccion.customers?.full_name ?? "Sin cliente"}</strong> por un total de <strong className="text-indigo-650 dark:text-indigo-400">${pedidoAccion.total_amount?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>:
+                Selecciona la acción para el pedido de <strong className="text-slate-800 dark:text-white">{pedidoAccion.customers?.full_name ?? "Sin cliente"}</strong> por un total de <strong className="text-indigo-600 dark:text-indigo-400">${pedidoAccion.total_amount?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>:
               </p>
               
               <div className="bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3.5 mt-2 space-y-1">
                 <p className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-wider">
                   Nota de Cuenta Corriente
                 </p>
-                <p className="text-[10px] text-amber-700 dark:text-amber-450 leading-relaxed">
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
                   Cualquier saldo pendiente o movimiento en cuenta corriente asociado a este pedido será automáticamente cancelado.
                 </p>
               </div>
@@ -916,7 +663,7 @@ export default function OrdersPage() {
               {/* Opción 1: Anular */}
               <button
                 onClick={() => handleAnularPedido(pedidoAccion)}
-                className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-550/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
               >
                 <FaBan className="w-3.5 h-3.5" /> Anular Pedido (Marcar como Cancelado)
               </button>
@@ -970,14 +717,14 @@ export default function OrdersPage() {
           <Link
             id="btn-pedidos-pendientes"
             href="/dashboard/pedidos/pendientes"
-            className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 text-amber-700 dark:text-amber-450 border border-amber-500/20 rounded-xl transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-2xs"
+            className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 text-amber-700 dark:text-amber-400 border border-amber-500/20 rounded-xl transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-2xs"
           >
             <FaClock className="w-3.5 h-3.5" /> Saldos Pendientes
           </Link>
           <Link
             id="btn-nuevo-pedido-header"
             href="/dashboard/pedidos/nuevo"
-            className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-650 text-white rounded-xl transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md hover:-translate-y-0.5"
+            className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md hover:-translate-y-0.5"
           >
             <FaPlus className="w-3.5 h-3.5" /> Registrar Pedido
           </Link>
@@ -1049,7 +796,7 @@ export default function OrdersPage() {
           <div className="flex items-start justify-between gap-3 relative z-10">
             <div>
               <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">En Viaje</p>
-              <p className="text-xl md:text-2xl font-black text-sky-600 dark:text-sky-450 leading-none">
+              <p className="text-xl md:text-2xl font-black text-sky-600 dark:text-sky-400 leading-none">
                 {deliveryStats.dispatchedCount}
               </p>
               <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-2">
@@ -1104,7 +851,7 @@ export default function OrdersPage() {
         {/* Inputs de Filtros */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-450 text-xs" />
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
             <input
               id="input-buscar-cliente-pedidos"
               type="text"
@@ -1158,7 +905,7 @@ export default function OrdersPage() {
           Mostrando <span className="font-bold text-slate-900 dark:text-white">{orders.length}</span> de <span className="font-bold text-indigo-600 dark:text-indigo-400">{totalCount}</span> pedidos registrados.
         </span>
         {hasActiveFilters && (
-          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-550/20">
+          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
             Filtros Activos
           </span>
         )}
@@ -1168,7 +915,7 @@ export default function OrdersPage() {
       <div className="hidden lg:block bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-            <thead className="bg-slate-50/60 dark:bg-slate-900/60 text-slate-455 dark:text-slate-400">
+            <thead className="bg-slate-50/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-6 py-4 text-left font-black uppercase tracking-wider">Fecha Entrega</th>
                 <th className="px-6 py-4 text-left font-black uppercase tracking-wider">Cliente</th>
@@ -1193,7 +940,7 @@ export default function OrdersPage() {
                 <tr>
                   <td colSpan={7} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
-                      <FaInbox className="text-3xl text-slate-350" />
+                      <FaInbox className="text-3xl text-slate-400" />
                       <span className="text-slate-700 font-bold text-sm">No se encontraron pedidos</span>
                       {hasActiveFilters ? (
                         <button
@@ -1219,7 +966,7 @@ export default function OrdersPage() {
                     key={order.id}
                     className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-slate-605 dark:text-slate-300 font-bold font-mono">
+                    <td className="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-300 font-bold font-mono">
                       {new Date(order.created_at).toLocaleDateString("es-AR", {
                         day: "2-digit",
                         month: "2-digit",
@@ -1246,7 +993,7 @@ export default function OrdersPage() {
                         }) ?? "0.00"}
                       </span>
                       {((order as any).amount_pending || 0) > 0 && (
-                        <span className="text-[10px] text-rose-600 dark:text-rose-405 block font-bold mt-0.5">
+                        <span className="text-[10px] text-rose-600 dark:text-rose-400 block font-bold mt-0.5">
                           Pendiente: ${((order as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                         </span>
                       )}
@@ -1285,7 +1032,7 @@ export default function OrdersPage() {
                             setSelectedOrderIdForDetails(order.id);
                             setIsOrderDetailsModalOpen(true);
                           }}
-                          className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/50 dark:border-slate-700/80 transition-all"
+                          className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/50 dark:border-slate-700/80 transition-all"
                           title="Ver resumen"
                         >
                           <FaEye className="w-3.5 h-3.5" />
@@ -1296,7 +1043,7 @@ export default function OrdersPage() {
                             setSelectedOrderIdForRemito(order.id);
                             setIsRemitoModalOpen(true);
                           }}
-                          className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-350 rounded-xl border border-slate-200/50 dark:border-slate-700/80 transition-all"
+                          className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-400 rounded-xl border border-slate-200/50 dark:border-slate-700/80 transition-all"
                           title="Exportar remito"
                         >
                           <FaPrint className="w-3.5 h-3.5" />
@@ -1304,7 +1051,7 @@ export default function OrdersPage() {
                         <Link
                           id={`link-detalle-completo-${order.id}`}
                           href={`/dashboard/pedidos/${order.id}`}
-                          className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-650 hover:text-white dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-600 rounded-xl border border-indigo-500/20 transition-all"
+                          className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:text-white dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-600 rounded-xl border border-indigo-500/20 transition-all"
                         >
                           Detalle
                         </Link>
@@ -1313,7 +1060,7 @@ export default function OrdersPage() {
                             setPedidoAccion(order);
                             setShowAccionModal(true);
                           }}
-                          className="p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/20 dark:hover:bg-rose-900/35 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20 transition-all"
+                          className="p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/35 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20 transition-all"
                           title="Anular o eliminar pedido"
                         >
                           <FaTrash className="w-3.5 h-3.5" />
@@ -1332,12 +1079,12 @@ export default function OrdersPage() {
       <div className="lg:hidden space-y-4">
         {loading ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-10 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-650 border-t-transparent mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent mx-auto"></div>
             <span className="text-xs font-bold text-slate-500 mt-2 block">Cargando pedidos...</span>
           </div>
         ) : orders.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl p-10 text-center space-y-3">
-            <FaBoxOpen className="text-4xl text-slate-300 dark:text-slate-650 mx-auto" />
+            <FaBoxOpen className="text-4xl text-slate-300 dark:text-slate-400 mx-auto" />
             <p className="text-xs font-bold text-slate-500">No se encontraron resultados.</p>
           </div>
         ) : (
@@ -1355,7 +1102,7 @@ export default function OrdersPage() {
                       year: "numeric",
                     })}
                   </span>
-                  <h3 className="font-extrabold text-sm text-slate-850 dark:text-white">
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
                     {order.customers?.full_name ?? "Sin cliente"}
                   </h3>
                   {order.customers?.delivery_day && (
@@ -1390,8 +1137,8 @@ export default function OrdersPage() {
                 </div>
                 {((order as any).amount_pending || 0) > 0 && (
                   <div>
-                    <span className="text-[9px] font-bold text-rose-505 uppercase tracking-wider block">Saldo Pendiente</span>
-                    <span className="text-xs font-black text-rose-600 dark:text-rose-405 block mt-0.5">
+                    <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wider block">Saldo Pendiente</span>
+                    <span className="text-xs font-black text-rose-600 dark:text-rose-400 block mt-0.5">
                       ${((order as any).amount_pending || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -1416,14 +1163,14 @@ export default function OrdersPage() {
                     setSelectedOrderIdForRemito(order.id);
                     setIsRemitoModalOpen(true);
                   }}
-                  className="py-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-350 rounded-xl border border-slate-200/50 dark:border-slate-700/80 flex items-center justify-center gap-1"
+                  className="py-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-400 rounded-xl border border-slate-200/50 dark:border-slate-700/80 flex items-center justify-center gap-1"
                 >
                   <FaPrint /> Remito
                 </button>
                 <Link
                   id={`btn-mobile-detail-${order.id}`}
                   href={`/dashboard/pedidos/${order.id}`}
-                  className="py-2.5 bg-indigo-50 text-indigo-650 dark:bg-indigo-900/20 dark:text-indigo-400 rounded-xl text-[10px] font-black border border-indigo-500/20 text-center block"
+                  className="py-2.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 rounded-xl text-[10px] font-black border border-indigo-500/20 text-center block"
                 >
                   Completo
                 </Link>
@@ -1432,7 +1179,7 @@ export default function OrdersPage() {
                     setPedidoAccion(order);
                     setShowAccionModal(true);
                   }}
-                  className="py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/20 text-[10px] font-black text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20 flex items-center justify-center gap-0.5"
+                  className="py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-[10px] font-black text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20 flex items-center justify-center gap-0.5"
                   title="Anular o eliminar pedido"
                 >
                   <FaTrash className="w-3 h-3" /> Anular
