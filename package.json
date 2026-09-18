@@ -43,7 +43,7 @@
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.22",
-    "baseline-browser-mapping": "^2.11.25",
+    "baseline-browser-mapping": "^2.10.19",
     "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
