@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { formatCurrency } from "@/lib/numberFormat";
 import toast from "react-hot-toast";
-import { FaUser, FaShoppingCart, FaMoneyBillWave, FaSearch } from "react-icons/fa";
+import { FaUser, FaShoppingCart, FaMoneyBillWave, FaSearch, FaPrint, FaCog } from "react-icons/fa";
 import { useVoucher } from "@/hooks/useVoucher";
 
 import {
@@ -25,6 +25,12 @@ import ShortcutsBar from "./components/ShortcutsBar";
 import { getAppliedPromotion } from "@/lib/promotions";
 import { useRegister } from "@/hooks/useRegister";
 import ActiveRegisterBadge from "@/components/ActiveRegisterBadge";
+import QuickShiftAction from "./components/QuickShiftAction";
+import TerminalPrinterModal from "./components/TerminalPrinterModal";
+import SaleTicketModal from "../components/SaleTicketModal";
+import { useRealtimeProductStock } from "@/hooks/useRealtimeProductStock";
+import { useGlobalBarcodeScanner } from "@/hooks/useGlobalBarcodeScanner";
+import { getTerminalPrinterSettings } from "@/lib/printerSettings";
 
 export default function NewSalePage() {
   const { activeRegister } = useRegister();
@@ -32,6 +38,9 @@ export default function NewSalePage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [isPrinterModalOpen, setIsPrinterModalOpen] = useState(false);
 
   // Sistema de pestañas
   const [tabs, setTabs] = useState<SaleTab[]>([
@@ -530,6 +539,74 @@ export default function NewSalePage() {
     [cart, selectedCustomer]
   );
 
+  // Escáner de código de barras global por hardware (pistola USB / Bluetooth)
+  const handleBarcodeScanned = useCallback(
+    async (barcode: string) => {
+      try {
+        const cleanCode = barcode.trim();
+        // 1. Buscar coincidencia exacta por SKU
+        const { data: exactMatch } = await supabase
+          .from("products")
+          .select("*")
+          .eq("sku", cleanCode)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (exactMatch) {
+          handleAddProduct(exactMatch);
+          toast.success(`✓ ${exactMatch.name} escaneado`, { id: `scan-${cleanCode}` });
+          return;
+        }
+
+        // 2. Búsqueda secundaria si el código tiene ceros o similitud
+        const { data: similar } = await supabase
+          .from("products")
+          .select("*")
+          .or(`sku.ilike.%${cleanCode}%,name.ilike.%${cleanCode}%`)
+          .eq("is_active", true)
+          .limit(2);
+
+        if (similar && similar.length === 1) {
+          handleAddProduct(similar[0]);
+          toast.success(`✓ ${similar[0].name} escaneado`, { id: `scan-${cleanCode}` });
+        } else {
+          toast.error(`Código de barras "${cleanCode}" no encontrado`, { id: `scan-err-${cleanCode}` });
+        }
+      } catch (err) {
+        console.error("[BarcodeScanner] Error buscando producto:", err);
+      }
+    },
+    [handleAddProduct]
+  );
+
+  useGlobalBarcodeScanner({
+    onScan: handleBarcodeScanned,
+    enabled: true,
+  });
+
+  // Sincronización de Stock en Tiempo Real entre terminales
+  useRealtimeProductStock({
+    onProductUpdate: (updatedProduct) => {
+      setTabs((prevTabs) =>
+        prevTabs.map((tab) => ({
+          ...tab,
+          cart: tab.cart.map((item) => {
+            if (item.id === updatedProduct.id) {
+              if (updatedProduct.stock < item.quantity) {
+                toast(
+                  `⚠️ Otra caja acaba de vender "${item.name}". Stock restante: ${updatedProduct.stock}`,
+                  { icon: "⚠️", id: `stock-warn-${item.id}` }
+                );
+              }
+              return { ...item, stock: updatedProduct.stock };
+            }
+            return item;
+          }),
+        }))
+      );
+    },
+  });
+
   const filteredCustomers = useMemo(() => {
     const query = customerQuery.trim().toLowerCase();
     if (!query) return customers;
@@ -702,7 +779,7 @@ export default function NewSalePage() {
           p_selected_supplier_id: selectedSupplierId,
           p_customer_full_name: selectedCustomer.full_name,
           p_voucher_type_id: "FB",
-          p_point_of_sale: parseInt(companySettings?.business_point_of_sale || "1") || 1,
+          p_point_of_sale: activeRegister?.point_of_sale || parseInt(companySettings?.business_point_of_sale || "1") || 1,
           p_observations: null,
           p_subtotal_neto: total,
           p_iva_amount: 0,
@@ -744,7 +821,36 @@ export default function NewSalePage() {
           );
         }
       } else {
-        toast.success("¡Venta registrada exitosamente!");
+        // Gestión de ticket por puesto
+        const saleIdCreated = txResult.sale_id;
+        if (saleIdCreated) {
+          setCompletedSaleId(saleIdCreated);
+          const printerCfg = getTerminalPrinterSettings(activeRegister?.id);
+          if (printerCfg.autoPrintAfterSale) {
+            setShowTicketModal(true);
+            toast.success("¡Venta registrada! Abriendo ticket...");
+          } else {
+            toast.success(
+              (t) => (
+                <div className="flex items-center justify-between gap-3">
+                  <span>¡Venta registrada!</span>
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      setShowTicketModal(true);
+                    }}
+                    className="px-2.5 py-1 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-black text-xs rounded-lg shadow-2xs hover:bg-slate-50 flex items-center gap-1 border border-indigo-200 dark:border-indigo-800"
+                  >
+                    <FaPrint size={10} /> Imprimir Ticket
+                  </button>
+                </div>
+              ),
+              { duration: 5000 }
+            );
+          }
+        } else {
+          toast.success("¡Venta registrada exitosamente!");
+        }
       }
 
       // Si hay solo una pestaña, resetear su contenido
@@ -895,6 +1001,16 @@ export default function NewSalePage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <ActiveRegisterBadge />
+              <QuickShiftAction />
+              <button
+                type="button"
+                onClick={() => setIsPrinterModalOpen(true)}
+                title="Configuración de comandera / ticket térmico de este equipo"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 transition-colors shadow-2xs flex items-center gap-1.5 text-xs font-bold active:scale-95"
+              >
+                <FaPrint className="w-3 h-3 text-indigo-500" />
+                <span className="hidden sm:inline">Comandera</span>
+              </button>
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                 Productos: {cart.reduce((acc, item) => acc + item.quantity, 0)}
               </span>
@@ -1163,6 +1279,19 @@ export default function NewSalePage() {
         isOpen={showProductSearchModal}
         onClose={() => setShowProductSearchModal(false)}
         onSelectProduct={handleAddProduct}
+      />
+
+      {/* Modal de Ticket de Venta Rápido */}
+      <SaleTicketModal
+        isOpen={showTicketModal}
+        onClose={() => setShowTicketModal(false)}
+        saleId={completedSaleId}
+      />
+
+      {/* Modal de Configuración de Comandera / Impresora Térmica */}
+      <TerminalPrinterModal
+        isOpen={isPrinterModalOpen}
+        onClose={() => setIsPrinterModalOpen(false)}
       />
 
       <ShortcutsBar />

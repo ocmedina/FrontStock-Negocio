@@ -7,6 +7,7 @@ export type Register = {
   name: string;
   description: string | null;
   is_active: boolean;
+  point_of_sale: number;
   created_at: string;
   updated_at?: string;
   assigned_users_count?: number;
@@ -49,8 +50,8 @@ export async function getRegisters(): Promise<{
         return {
           success: true,
           data: [
-            { id: 1, name: 'Caja 1', description: 'Puesto principal (por defecto)', is_active: true, created_at: new Date().toISOString() },
-            { id: 2, name: 'Caja 2', description: 'Puesto adicional simultáneo', is_active: true, created_at: new Date().toISOString() },
+            { id: 1, name: 'Caja 1', description: 'Puesto principal (por defecto)', is_active: true, point_of_sale: 1, created_at: new Date().toISOString() },
+            { id: 2, name: 'Caja 2', description: 'Puesto adicional simultáneo', is_active: true, point_of_sale: 2, created_at: new Date().toISOString() },
           ],
         };
       }
@@ -70,6 +71,7 @@ export async function getRegisters(): Promise<{
       name: r.name,
       description: r.description ?? null,
       is_active: Boolean(r.is_active),
+      point_of_sale: Math.max(1, Number(r.point_of_sale) || 1),
       created_at: r.created_at,
       updated_at: r.updated_at,
       assigned_users_count: counts[Number(r.id)] || 0,
@@ -94,7 +96,7 @@ export async function getActiveRegisters(): Promise<{
     const supabase = createLooseAdminClient();
     const { data, error } = await supabase
       .from('registers' as any)
-      .select('id, name, description, is_active, created_at')
+      .select('id, name, description, is_active, point_of_sale, created_at')
       .eq('is_active', true)
       .order('id', { ascending: true });
 
@@ -103,8 +105,8 @@ export async function getActiveRegisters(): Promise<{
       return {
         success: true,
         data: [
-          { id: 1, name: 'Caja 1', description: 'Puesto principal', is_active: true, created_at: new Date().toISOString() },
-          { id: 2, name: 'Caja 2', description: 'Puesto adicional', is_active: true, created_at: new Date().toISOString() },
+          { id: 1, name: 'Caja 1', description: 'Puesto principal', is_active: true, point_of_sale: 1, created_at: new Date().toISOString() },
+          { id: 2, name: 'Caja 2', description: 'Puesto adicional', is_active: true, point_of_sale: 2, created_at: new Date().toISOString() },
         ],
       };
     }
@@ -116,6 +118,7 @@ export async function getActiveRegisters(): Promise<{
         name: r.name,
         description: r.description ?? null,
         is_active: Boolean(r.is_active),
+        point_of_sale: Math.max(1, Number(r.point_of_sale) || 1),
         created_at: r.created_at,
       })),
     };
@@ -197,19 +200,22 @@ export async function assignUserRegister(
 
 export async function createRegister(
   name: string,
-  description?: string
+  description?: string,
+  point_of_sale: number = 1
 ): Promise<{ success: boolean; data?: Register; error?: string }> {
   try {
     if (!name || !name.trim()) {
       return { success: false, error: 'El nombre de la caja es obligatorio' };
     }
 
+    const pos = Math.max(1, Number(point_of_sale) || 1);
     const supabase = createLooseAdminClient();
     const { data, error } = await supabase
       .from('registers' as any)
       .insert({
         name: name.trim(),
         description: description?.trim() || null,
+        point_of_sale: pos,
         is_active: true,
       })
       .select()
@@ -224,6 +230,7 @@ export async function createRegister(
         name: data.name,
         description: data.description,
         is_active: Boolean(data.is_active),
+        point_of_sale: Number(data.point_of_sale) || pos,
         created_at: data.created_at,
       },
     };
@@ -234,17 +241,20 @@ export async function createRegister(
   }
 }
 
-// ─── Modificar caja existente (nombre, descripción, activo) ───────────────────
+// ─── Modificar caja existente (nombre, descripción, activo, punto de venta) ───
 
 export async function updateRegister(
   id: number,
-  updates: { name?: string; description?: string; is_active?: boolean }
+  updates: { name?: string; description?: string; is_active?: boolean; point_of_sale?: number }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const payload: Record<string, any> = {};
     if (updates.name !== undefined) payload.name = updates.name.trim();
     if (updates.description !== undefined) payload.description = updates.description.trim() || null;
     if (updates.is_active !== undefined) payload.is_active = updates.is_active;
+    if (updates.point_of_sale !== undefined) {
+      payload.point_of_sale = Math.max(1, Number(updates.point_of_sale) || 1);
+    }
 
     const supabase = createLooseAdminClient();
     const { error } = await supabase

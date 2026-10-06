@@ -105,6 +105,18 @@ export default function CartList({
                             SKU: {item.sku}
                           </span>
                         )}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            item.stock <= 0
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-900 animate-pulse"
+                              : item.stock < (item.quantity + giftQty)
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-300 dark:border-amber-900"
+                              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                          }`}
+                        >
+                          Stock: {item.stock} disp.
+                          {item.stock < (item.quantity + giftQty) && " ⚠️ Insuficiente"}
+                        </span>
                         {item.promotion?.enabled && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
                             <FaGift size={10} /> Cada {item.promotion.buyQuantity}, regalar {item.promotion.giftQuantity}

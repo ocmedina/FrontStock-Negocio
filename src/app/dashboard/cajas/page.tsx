@@ -47,6 +47,7 @@ export default function CashRegistersPage() {
   const [editingRegister, setEditingRegister] = useState<Register | null>(null);
   const [formName, setFormName] = useState("");
   const [formDesc, setFormDesc] = useState("");
+  const [formPos, setFormPos] = useState<number>(1);
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -77,6 +78,7 @@ export default function CashRegistersPage() {
     setEditingRegister(null);
     setFormName(`Caja ${registers.length + 1}`);
     setFormDesc("");
+    setFormPos(registers.length + 1);
     setIsModalOpen(true);
   };
 
@@ -84,6 +86,7 @@ export default function CashRegistersPage() {
     setEditingRegister(reg);
     setFormName(reg.name);
     setFormDesc(reg.description || "");
+    setFormPos(reg.point_of_sale || 1);
     setIsModalOpen(true);
   };
 
@@ -100,6 +103,7 @@ export default function CashRegistersPage() {
         const res = await updateRegister(editingRegister.id, {
           name: formName,
           description: formDesc,
+          point_of_sale: formPos,
         });
         if (res.success) {
           toast.success("Caja actualizada con éxito.");
@@ -109,7 +113,7 @@ export default function CashRegistersPage() {
           toast.error(res.error || "Error al actualizar la caja.");
         }
       } else {
-        const res = await createRegister(formName, formDesc);
+        const res = await createRegister(formName, formDesc, formPos);
         if (res.success) {
           toast.success("Caja creada con éxito.");
           setIsModalOpen(false);
@@ -295,6 +299,9 @@ export default function CashRegistersPage() {
                           <FaTimesCircle className="text-[9px]" /> Inactiva
                         </span>
                       )}
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-300 dark:border-blue-800" title="Punto de Venta Fiscal asignado a esta terminal">
+                        PV {String(reg.point_of_sale || 1).padStart(4, "0")}
+                      </span>
                       {isCurrentActive && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-800">
                           <FaDesktop className="text-[9px]" /> Puesto Actual de este Equipo
@@ -481,6 +488,25 @@ export default function CashRegistersPage() {
                   placeholder="Ej: Caja 1, Caja 2, Mostrador Frente"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+                  Punto de Venta Fiscal (AFIP / Facturación) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="9999"
+                  required
+                  value={formPos}
+                  onChange={(e) => setFormPos(parseInt(e.target.value) || 1)}
+                  placeholder="1"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold"
+                />
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                  Número de terminal fiscal (ej: 1 para 0001, 2 para 0002). Permite que esta caja emita comprobantes con su propia serie correlativa independiente.
+                </p>
               </div>
 
               <div>

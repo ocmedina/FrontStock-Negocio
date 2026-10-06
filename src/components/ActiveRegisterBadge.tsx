@@ -74,6 +74,9 @@ export default function ActiveRegisterBadge({
           <span className="font-extrabold uppercase tracking-tight text-current">
             {activeRegister.name}
           </span>
+          <span className="text-[10px] font-bold opacity-75">
+            (PV {String(activeRegister.point_of_sale || 1).padStart(4, '0')})
+          </span>
         </div>
 
         {isAssignedFixed && (
@@ -117,6 +120,9 @@ export default function ActiveRegisterBadge({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     <span>{reg.name}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      PV {String(reg.point_of_sale || 1).padStart(4, '0')}
+                    </span>
                   </div>
                   {isSelected && <FaCheck className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />}
                 </button>

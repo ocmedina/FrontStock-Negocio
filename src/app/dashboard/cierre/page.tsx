@@ -8,6 +8,7 @@ import {
   type DeskCashCloseResult,
 } from "@/app/actions/cashCloseActions";
 import { getActiveRegisters, CashRegister } from "@/app/actions/registerActions";
+import CashShiftControl from "./components/CashShiftControl";
 import {
   FaTruck,
   FaStore,
@@ -494,6 +495,15 @@ function MostradorTab() {
           {loading ? "Generando..." : "Generar Cierre"}
         </button>
       </div>
+
+      {/* Control de Efectivo, Turnos y Arqueos */}
+      <CashShiftControl
+        selectedRegisterId={selectedRegister === "all" ? "all" : Number(selectedRegister)}
+        registers={registers}
+        onShiftChange={() => {
+          if (loaded) load(date);
+        }}
+      />
 
       {error && (
         <div className="bg-rose-500/10 border border-rose-500/25 p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold text-rose-600 dark:text-rose-400">
