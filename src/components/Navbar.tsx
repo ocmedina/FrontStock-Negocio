@@ -20,9 +20,12 @@ import {
   HiOutlineTruck,
   HiOutlineClipboardList,
   HiOutlineCash,
+  HiOutlineDesktopComputer,
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import TimeWeatherIndicator from "@/components/TimeWeatherIndicator";
+import { hasPermission } from "@/lib/permissions";
+import ActiveRegisterBadge from "@/components/ActiveRegisterBadge";
 
 const navSections = {
   comercial: [
@@ -99,6 +102,12 @@ const navSections = {
       icon: HiOutlineUserGroup,
       adminOnly: true,
     },
+    {
+      href: "/dashboard/cajas",
+      label: "Puestos de Venta",
+      icon: HiOutlineDesktopComputer,
+      adminOnly: true,
+    },
   ],
 };
 
@@ -110,6 +119,7 @@ export default function Navbar() {
     email: string;
     role: string;
   } | null>(null);
+  const [showDashboard, setShowDashboard] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -119,11 +129,34 @@ export default function Navbar() {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, role")
-          .eq("id", session.user.id)
-          .single();
+        const [profileRes, dashSettingRes, permsRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, full_name, role")
+            .eq("id", session.user.id)
+            .single(),
+          supabase
+            .from("settings")
+            .select("value")
+            .eq("key", "disable_dashboard")
+            .maybeSingle(),
+          supabase
+            .from("user_permissions")
+            .select("permission, granted")
+            .eq("profile_id", session.user.id),
+        ]);
+
+        const profile = profileRes.data;
+        const isDashboardDisabled = dashSettingRes.data?.value === "true";
+        const overrides: Record<string, boolean> = {};
+        if (permsRes.data) {
+          for (const row of permsRes.data) {
+            overrides[row.permission] = row.granted;
+          }
+        }
+
+        const canView = hasPermission(profile?.role ?? "vendedor", "VER_DASHBOARD", overrides);
+        setShowDashboard(!isDashboardDisabled && canView);
 
         setUserProfile({
           full_name: profile?.full_name ?? "Usuario",
@@ -193,7 +226,7 @@ export default function Navbar() {
           {/* Logo y Dashboard */}
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard"
+              href={showDashboard ? "/dashboard" : "/dashboard/ventas/nueva"}
               className="text-base font-black text-slate-900 dark:text-slate-50 tracking-tight flex items-center gap-2"
             >
               <img
@@ -204,17 +237,19 @@ export default function Navbar() {
               <span className="hidden sm:inline">FrontStock</span>
             </Link>
             
-            <Link
-              href="/dashboard"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors
-                ${pathname === "/dashboard"
-                  ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-bold"
-                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 hover:text-slate-850 dark:hover:text-slate-200"
-                }`}
-            >
-              <HiOutlineChartPie className="h-4 w-4" />
-              <span>Panel</span>
-            </Link>
+            {showDashboard && (
+              <Link
+                href="/dashboard"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors
+                  ${pathname === "/dashboard"
+                    ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-bold"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 hover:text-slate-850 dark:hover:text-slate-200"
+                  }`}
+              >
+                <HiOutlineChartPie className="h-4 w-4" />
+                <span>Panel</span>
+              </Link>
+            )}
           </div>
 
           {/* Navigation Links - Desktop Unified (No color columns blocks) */}
@@ -247,7 +282,8 @@ export default function Navbar() {
           </div>
 
           {/* User Menu - Desktop */}
-          <div className="hidden lg:flex items-center gap-3 relative flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-2.5 relative flex-shrink-0">
+            <ActiveRegisterBadge />
             <TimeWeatherIndicator />
             <ThemeToggle />
             
@@ -310,6 +346,7 @@ export default function Navbar() {
 
           {/* Botón menú móvil */}
           <div className="lg:hidden flex items-center gap-2">
+            <ActiveRegisterBadge compact />
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -332,18 +369,20 @@ export default function Navbar() {
           <div className="space-y-4">
             
             {/* Dashboard Link */}
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors border-l-2
-                ${pathname === "/dashboard"
-                  ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-600"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-transparent"
-                }`}
-            >
-              <HiOutlineChartPie className="h-4 w-4" />
-              Dashboard
-            </Link>
+            {showDashboard && (
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors border-l-2
+                  ${pathname === "/dashboard"
+                    ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-600"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-transparent"
+                  }`}
+              >
+                <HiOutlineChartPie className="h-4 w-4" />
+                Dashboard
+              </Link>
+            )}
 
             {/* Comercial */}
             <div className="space-y-1.5">

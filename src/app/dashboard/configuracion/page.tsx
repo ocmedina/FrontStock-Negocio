@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import {
   FaSave, FaUpload, FaStore, FaMapMarkerAlt, FaPhone,
   FaImage, FaCheck, FaLock, FaPalette, FaDownload, FaFileImport,
   FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaSpinner,
-  FaEnvelope, FaBuilding
+  FaEnvelope, FaBuilding, FaCashRegister
 } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { useLayout } from '@/contexts/LayoutContext';
@@ -404,6 +405,14 @@ export default function SettingsPage() {
               <FaBroom className="text-lg flex-shrink-0" />
               Limpieza y Mantenimiento
             </button>
+            <div className="pt-2 border-t border-gray-200 dark:border-slate-800 my-1" />
+            <Link
+              href="/dashboard/cajas"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 hover:bg-indigo-100/60 dark:hover:bg-indigo-950/40 border border-indigo-150 dark:border-indigo-900/40 transition-all duration-200"
+            >
+              <FaCashRegister className="text-lg flex-shrink-0" />
+              Puestos de Venta / Cajas
+            </Link>
           </nav>
 
           {/* Área de Contenido */}
@@ -647,6 +656,47 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Flujo de Inicio y Modo Punto de Venta */}
+                      <h3 className="text-sm font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-gray-100 dark:border-slate-800 pb-2 pt-4">
+                        Flujo de Inicio y Navegación
+                      </h3>
+                      <div className="flex items-start justify-between gap-4 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold text-gray-900 dark:text-slate-100">
+                              Desactivar Dashboard (Ir directo a Nueva Venta)
+                            </span>
+                            {settings.disable_dashboard === 'true' && (
+                              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-full border border-amber-300 dark:border-amber-800">
+                                Activo (Modo Punto de Venta)
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
+                            Al iniciar sesión o acceder a la raíz del sistema, pasa directamente a <strong>Nueva Venta</strong> sin mostrar el panel de métricas y estadísticas. Ideal para cajas y terminales de venta rápida.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleInputChange(
+                              'disable_dashboard',
+                              settings.disable_dashboard === 'true' ? 'false' : 'true'
+                            )
+                          }
+                          className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            settings.disable_dashboard === 'true' ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-slate-700'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              settings.disable_dashboard === 'true' ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -764,6 +814,46 @@ export default function SettingsPage() {
                             Barra superior horizontal compacta.
                           </p>
                         </button>
+                      </div>
+
+                      {/* Flujo de Inicio y Modo Punto de Venta */}
+                      <div className="pt-6 border-t border-gray-100 dark:border-slate-800">
+                        <div className="flex items-start justify-between gap-4 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base font-bold text-gray-900 dark:text-slate-100">
+                                Desactivar Dashboard (Ir directo a Nueva Venta)
+                              </span>
+                              {settings.disable_dashboard === 'true' && (
+                                <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-full border border-amber-300 dark:border-amber-800">
+                                  Activo (Modo Punto de Venta)
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
+                              Al iniciar sesión o abrir el sistema, se redirige inmediatamente a la pantalla de <strong>Nueva Venta</strong> sin pasar por el panel de métricas y estadísticas. Ideal para cajas y terminales de venta rápida.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleInputChange(
+                                'disable_dashboard',
+                                settings.disable_dashboard === 'true' ? 'false' : 'true'
+                              )
+                            }
+                            className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              settings.disable_dashboard === 'true' ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-slate-700'
+                            }`}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                settings.disable_dashboard === 'true' ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

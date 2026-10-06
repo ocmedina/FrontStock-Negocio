@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
+import { hasPermission } from "@/lib/permissions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function LoginPage() {
       // Buscar el usuario por username en la tabla profiles
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("email, role, is_active")
+        .select("id, email, role, is_active")
         .eq("username", username.trim())
         .single();
 
@@ -51,9 +52,37 @@ export default function LoginPage() {
         return;
       }
 
-      // Redireccionar según el rol
+      // Redireccionar según el rol y configuración de dashboard
       if (profileData.role === "repartidor") {
         router.push("/reparto");
+        return;
+      }
+
+      // Verificar si el dashboard está desactivado globalmente o para este usuario
+      const [dashSettingRes, permRes] = await Promise.all([
+        supabase
+          .from("settings")
+          .select("value")
+          .eq("key", "disable_dashboard")
+          .maybeSingle(),
+        supabase
+          .from("user_permissions")
+          .select("permission, granted")
+          .eq("profile_id", profileData.id),
+      ]);
+
+      const isDashboardDisabled = dashSettingRes.data?.value === "true";
+      const overrides: Record<string, boolean> = {};
+      if (permRes.data) {
+        for (const row of permRes.data) {
+          overrides[row.permission] = row.granted;
+        }
+      }
+
+      const canViewDashboard = hasPermission(profileData.role, "VER_DASHBOARD", overrides);
+
+      if (isDashboardDisabled || !canViewDashboard) {
+        router.push("/dashboard/ventas/nueva");
       } else {
         router.push("/dashboard");
       }

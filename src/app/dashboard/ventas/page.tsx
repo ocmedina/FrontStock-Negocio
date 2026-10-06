@@ -28,16 +28,20 @@ import {
   FaChevronRight,
   FaChartBar,
   FaPrint,
+  FaCashRegister,
 } from "react-icons/fa";
 import { getUTCInterval } from "@/lib/date-utils";
 import SaleTicketModal from "./components/SaleTicketModal";
+import { getActiveRegisters, CashRegister } from "@/app/actions/registerActions";
 
 const ITEMS_PER_PAGE = 10; // Puedes ajustar cuántas ventas mostrar por página
 
 export default function SalesHistoryPage() {
   const [sales, setSales] = useState<any[]>([]);
+  const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Fecha de hoy por defecto
   const [paymentFilter, setPaymentFilter] = useState("all"); // Filtro por método de pago
+  const [registerFilter, setRegisterFilter] = useState("all"); // Filtro por caja/puesto
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,14 +49,19 @@ export default function SalesHistoryPage() {
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
+  useEffect(() => {
+    getActiveRegisters().then((res) => {
+      setRegisters(res.data || []);
+    });
+  }, []);
+
   const fetchSales = async () => {
     setLoading(true);
 
     const from = (currentPage - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
-    let query = supabase
-      .from("sales")
+    let query = (supabase.from("sales") as any)
       .select(
         `
         id,
@@ -60,6 +69,8 @@ export default function SalesHistoryPage() {
         total_amount,
         payment_method,
         is_cancelled,
+        register_id,
+        registers ( id, name ),
         customers ( full_name ),
         profiles ( full_name )
       `,
@@ -79,6 +90,11 @@ export default function SalesHistoryPage() {
       query = query.eq("payment_method", paymentFilter);
     }
 
+    // --- FILTRO POR CAJA / PUESTO ---
+    if (registerFilter !== "all") {
+      query = query.eq("register_id", registerFilter);
+    }
+
     const { data, error, count } = await query;
 
     if (error) {
@@ -92,7 +108,7 @@ export default function SalesHistoryPage() {
 
   useEffect(() => {
     fetchSales();
-  }, [date, currentPage, paymentFilter]); // Se ejecuta si la fecha, página o filtro de pago cambian
+  }, [date, currentPage, paymentFilter, registerFilter]); // Se ejecuta si la fecha, página o filtro de pago cambian
 
   const handleCancelSale = async (saleId: string) => {
     if (
@@ -317,7 +333,7 @@ export default function SalesHistoryPage() {
         <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2">
           <FaSearch className="text-blue-600" /> Filtros de Búsqueda
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Filtro por fecha */}
           <div className="space-y-2">
             <label
@@ -379,6 +395,32 @@ export default function SalesHistoryPage() {
               )}
             </div>
           </div>
+
+          {/* Filtro por Caja / Puesto */}
+          <div className="space-y-2">
+            <label
+              htmlFor="registerFilter"
+              className="block text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"
+            >
+              <FaCashRegister className="text-indigo-500" /> Puesto / Caja
+            </label>
+            <select
+              id="registerFilter"
+              value={registerFilter}
+              onChange={(e) => {
+                setRegisterFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
+            >
+              <option value="all">Todas las cajas</option>
+              {registers.map((reg) => (
+                <option key={reg.id} value={reg.id}>
+                  {reg.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -405,6 +447,11 @@ export default function SalesHistoryPage() {
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
+                    <FaCashRegister /> Caja
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-slate-200 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
                     <FaCreditCard /> Método de Pago
                   </div>
                 </th>
@@ -426,7 +473,7 @@ export default function SalesHistoryPage() {
             <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                       <span className="text-gray-500 dark:text-slate-400 font-medium">
@@ -437,7 +484,7 @@ export default function SalesHistoryPage() {
                 </tr>
               ) : sales.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <FaInbox className="text-6xl text-gray-300" />
                       <span className="text-gray-500 dark:text-slate-400 font-medium">
@@ -495,6 +542,18 @@ export default function SalesHistoryPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-slate-300">
                       {sale.profiles?.full_name ?? "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {sale.registers?.name ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                          <FaCashRegister className="text-[10px]" />
+                          {sale.registers.name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-400 dark:text-slate-500">
+                          Caja 1
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {sale.payment_method === "cuenta_corriente" ? (
@@ -671,9 +730,21 @@ export default function SalesHistoryPage() {
               </div>
 
               <div className="mt-3 space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
-                  <FaUser className="text-blue-500" />
-                  {sale.customers?.full_name ?? "Sin cliente"}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
+                    <FaUser className="text-blue-500" />
+                    {sale.customers?.full_name ?? "Sin cliente"}
+                  </div>
+                  {sale.registers?.name ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                      <FaCashRegister className="text-[9px]" />
+                      {sale.registers.name}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Caja 1
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
                   <FaCreditCard className="text-amber-500" />

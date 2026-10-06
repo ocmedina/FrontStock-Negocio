@@ -15,13 +15,14 @@ export default async function SaleDetailPage({
   // --- LÓGICA DE CARGA DIRECTAMENTE AQUÍ ---
   const supabase = await createClient();
 
-  const { data: sale, error } = await supabase
-    .from("sales")
+  const { data: sale, error } = await (supabase.from("sales") as any)
     .select(
       `
       id,
       created_at,
       total_amount,
+      register_id,
+      registers ( * ),
       customers ( * ),
       profiles ( * ),
       sale_items ( *, products ( * ) )

@@ -39,6 +39,9 @@ export function ProtectedRoute({
     return null;
   }
 
+  const homeRoute = can('VER_DASHBOARD') ? '/dashboard' : '/dashboard/ventas/nueva';
+  const homeLabel = can('VER_DASHBOARD') ? 'Volver al Dashboard' : 'Ir a Nueva Venta';
+
   // Verificar permiso específico
   if (permission && !can(permission)) {
     return fallback || (
@@ -47,10 +50,10 @@ export function ProtectedRoute({
           <h2 className="text-xl font-bold text-red-800 mb-2">Acceso Denegado</h2>
           <p className="text-red-600 mb-4">No tienes permisos para acceder a esta sección.</p>
           <button 
-            onClick={() => router.push('/dashboard')} 
+            onClick={() => router.push(homeRoute)} 
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
           >
-            Volver al Dashboard
+            {homeLabel}
           </button>
         </div>
       </div>
@@ -65,10 +68,10 @@ export function ProtectedRoute({
           <h2 className="text-xl font-bold text-red-800 mb-2">Acceso Denegado</h2>
           <p className="text-red-600 mb-4">Esta sección es solo para {requiredRole}s.</p>
           <button 
-            onClick={() => router.push('/dashboard')} 
+            onClick={() => router.push(homeRoute)} 
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
           >
-            Volver al Dashboard
+            {homeLabel}
           </button>
         </div>
       </div>

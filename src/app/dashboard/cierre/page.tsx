@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   getDeliveryCashClose,
   getDeskCashClose,
   type DeliveryCashCloseResult,
   type DeskCashCloseResult,
 } from "@/app/actions/cashCloseActions";
+import { getActiveRegisters, CashRegister } from "@/app/actions/registerActions";
 import {
   FaTruck,
   FaStore,
@@ -25,6 +26,7 @@ import {
   FaSync,
   FaExclamationTriangle,
   FaCreditCard,
+  FaCashRegister,
 } from "react-icons/fa";
 import { HiOutlineCash } from "react-icons/hi";
 
@@ -417,15 +419,23 @@ function RepartoTab() {
 
 function MostradorTab() {
   const [date, setDate] = useState(todayAR);
+  const [registers, setRegisters] = useState<CashRegister[]>([]);
+  const [selectedRegister, setSelectedRegister] = useState<string>("all");
   const [data, setData] = useState<DeskCashCloseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async (d: string) => {
+  useEffect(() => {
+    getActiveRegisters().then((res) => setRegisters(res.data || []));
+  }, []);
+
+  const load = useCallback(async (d: string, regVal?: string) => {
     setLoading(true);
     setError(null);
-    const res = await getDeskCashClose(d);
+    const activeReg = regVal !== undefined ? regVal : selectedRegister;
+    const regId = activeReg === "all" ? null : Number(activeReg);
+    const res = await getDeskCashClose(d, regId);
     if (res.success && res.data) {
       setData(res.data);
       setLoaded(true);
@@ -433,7 +443,7 @@ function MostradorTab() {
       setError(res.error ?? "Error desconocido");
     }
     setLoading(false);
-  }, []);
+  }, [selectedRegister]);
 
   const handleDateChange = (d: string) => {
     setDate(d);
@@ -441,11 +451,40 @@ function MostradorTab() {
     setData(null);
   };
 
+  const handleRegisterChange = (regId: string) => {
+    setSelectedRegister(regId);
+    setLoaded(false);
+    setData(null);
+  };
+
+  const activeRegisterObj = registers.find((r) => String(r.id) === String(selectedRegister));
+  const registerTitleLabel = selectedRegister === "all" ? "Consolidado (Todas las Cajas)" : (activeRegisterObj?.name ?? "Caja");
+
   return (
     <div className="space-y-6">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <DateNav date={date} onChange={handleDateChange} />
+        <div className="flex flex-wrap items-center gap-3">
+          <DateNav date={date} onChange={handleDateChange} />
+
+          {/* Selector de Caja */}
+          <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-2xl px-4 py-2.5 shadow-2xs relative z-10">
+            <FaCashRegister className="text-indigo-600 dark:text-indigo-400 w-3.5 h-3.5" />
+            <select
+              value={selectedRegister}
+              onChange={(e) => handleRegisterChange(e.target.value)}
+              className="bg-transparent border-none outline-none focus:ring-0 p-0 cursor-pointer text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200"
+            >
+              <option value="all">Todas las Cajas (Consolidado)</option>
+              {registers.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <button
           onClick={() => load(date)}
           disabled={loading}
@@ -466,7 +505,7 @@ function MostradorTab() {
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 p-16 text-center">
           <FaStore className="text-4xl text-slate-300 dark:text-slate-600 mx-auto mb-3 animate-pulse" />
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-            Selecciona una fecha y presiona el botón para <strong className="text-indigo-600 dark:text-indigo-400">Generar Cierre</strong>
+            Selecciona fecha y caja, luego presiona el botón para <strong className="text-indigo-600 dark:text-indigo-400">Generar Cierre</strong>
           </p>
         </div>
       )}
@@ -475,8 +514,22 @@ function MostradorTab() {
         <div className="space-y-6" id="mostrador-print">
           {/* Title */}
           <div className="hidden print:block text-center mb-6">
-            <h2 className="text-xl font-bold text-slate-900">Cierre de Mostrador</h2>
+            <h2 className="text-xl font-bold text-slate-900">Cierre de Mostrador — {registerTitleLabel}</h2>
             <p className="text-sm text-slate-500">{fmtDate(date)}</p>
+          </div>
+
+          {/* Subheader info en pantalla */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-150 dark:border-slate-800 print:hidden">
+            <div>
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cierre Seleccionado</span>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <FaCashRegister className="text-indigo-600 dark:text-indigo-400" />
+                {registerTitleLabel}
+              </h3>
+            </div>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl">
+              {fmtDate(date)}
+            </span>
           </div>
 
           {/* Stat Cards */}
@@ -513,7 +566,7 @@ function MostradorTab() {
                 color="bg-teal-500/10 text-teal-600 dark:text-teal-400" />
             </div>
             {data.collected.total === 0 && (
-              <p className="text-xs text-slate-450 text-center py-6 font-semibold">Sin ventas activas para esta fecha</p>
+              <p className="text-xs text-slate-450 text-center py-6 font-semibold">Sin ventas activas para este criterio</p>
             )}
             {data.collected.total > 0 && (
               <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-850 flex justify-between items-center">
@@ -534,7 +587,7 @@ function MostradorTab() {
               <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-850">
                 <thead className="bg-slate-50/60 dark:bg-slate-900/60 text-slate-550 dark:text-slate-400 uppercase tracking-widest font-black text-[10px] border-b border-slate-100 dark:border-slate-850">
                   <tr>
-                    {["Hora", "Cliente", "Método de Pago", "Monto Total", "Estado"].map((h) => (
+                    {["Hora", "Caja", "Cliente", "Método de Pago", "Monto Total", "Estado"].map((h) => (
                       <th key={h} className="px-6 py-3.5 text-left">{h}</th>
                     ))}
                   </tr>
@@ -544,6 +597,12 @@ function MostradorTab() {
                     <tr key={s.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors ${s.is_cancelled ? 'opacity-40' : ''}`}>
                       <td className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-450">
                         {new Date(s.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                          <FaCashRegister className="text-[10px]" />
+                          {s.register_name || "Caja 1"}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">{s.customer_name}</td>
                       <td className="px-6 py-4">
@@ -568,23 +627,29 @@ function MostradorTab() {
                 </tbody>
               </table>
               {data.sales.length === 0 && (
-                <div className="text-center py-12 text-xs font-semibold text-slate-450">No hay ventas registradas para este día.</div>
+                <div className="text-center py-12 text-xs font-semibold text-slate-450">No hay ventas registradas para este criterio.</div>
               )}
             </div>
 
             {/* Vista Móvil */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-850">
               {data.sales.length === 0 ? (
-                <div className="text-center py-12 text-xs font-semibold text-slate-450">No hay ventas registradas para este día.</div>
+                <div className="text-center py-12 text-xs font-semibold text-slate-450">No hay ventas registradas para este criterio.</div>
               ) : (
                 data.sales.map((s) => (
                   <div key={s.id} className={`p-4 space-y-3 ${s.is_cancelled ? 'opacity-50' : ''}`}>
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white block leading-tight">{s.customer_name}</span>
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block mt-0.5">
-                          {new Date(s.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
-                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block">
+                            {new Date(s.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            <FaCashRegister className="text-[8px]" />
+                            {s.register_name || "Caja 1"}
+                          </span>
+                        </div>
                       </div>
                       <span>
                         {s.is_cancelled ? (

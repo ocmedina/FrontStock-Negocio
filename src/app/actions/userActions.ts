@@ -21,8 +21,11 @@ export async function createEmployee(formData: FormData) {
     return { success: false, message: 'Todos los campos son requeridos.' }
   }
 
-  // 🔹 Si el rol es "vendedor", lo transformamos a "supervendedor"
-  const finalRole = role === 'vendedor' ? 'supervendedor' : role
+  const validRoles = ['administrador', 'supervendedor', 'vendedor', 'repartidor'];
+  if (!validRoles.includes(role)) {
+    return { success: false, message: 'Rol inválido.' };
+  }
+  const finalRole = role;
 
   // Verificar si el username ya existe
   const { data: existingUsername } = await supabaseAdmin

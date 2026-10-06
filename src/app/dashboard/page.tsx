@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/server";
+import { redirect } from "next/navigation";
+import { hasPermission } from "@/lib/permissions";
 import Link from "next/link";
 import {
   FaBoxes,
@@ -78,16 +80,52 @@ async function getDashboardData() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let displayName = "";
-  if (user?.id) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
-
-    displayName = profile?.full_name?.trim() || "";
+  if (!user) {
+    redirect("/login");
   }
+
+  // 1. Verificar si el dashboard fue desactivado globalmente en configuración
+  const { data: dashSetting } = await (supabase.from("settings" as any) as any)
+    .select("value")
+    .eq("key", "disable_dashboard")
+    .maybeSingle();
+
+  if (dashSetting?.value === "true") {
+    redirect("/dashboard/ventas/nueva");
+  }
+
+  // 2. Verificar perfil del usuario y estado activo
+  const { data: profile } = await (supabase.from("profiles" as any) as any)
+    .select("id, full_name, role, is_active")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.is_active === false) {
+    redirect("/login");
+  }
+
+  if (profile.role === "repartidor") {
+    redirect("/reparto");
+  }
+
+  // 3. Verificar permisos de usuario (rol + overrides)
+  const { data: userPerms } = await (supabase.from("user_permissions" as any) as any)
+    .select("permission, granted")
+    .eq("profile_id", profile.id);
+
+  const overrides: Record<string, boolean> = {};
+  if (userPerms) {
+    for (const p of userPerms as any[]) {
+      overrides[p.permission] = p.granted;
+    }
+  }
+
+  const canViewDashboard = hasPermission(profile.role, "VER_DASHBOARD", overrides);
+  if (!canViewDashboard) {
+    redirect("/dashboard/ventas/nueva");
+  }
+
+  const displayName = profile?.full_name?.trim() || "";
 
   // Obtener fecha en zona horaria Argentina
   const now = new Date();

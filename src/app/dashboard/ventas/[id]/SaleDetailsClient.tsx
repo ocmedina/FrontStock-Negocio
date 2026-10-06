@@ -16,6 +16,7 @@ import {
   FaReceipt,
   FaBoxes,
   FaGift,
+  FaCashRegister,
 } from "react-icons/fa";
 import { createInvoiceFromSale } from "@/app/actions/invoiceActions";
 import toast from "react-hot-toast";
@@ -178,7 +179,7 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
         </div>
 
         {/* INFORMACIÓN DE LA VENTA */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Fecha */}
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-3 mb-3">
@@ -224,6 +225,21 @@ export default function SaleDetailsClient({ sale }: { sale: any }) {
                 <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Vendedor</p>
                 <p className="text-lg font-bold text-gray-900 dark:text-slate-50">
                   {sale.profiles?.full_name ?? "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Puesto / Caja */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-950/40 dark:to-indigo-900/40 rounded-lg">
+                <FaCashRegister className="text-2xl text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Puesto de Venta</p>
+                <p className="text-lg font-bold text-indigo-700 dark:text-indigo-300">
+                  {sale.registers?.name ?? "Caja 1"}
                 </p>
               </div>
             </div>

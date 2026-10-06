@@ -1,5 +1,6 @@
 import DashboardWrapper from "@/components/DashboardWrapper";
 import { LayoutProvider } from "@/contexts/LayoutContext";
+import { RegisterProvider } from "@/contexts/RegisterContext";
 import LayoutSwitcher from "@/components/LayoutSwitcher";
 
 export default function DashboardLayout({
@@ -9,9 +10,11 @@ export default function DashboardLayout({
 }) {
   return (
     <LayoutProvider>
-      <DashboardWrapper>
-        <LayoutSwitcher>{children}</LayoutSwitcher>
-      </DashboardWrapper>
+      <RegisterProvider>
+        <DashboardWrapper>
+          <LayoutSwitcher>{children}</LayoutSwitcher>
+        </DashboardWrapper>
+      </RegisterProvider>
     </LayoutProvider>
   );
 }

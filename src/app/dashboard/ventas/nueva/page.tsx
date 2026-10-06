@@ -23,8 +23,11 @@ import CartList from "./components/CartList";
 import SaleTabs from "./components/SaleTabs";
 import ShortcutsBar from "./components/ShortcutsBar";
 import { getAppliedPromotion } from "@/lib/promotions";
+import { useRegister } from "@/hooks/useRegister";
+import ActiveRegisterBadge from "@/components/ActiveRegisterBadge";
 
 export default function NewSalePage() {
+  const { activeRegister } = useRegister();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -413,7 +416,7 @@ export default function NewSalePage() {
     prevCustomerIdRef.current = selectedCustomer.id;
 
     const companyIva = companySettings?.business_iva_condition || "Responsable Inscripto";
-    const customerIva = selectedCustomer.iva_condition || "Consumidor Final";
+    const customerIva = (selectedCustomer as any)?.iva_condition || "Consumidor Final";
 
     let defaultVoucher = "FB";
     if (companyIva === "Responsable Inscripto") {
@@ -704,6 +707,7 @@ export default function NewSalePage() {
           p_subtotal_neto: total,
           p_iva_amount: 0,
           p_iva_breakdown: [],
+          p_register_id: activeRegister?.id || null,
         }
       );
 
@@ -790,6 +794,7 @@ export default function NewSalePage() {
     companySettings,
     calculations,
     activeVoucherType,
+    activeRegister,
   ]);
 
   // Atajos de teclado F10, F12, F2 y Ctrl+T
@@ -889,6 +894,7 @@ export default function NewSalePage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <ActiveRegisterBadge />
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                 Productos: {cart.reduce((acc, item) => acc + item.quantity, 0)}
               </span>

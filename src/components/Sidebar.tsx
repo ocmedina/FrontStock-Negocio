@@ -21,8 +21,10 @@ import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
   HiOutlineCash,
+  HiOutlineDesktopComputer,
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { hasPermission } from "@/lib/permissions";
 
 const navSections = {
   comercial: [
@@ -142,6 +144,14 @@ const navSections = {
       colorClass: "text-amber-500",
       activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
     },
+    {
+      href: "/dashboard/cajas",
+      label: "Puestos de Venta",
+      icon: HiOutlineDesktopComputer,
+      adminOnly: true,
+      colorClass: "text-amber-500",
+      activeBg: "bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border-amber-500",
+    },
   ],
 };
 
@@ -165,6 +175,7 @@ export default function Sidebar({
     email: string;
     role: string;
   } | null>(null);
+  const [showDashboard, setShowDashboard] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -172,11 +183,34 @@ export default function Sidebar({
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, role")
-          .eq("id", session.user.id)
-          .single();
+        const [profileRes, dashSettingRes, permsRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, full_name, role")
+            .eq("id", session.user.id)
+            .single(),
+          supabase
+            .from("settings")
+            .select("value")
+            .eq("key", "disable_dashboard")
+            .maybeSingle(),
+          supabase
+            .from("user_permissions")
+            .select("permission, granted")
+            .eq("profile_id", session.user.id),
+        ]);
+
+        const profile = profileRes.data;
+        const isDashboardDisabled = dashSettingRes.data?.value === "true";
+        const overrides: Record<string, boolean> = {};
+        if (permsRes.data) {
+          for (const row of permsRes.data) {
+            overrides[row.permission] = row.granted;
+          }
+        }
+
+        const canView = hasPermission(profile?.role ?? "vendedor", "VER_DASHBOARD", overrides);
+        setShowDashboard(!isDashboardDisabled && canView);
 
         setUserProfile({
           full_name: profile?.full_name ?? "Usuario",
@@ -251,7 +285,7 @@ export default function Sidebar({
         <div className="flex items-center justify-between px-5 border-b border-slate-100 dark:border-slate-800/60 h-16 flex-shrink-0">
           {!isCollapsed ? (
             <Link
-              href="/dashboard"
+              href={showDashboard ? "/dashboard" : "/dashboard/ventas/nueva"}
               className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight flex items-center gap-2"
             >
               <img
@@ -263,7 +297,7 @@ export default function Sidebar({
             </Link>
           ) : (
             <Link
-              href="/dashboard"
+              href={showDashboard ? "/dashboard" : "/dashboard/ventas/nueva"}
               className="flex items-center justify-center mx-auto"
             >
               <img
@@ -286,28 +320,30 @@ export default function Sidebar({
         <div className="flex-1 overflow-y-auto py-5 px-3 space-y-5 scrollbar-none overflow-x-hidden">
           
           {/* Dashboard Link */}
-          <div>
-            <Link
-              href="/dashboard"
-              onClick={onClose}
-              title={isCollapsed ? "Dashboard" : ""}
-              className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border-l-2 group
-                ${
-                  pathname === "/dashboard"
-                    ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-600 font-bold"
-                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-205 border-transparent"
-                } ${isCollapsed ? "justify-center border-l-0" : ""}`}
-            >
-              <HiOutlineChartPie
-                className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-105 ${
-                  pathname === "/dashboard"
-                    ? "text-indigo-600 dark:text-indigo-400"
-                    : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-350"
-                }`}
-              />
-              {!isCollapsed && <span className="text-xs font-semibold">Dashboard</span>}
-            </Link>
-          </div>
+          {showDashboard && (
+            <div>
+              <Link
+                href="/dashboard"
+                onClick={onClose}
+                title={isCollapsed ? "Dashboard" : ""}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border-l-2 group
+                  ${
+                    pathname === "/dashboard"
+                      ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-600 font-bold"
+                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-800 dark:hover:text-slate-205 border-transparent"
+                  } ${isCollapsed ? "justify-center border-l-0" : ""}`}
+              >
+                <HiOutlineChartPie
+                  className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-105 ${
+                    pathname === "/dashboard"
+                      ? "text-indigo-600 dark:text-indigo-400"
+                      : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-350"
+                  }`}
+                />
+                {!isCollapsed && <span className="text-xs font-semibold">Dashboard</span>}
+              </Link>
+            </div>
+          )}
 
           {/* Comercial */}
           <div className="space-y-1">

@@ -45,6 +45,8 @@ export type DeskSaleRow = {
   total_amount: number;
   payment_method: string | null;
   is_cancelled: boolean;
+  register_id?: number | null;
+  register_name?: string | null;
   created_at: string;
 };
 
@@ -61,6 +63,7 @@ export type DeliveryCashCloseResult = {
 
 export type DeskCashCloseResult = {
   date: string;
+  registerId?: number | null;
   totalSales: number;
   activeSales: number;
   cancelledSales: number;
@@ -166,25 +169,33 @@ export async function getDeliveryCashClose(
 // ─── Cierre de Mostrador ─────────────────────────────────────────────────────
 
 export async function getDeskCashClose(
-  date: string
+  date: string,
+  registerId?: number | null
 ): Promise<{ success: boolean; data?: DeskCashCloseResult; error?: string }> {
   try {
     const supabase = createLooseAdminClient();
     const { startISO, endISO } = getArgentinaDayBounds(date);
 
-    const { data, error } = await supabase
-      .from('sales')
+    let query = (supabase.from('sales') as any)
       .select(`
         id,
         total_amount,
         payment_method,
         is_cancelled,
+        register_id,
         created_at,
-        customers ( full_name )
+        customers ( full_name ),
+        registers ( id, name )
       `)
       .gte('created_at', startISO)
       .lt('created_at', endISO)
       .order('created_at', { ascending: false });
+
+    if (registerId !== undefined && registerId !== null) {
+      query = query.eq('register_id', registerId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -196,6 +207,8 @@ export async function getDeskCashClose(
       total_amount: Number(s.total_amount) || 0,
       payment_method: s.payment_method ?? null,
       is_cancelled: Boolean(s.is_cancelled),
+      register_id: s.register_id ?? null,
+      register_name: s.registers?.name ?? null,
       created_at: s.created_at,
     }));
 
@@ -234,6 +247,7 @@ export async function getDeskCashClose(
       success: true,
       data: {
         date,
+        registerId: registerId ?? null,
         totalSales: sales.length,
         activeSales: active.length,
         cancelledSales: cancelled.length,
