@@ -1,6 +1,7 @@
 'use server';
 
 import { createLooseAdminClient } from '@/lib/admin';
+import { requirePermission } from '@/lib/serverAuth';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,8 @@ export async function getDeliveryCashClose(
   date: string
 ): Promise<{ success: boolean; data?: DeliveryCashCloseResult; error?: string }> {
   try {
+    await requirePermission('VER_CIERRE_CAJA');
+
     const supabase = createLooseAdminClient();
     const { startISO, endISO } = getArgentinaDayBounds(date);
 
@@ -173,6 +176,8 @@ export async function getDeskCashClose(
   registerId?: number | null
 ): Promise<{ success: boolean; data?: DeskCashCloseResult; error?: string }> {
   try {
+    await requirePermission('VER_CIERRE_CAJA');
+
     const supabase = createLooseAdminClient();
     const { startISO, endISO } = getArgentinaDayBounds(date);
 
@@ -270,6 +275,8 @@ export async function getCustomerRealDebt(
   customerId: string
 ): Promise<{ debt: number; debug?: any }> {
   try {
+    await requirePermission('VER_DEUDA_CLIENTES');
+
     const supabase = createLooseAdminClient();
 
     console.log('[getCustomerRealDebt] customerId:', customerId);

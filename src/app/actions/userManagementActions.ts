@@ -1,6 +1,7 @@
 'use server';
 
 import { createLooseAdminClient } from '@/lib/admin';
+import { requirePermission } from '@/lib/serverAuth';
 import { PERMISSIONS, type Permission, type Role, roleHasPermission } from '@/lib/permissions';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -23,6 +24,8 @@ export async function listUsers(): Promise<{
   error?: string;
 }> {
   try {
+    await requirePermission('VER_USUARIOS');
+
     const supabase = createLooseAdminClient();
 
     const [profilesResult, overridesResult] = await Promise.all([
@@ -70,6 +73,17 @@ export async function updateUserRole(
   newRole: Role
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const ctx = await requirePermission('CAMBIAR_ROLES');
+
+    const validRoles: Role[] = ['administrador', 'supervendedor', 'vendedor', 'repartidor'];
+    if (!validRoles.includes(newRole)) {
+      return { success: false, error: 'Rol inválido.' };
+    }
+
+    if (ctx.user.id === profileId && newRole !== 'administrador') {
+      return { success: false, error: 'No puedes degradar tu propio rol de administrador.' };
+    }
+
     const supabase = createLooseAdminClient();
     const { error } = await supabase
       .from('profiles')
@@ -92,6 +106,12 @@ export async function updateUserStatus(
   isActive: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const ctx = await requirePermission('EDITAR_USUARIOS');
+
+    if (ctx.user.id === profileId && !isActive) {
+      return { success: false, error: 'No puedes desactivar tu propia cuenta.' };
+    }
+
     const supabase = createLooseAdminClient();
     const { error } = await supabase
       .from('profiles')
@@ -118,6 +138,8 @@ export async function saveUserPermissions(
   overrides: { permission: Permission; granted: boolean }[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requirePermission('GESTIONAR_PERMISOS');
+
     const supabase = createLooseAdminClient();
 
     // Separar los overrides reales (difieren del rol) de los redundantes
@@ -168,6 +190,8 @@ export async function resetUserPermissions(
   profileId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requirePermission('GESTIONAR_PERMISOS');
+
     const supabase = createLooseAdminClient();
     const { error } = await supabase
       .from('user_permissions')
@@ -182,3 +206,4 @@ export async function resetUserPermissions(
     return { success: false, error: msg };
   }
 }
+

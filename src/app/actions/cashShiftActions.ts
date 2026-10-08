@@ -1,7 +1,8 @@
 'use server';
 
 import { createLooseAdminClient } from '@/lib/admin';
-import { supabase as browserSupabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/serverAuth';
+import { hasPermission } from '@/lib/permissions';
 
 export type CashShift = {
   id: number;
@@ -44,6 +45,8 @@ export async function getActiveShift(
   registerId: number
 ): Promise<{ success: boolean; data?: CashShift | null; error?: string }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
 
     // 1. Buscar turno abierto para la caja
@@ -141,6 +144,7 @@ export async function openCashShift(params: {
   profileId?: string;
 }): Promise<{ success: boolean; data?: CashShift; error?: string }> {
   try {
+    const ctx = await requireAuth();
     const supabase = createLooseAdminClient();
 
     // Validar que no haya ya un turno abierto en esta caja
@@ -154,21 +158,13 @@ export async function openCashShift(params: {
       return { success: false, error: 'Esta caja ya tiene un turno abierto activo.' };
     }
 
-    let cashierId = params.profileId;
-    if (!cashierId) {
-      // Intentar obtener usuario de auth si no fue enviado
-      const { data: { session } } = await browserSupabase.auth.getSession();
-      cashierId = session?.user?.id;
-    }
-
-    if (!cashierId) {
-      // Si no hay sesión directa en servidor, buscar el primer admin o perfil disponible
-      const { data: firstProfile } = await supabase.from('profiles').select('id').limit(1).single();
-      cashierId = firstProfile?.id;
-    }
-
-    if (!cashierId) {
-      return { success: false, error: 'No se pudo identificar el usuario para abrir el turno.' };
+    let cashierId = ctx.user.id;
+    if (params.profileId && params.profileId !== ctx.user.id) {
+      const canManage = hasPermission(ctx.profile.role, 'GESTIONAR_CAJAS', ctx.overrides);
+      if (!canManage) {
+        return { success: false, error: 'No tienes permiso para abrir turnos en nombre de otro usuario.' };
+      }
+      cashierId = params.profileId;
     }
 
     const initialAmount = Math.max(0, Number(params.initialCash) || 0);
@@ -231,6 +227,7 @@ export async function createCashMovement(params: {
   profileId?: string;
 }): Promise<{ success: boolean; data?: CashMovement; error?: string }> {
   try {
+    const ctx = await requireAuth();
     const supabase = createLooseAdminClient();
 
     const amt = Number(params.amount);
@@ -242,17 +239,13 @@ export async function createCashMovement(params: {
       return { success: false, error: 'Debe especificar el motivo del movimiento.' };
     }
 
-    let cashierId = params.profileId;
-    if (!cashierId) {
-      const { data: { session } } = await browserSupabase.auth.getSession();
-      cashierId = session?.user?.id;
-    }
+    const cashierId = ctx.user.id;
 
     const { data: inserted, error } = await (supabase.from('cash_movements') as any)
       .insert({
         register_id: params.registerId,
         shift_id: params.shiftId || null,
-        profile_id: cashierId || null,
+        profile_id: cashierId,
         type: params.type,
         amount: amt,
         reason: params.reason.trim(),
@@ -291,6 +284,8 @@ export async function getShiftMovements(
   openedAt?: string
 ): Promise<{ success: boolean; data?: CashMovement[]; error?: string }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
 
     let query = (supabase.from('cash_movements') as any)
@@ -341,6 +336,7 @@ export async function closeCashShift(params: {
   closedBy?: string;
 }): Promise<{ success: boolean; data?: CashShift; error?: string }> {
   try {
+    const ctx = await requireAuth();
     const supabase = createLooseAdminClient();
 
     // 1. Obtener datos del turno abierto
@@ -355,6 +351,16 @@ export async function closeCashShift(params: {
 
     if (shift.status === 'closed') {
       return { success: false, error: 'Este turno ya fue cerrado previamente.' };
+    }
+
+    // Si el turno no pertenece al usuario actual, verificar si tiene permisos de supervisión o administración de cajas
+    if (shift.profile_id !== ctx.user.id) {
+      const canCloseOthers =
+        hasPermission(ctx.profile.role, 'VER_CIERRE_CAJA', ctx.overrides) ||
+        hasPermission(ctx.profile.role, 'GESTIONAR_CAJAS', ctx.overrides);
+      if (!canCloseOthers) {
+        return { success: false, error: 'No tienes permiso para cerrar el turno de otro usuario.' };
+      }
     }
 
     const openedAt = shift.opened_at;
@@ -397,11 +403,7 @@ export async function closeCashShift(params: {
     const countedCash = Number(params.countedCash) || 0;
     const difference = countedCash - expectedCash;
 
-    let closerId = params.closedBy;
-    if (!closerId) {
-      const { data: { session } } = await browserSupabase.auth.getSession();
-      closerId = session?.user?.id || shift.profile_id;
-    }
+    const closerId = ctx.user.id;
 
     // 4. Actualizar el turno como cerrado
     const { data: updated, error: updateErr } = await (supabase.from('cash_shifts') as any)
@@ -466,6 +468,8 @@ export async function getShiftHistory(
   limit: number = 30
 ): Promise<{ success: boolean; data?: CashShift[]; error?: string }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
 
     let query = (supabase.from('cash_shifts') as any)

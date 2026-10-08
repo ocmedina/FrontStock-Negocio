@@ -1,6 +1,7 @@
 'use server';
 
 import { createLooseAdminClient } from '@/lib/admin';
+import { requireAuth, requirePermission } from '@/lib/serverAuth';
 
 export type Register = {
   id: number;
@@ -32,6 +33,8 @@ export async function getRegisters(): Promise<{
   error?: string;
 }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
 
     const [registersRes, profilesRes] = await Promise.all([
@@ -93,6 +96,8 @@ export async function getActiveRegisters(): Promise<{
   error?: string;
 }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
     const { data, error } = await supabase
       .from('registers' as any)
@@ -137,6 +142,8 @@ export async function getUserAssignedRegister(profileId: string): Promise<{
   error?: string;
 }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -164,6 +171,7 @@ export async function getUserAssignedRegister(profileId: string): Promise<{
         name: reg.name,
         description: reg.description ?? null,
         is_active: Boolean(reg.is_active),
+        point_of_sale: Math.max(1, Number(reg.point_of_sale) || 1),
         created_at: reg.created_at,
       },
     };
@@ -181,6 +189,8 @@ export async function assignUserRegister(
   registerId: number | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requirePermission('GESTIONAR_CAJAS');
+
     const supabase = createLooseAdminClient();
     const { error } = await supabase
       .from('profiles')
@@ -204,6 +214,8 @@ export async function createRegister(
   point_of_sale: number = 1
 ): Promise<{ success: boolean; data?: Register; error?: string }> {
   try {
+    await requirePermission('GESTIONAR_CAJAS');
+
     if (!name || !name.trim()) {
       return { success: false, error: 'El nombre de la caja es obligatorio' };
     }
@@ -248,6 +260,8 @@ export async function updateRegister(
   updates: { name?: string; description?: string; is_active?: boolean; point_of_sale?: number }
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requirePermission('GESTIONAR_CAJAS');
+
     const payload: Record<string, any> = {};
     if (updates.name !== undefined) payload.name = updates.name.trim();
     if (updates.description !== undefined) payload.description = updates.description.trim() || null;
@@ -279,6 +293,8 @@ export async function getUserRegisterAssignments(): Promise<{
   error?: string;
 }> {
   try {
+    await requireAuth();
+
     const supabase = createLooseAdminClient();
     const { data, error } = await supabase
       .from('profiles')

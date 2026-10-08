@@ -30,7 +30,7 @@ export default function MobileBottomNav({ onOpenMenu }: MobileBottomNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur border-t border-gray-200 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/90 dark:bg-slate-950/90 backdrop-blur border-t border-gray-200 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]">
       <div className="mx-3 my-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl border border-white/10">
         <div className="grid grid-cols-4 items-center">
           {navItems.map((item) => {

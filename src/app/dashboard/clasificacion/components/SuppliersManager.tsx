@@ -346,7 +346,7 @@ export default function SuppliersManager() {
 
       {/* Supplier Brand Assignment Modal */}
       {assignBrandsTarget && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4 animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
             
             {/* Modal Header */}
