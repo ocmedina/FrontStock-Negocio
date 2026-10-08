@@ -12,10 +12,16 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   const fetchPermissionOverrides = useCallback(async (profileId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_permissions')
       .select('permission, granted')
       .eq('profile_id', profileId);
+
+    if (error) {
+      console.error('[useAuth] Error loading permission overrides:', error);
+      setPermissionOverrides({});
+      return;
+    }
 
     if (data) {
       const map: Record<string, boolean> = {};
@@ -36,54 +42,83 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+    let isMounted = true;
 
-      if (user) {
-        const profile = await fetchProfile(user.id);
-        const roleFromMetadata = user.user_metadata?.role as string | undefined;
-        const resolvedProfile = profile || (roleFromMetadata ? { id: user.id, role: roleFromMetadata } : null);
-
-        setUser(user);
-        setProfile(resolvedProfile);
-
-        if (resolvedProfile?.id) {
-          await fetchPermissionOverrides(resolvedProfile.id);
+    const applySession = async (sessionUser: any | null) => {
+      if (!sessionUser) {
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setPermissionOverrides({});
         }
-      } else {
-        setUser(null);
-        setProfile(null);
-        setPermissionOverrides({});
+        return;
       }
-      setLoading(false);
+
+      const profile = await fetchProfile(sessionUser.id);
+      const roleFromMetadata = sessionUser.user_metadata?.role as string | undefined;
+      const resolvedProfile = profile || (
+        roleFromMetadata
+          ? { id: sessionUser.id, role: roleFromMetadata }
+          : null
+      );
+
+      if (!isMounted) return;
+
+      setUser(sessionUser);
+      setProfile(resolvedProfile);
+      setPermissionOverrides({});
+
+      if (resolvedProfile?.id) {
+        await fetchPermissionOverrides(resolvedProfile.id);
+      }
+    };
+
+    const fetchUser = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        await applySession(data.user);
+      } catch (error) {
+        console.error('[useAuth] Error loading authenticated user:', error);
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setPermissionOverrides({});
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     };
 
     fetchUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
-          const roleFromMetadata = session.user.user_metadata?.role as string | undefined;
-          const resolvedProfile = profile || (roleFromMetadata ? { id: session.user.id, role: roleFromMetadata } : null);
+      (_event, session) => {
+        // No hacer consultas a Supabase directamente dentro de este callback:
+        // el cliente puede mantener un lock interno durante la notificación.
+        setTimeout(() => {
+          if (!isMounted) return;
 
-          setUser(session.user);
-          setProfile(resolvedProfile);
-
-          if (resolvedProfile?.id) {
-            await fetchPermissionOverrides(resolvedProfile.id);
-          }
-        } else {
-          setUser(null);
-          setProfile(null);
-          setPermissionOverrides({});
-        }
-
-        setLoading(false);
+          void applySession(session?.user ?? null)
+            .catch((error) => {
+              console.error('[useAuth] Error processing auth state change:', error);
+              if (isMounted) {
+                setUser(null);
+                setProfile(null);
+                setPermissionOverrides({});
+              }
+            })
+            .finally(() => {
+              if (isMounted) setLoading(false);
+            });
+        }, 0);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile, fetchPermissionOverrides]);
 
   /**

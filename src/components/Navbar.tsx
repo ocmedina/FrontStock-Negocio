@@ -21,6 +21,7 @@ import {
   HiOutlineClipboardList,
   HiOutlineCash,
   HiOutlineDesktopComputer,
+  HiOutlineChevronDown,
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import TimeWeatherIndicator from "@/components/TimeWeatherIndicator";
@@ -122,6 +123,8 @@ export default function Navbar() {
   const [showDashboard, setShowDashboard] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [openDesktopSection, setOpenDesktopSection] = useState<string | null>(null);
+  const [openMobileSections, setOpenMobileSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -218,6 +221,15 @@ export default function Navbar() {
     { category: "Administración", links: getVisibleLinks(navSections.administracion) },
   ];
 
+  const hasActiveLink = (links: any[]) => links.some((link) => isLinkActive(link.href));
+
+  const toggleMobileSection = (category: string, links: any[]) => {
+    setOpenMobileSections((prev) => ({
+      ...prev,
+      [category]: !(prev[category] ?? hasActiveLink(links)),
+    }));
+  };
+
   return (
     <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-150 dark:border-slate-800/80 sticky top-0 z-50 h-14 flex items-center shadow-sm">
       <div className="w-full px-4 max-w-[1550px] mx-auto">
@@ -252,30 +264,52 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Navigation Links - Desktop Unified (No color columns blocks) */}
-          <div className="hidden lg:flex items-center gap-1.5 max-w-6xl mx-4 overflow-x-auto scrollbar-none">
+          {/* Navigation Links - Desktop por menús desplegables */}
+          <div className="hidden lg:flex items-center gap-2 mx-4">
             {allLinks.map((catGroup) => {
               if (catGroup.links.length === 0) return null;
+              const sectionIsActive = hasActiveLink(catGroup.links);
               return (
-                <div key={catGroup.category} className="flex items-center gap-1 border-r border-slate-100 dark:border-slate-800/50 pr-2 last:border-0 last:pr-0">
-                  {catGroup.links.map((link) => {
-                    const Icon = link.icon;
-                    const isActive = isLinkActive(link.href);
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap
-                          ${isActive
-                            ? "bg-indigo-600 text-white shadow-sm font-bold"
-                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 hover:text-slate-855 dark:hover:text-slate-200"
-                          }`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span>{link.label}</span>
-                      </Link>
-                    );
-                  })}
+                <div key={catGroup.category} className="relative">
+                  <button
+                    onClick={() => setOpenDesktopSection((prev) => prev === catGroup.category ? null : catGroup.category)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                      sectionIsActive
+                        ? "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                    aria-expanded={openDesktopSection === catGroup.category}
+                  >
+                    {catGroup.category}
+                    <HiOutlineChevronDown className={`h-3.5 w-3.5 transition-transform ${openDesktopSection === catGroup.category ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {openDesktopSection === catGroup.category && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setOpenDesktopSection(null)} />
+                      <div className="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-xl z-20">
+                        {catGroup.links.map((link) => {
+                          const Icon = link.icon;
+                          const isActive = isLinkActive(link.href);
+                          return (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              onClick={() => setOpenDesktopSection(null)}
+                              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
+                                isActive
+                                  ? "bg-indigo-600 text-white font-bold"
+                                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              }`}
+                            >
+                              <Icon className="h-4 w-4" />
+                              {link.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -386,10 +420,15 @@ export default function Navbar() {
 
             {/* Comercial */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-widest px-3.5 block">
+              <button
+                onClick={() => toggleMobileSection("Comercial", getVisibleLinks(navSections.comercial))}
+                className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-[10px] font-extrabold text-indigo-600 uppercase tracking-widest hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20"
+                aria-expanded={openMobileSections.Comercial ?? hasActiveLink(getVisibleLinks(navSections.comercial))}
+              >
                 Comercial
-              </span>
-              <div className="space-y-1">
+                <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${((openMobileSections.Comercial ?? hasActiveLink(getVisibleLinks(navSections.comercial))) ? "rotate-180" : "")}`} />
+              </button>
+              {(openMobileSections.Comercial ?? hasActiveLink(getVisibleLinks(navSections.comercial))) && <div className="space-y-1">
                 {getVisibleLinks(navSections.comercial).map((link) => {
                   const Icon = link.icon;
                   const isActive = isLinkActive(link.href);
@@ -409,15 +448,20 @@ export default function Navbar() {
                     </Link>
                   );
                 })}
-              </div>
+              </div>}
             </div>
 
             {/* Logística */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest px-3.5 block">
+              <button
+                onClick={() => toggleMobileSection("Logística", getVisibleLinks(navSections.logistica))}
+                className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest hover:bg-emerald-50/60 dark:hover:bg-emerald-950/20"
+                aria-expanded={openMobileSections.Logística ?? hasActiveLink(getVisibleLinks(navSections.logistica))}
+              >
                 Logística
-              </span>
-              <div className="space-y-1">
+                <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${((openMobileSections.Logística ?? hasActiveLink(getVisibleLinks(navSections.logistica))) ? "rotate-180" : "")}`} />
+              </button>
+              {(openMobileSections.Logística ?? hasActiveLink(getVisibleLinks(navSections.logistica))) && <div className="space-y-1">
                 {getVisibleLinks(navSections.logistica).map((link) => {
                   const Icon = link.icon;
                   const isActive = isLinkActive(link.href);
@@ -437,16 +481,21 @@ export default function Navbar() {
                     </Link>
                   );
                 })}
-              </div>
+              </div>}
             </div>
 
             {/* Administración */}
             {getVisibleLinks(navSections.administracion).length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest px-3.5 block">
+                <button
+                  onClick={() => toggleMobileSection("Administración", getVisibleLinks(navSections.administracion))}
+                  className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-[10px] font-extrabold text-amber-600 uppercase tracking-widest hover:bg-amber-50/60 dark:hover:bg-amber-950/20"
+                  aria-expanded={openMobileSections.Administración ?? hasActiveLink(getVisibleLinks(navSections.administracion))}
+                >
                   Administración
-                </span>
-                <div className="space-y-1">
+                  <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${((openMobileSections.Administración ?? hasActiveLink(getVisibleLinks(navSections.administracion))) ? "rotate-180" : "")}`} />
+                </button>
+                {(openMobileSections.Administración ?? hasActiveLink(getVisibleLinks(navSections.administracion))) && <div className="space-y-1">
                   {getVisibleLinks(navSections.administracion).map((link) => {
                     const Icon = link.icon;
                     const isActive = isLinkActive(link.href);
@@ -466,7 +515,7 @@ export default function Navbar() {
                       </Link>
                     );
                   })}
-                </div>
+                </div>}
               </div>
             )}
 

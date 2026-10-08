@@ -163,13 +163,13 @@ export default function CashRegistersPage() {
   return (
     <div className="p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-full space-y-6">
       {/* HEADER CARD */}
-      <div className="relative overflow-hidden rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-sm flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
         <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-indigo-50/50 dark:bg-indigo-950/20" />
-        <div className="flex items-center gap-4 text-left relative z-10">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 text-left relative z-10">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-md text-xl flex-shrink-0">
             <FaCashRegister />
           </span>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
               Puestos de Venta / Cajas
             </h1>
@@ -179,7 +179,7 @@ export default function CashRegistersPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
+        <div className="flex w-full sm:w-auto items-center gap-2 sm:gap-3 relative z-10">
           <button
             onClick={() => fetchData()}
             disabled={loading}
@@ -190,7 +190,7 @@ export default function CashRegistersPage() {
           </button>
           <button
             onClick={handleOpenCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95"
+            className="inline-flex flex-1 sm:flex-none justify-center items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95"
           >
             <FaPlus className="text-xs" />
             Nueva Caja
@@ -201,16 +201,16 @@ export default function CashRegistersPage() {
       {/* OVERVIEW STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Terminal actual */}
-        <div className="rounded-2xl p-5 border shadow-2xs bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/50 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-2xs bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/50 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
               <FaDesktop />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Puesto en esta terminal
               </p>
-              <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+              <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mt-0.5 truncate">
                 {activeRegister ? activeRegister.name : "Cargando..."}
               </p>
             </div>
@@ -221,7 +221,7 @@ export default function CashRegistersPage() {
         </div>
 
         {/* Cajas activas */}
-        <div className="rounded-2xl p-5 border shadow-2xs bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 flex items-center gap-3.5">
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-2xs bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
             <FaStore />
           </div>
@@ -236,7 +236,7 @@ export default function CashRegistersPage() {
         </div>
 
         {/* Simultaniedad */}
-        <div className="rounded-2xl p-5 border shadow-2xs bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 flex items-center gap-3.5">
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-2xs bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
             <FaShieldAlt />
           </div>
@@ -253,7 +253,7 @@ export default function CashRegistersPage() {
 
       {/* LISTADO DE CAJAS */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-gray-50/50 dark:bg-slate-900/50">
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <FaStore className="text-indigo-600 dark:text-indigo-400" />
             Cajas Configuradas
@@ -281,13 +281,13 @@ export default function CashRegistersPage() {
               return (
                 <div
                   key={reg.id}
-                  className={`p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40 ${
+                  className={`p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40 ${
                     !reg.is_active ? "opacity-60 bg-gray-50/50 dark:bg-slate-950/40" : ""
                   }`}
                 >
                   <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2.5">
-                      <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h3 className="max-w-full break-words text-base font-black text-slate-900 dark:text-slate-100">
                         {reg.name}
                       </h3>
                       {reg.is_active ? (
@@ -336,11 +336,11 @@ export default function CashRegistersPage() {
                   </div>
 
                   {/* Acciones para cada caja */}
-                  <div className="flex items-center gap-2 self-start md:self-center flex-wrap">
+                  <div className="flex w-full md:w-auto items-stretch md:items-center gap-2 self-start md:self-center flex-wrap">
                     {!isCurrentActive && reg.is_active && (
                       <button
                         onClick={() => handleSwitchTerminalRegister(reg)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-100 transition-all shadow-2xs"
+                        className="inline-flex flex-1 md:flex-none justify-center items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-100 transition-all shadow-2xs"
                         title="Seleccionar esta caja para operar en este navegador"
                       >
                         <FaExchangeAlt className="text-[10px]" />
@@ -350,7 +350,7 @@ export default function CashRegistersPage() {
 
                     <button
                       onClick={() => handleOpenEditModal(reg)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-2xs"
+                      className="inline-flex flex-1 md:flex-none justify-center items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-2xs"
                     >
                       <FaEdit className="text-[10px]" />
                       Editar
@@ -358,7 +358,7 @@ export default function CashRegistersPage() {
 
                     <button
                       onClick={() => handleToggleActive(reg)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-bold text-xs transition-all shadow-2xs ${
+                      className={`inline-flex flex-1 md:flex-none justify-center items-center gap-1.5 px-3 py-1.5 rounded-xl border font-bold text-xs transition-all shadow-2xs ${
                         reg.is_active
                           ? "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 hover:bg-rose-100"
                           : "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
@@ -376,11 +376,11 @@ export default function CashRegistersPage() {
 
       {/* ASIGNACIÓN DE CAJAS POR USUARIO */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <FaUserCheck className="text-indigo-600 dark:text-indigo-400" />
-              Asignación Fija de Puestos por Usuario
+              <span>Asignación Fija de Puestos por Usuario</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Si fijas una caja a un usuario, no podrá operar ni cambiar a otra caja accidentalmente.
@@ -388,7 +388,7 @@ export default function CashRegistersPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800 text-left text-sm">
             <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-black tracking-wider">
               <tr>
@@ -445,10 +445,53 @@ export default function CashRegistersPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="divide-y divide-gray-100 dark:divide-slate-800 sm:hidden">
+          {userAssignments.length === 0 ? (
+            <p className="p-6 text-center text-xs font-semibold text-slate-400">
+              No hay usuarios para asignar.
+            </p>
+          ) : (
+            userAssignments.map((u) => {
+              const isAssigned = u.register_id !== null;
+
+              return (
+                <div key={u.profile_id} className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-words font-bold text-slate-900 dark:text-slate-100">
+                        {u.full_name || u.username || "Sin nombre"}
+                      </p>
+                      <span className="mt-1 inline-block capitalize text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        {u.role}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {isAssigned ? "Fijo" : "Libre"}
+                    </span>
+                  </div>
+
+                  <select
+                    value={u.register_id ?? "none"}
+                    onChange={(e) => handleUserAssignmentChange(u.profile_id, e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    <option value="none">Sin asignación (Libre)</option>
+                    {registers.map((reg) => (
+                      <option key={reg.id} value={reg.id} disabled={!reg.is_active}>
+                        {reg.name} {!reg.is_active ? "(Inactiva)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* NOTA INFORMATIVA DE SEGURIDAD Y STOCK */}
-      <div className="bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 rounded-2xl p-5 flex items-start gap-3.5 text-xs text-indigo-900 dark:text-indigo-300">
+      <div className="bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-xs text-indigo-900 dark:text-indigo-300">
         <FaInfoCircle className="text-indigo-600 text-base flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-bold">Arquitectura Unificada de Stock & Precios:</p>

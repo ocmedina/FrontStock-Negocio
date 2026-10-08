@@ -60,17 +60,17 @@ function NewUserModal({ isOpen, onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 dark:border-slate-700">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto border border-gray-200 dark:border-slate-700">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-5">
+          <div className="flex justify-between items-start gap-3">
+            <h2 className="min-w-0 text-xl font-bold text-white flex items-center gap-2">
               <FaUserPlus /> Crear Nuevo Usuario
             </h2>
             <button onClick={onClose} className="text-white/70 hover:text-white text-xl">✕</button>
           </div>
         </div>
 
-        <form action={handleSubmit} className="p-6 space-y-4">
+        <form action={handleSubmit} className="p-4 sm:p-6 space-y-4">
           {[
             { name: 'fullName', label: 'Nombre Completo', placeholder: 'Juan Pérez', type: 'text' },
             { name: 'username', label: 'Usuario', placeholder: 'juan.perez', type: 'text', pattern: '[a-zA-Z0-9._-]+' },
@@ -108,13 +108,13 @@ function NewUserModal({ isOpen, onClose, onCreated }: {
             </select>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2 border-t border-gray-200 dark:border-slate-700">
             <button type="button" onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 text-sm font-medium transition-all">
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 text-sm font-medium transition-all">
               Cancelar
             </button>
             <button type="submit" disabled={loading}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-all flex items-center gap-2">
+              className="w-full sm:w-auto justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-all flex items-center gap-2">
               {loading ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creando...</> : 'Crear Usuario'}
             </button>
           </div>
@@ -221,11 +221,11 @@ function PermissionsModal({ user, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-200 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col border border-gray-200 dark:border-slate-700">
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-purple-700 p-5 rounded-t-2xl flex-shrink-0">
-          <div className="flex justify-between items-start">
-            <div>
+        <div className="bg-gradient-to-r from-violet-600 to-purple-700 p-4 sm:p-5 rounded-t-2xl flex-shrink-0">
+          <div className="flex justify-between items-start gap-3">
+            <div className="min-w-0">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <FaShieldAlt /> Permisos de {user.full_name}
               </h2>
@@ -236,7 +236,7 @@ function PermissionsModal({ user, onClose, onSaved }: {
         </div>
 
         {/* Rol selector */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
@@ -269,7 +269,7 @@ function PermissionsModal({ user, onClose, onSaved }: {
         </div>
 
         {/* Permisos scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3">
           {PERMISSION_GROUPS.map((group) => {
             const isOpen = openGroups[group.label];
             const groupGranted = group.permissions.filter((p) => permissions[p]).length;
@@ -326,13 +326,13 @@ function PermissionsModal({ user, onClose, onSaved }: {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 flex-shrink-0 bg-gray-50 dark:bg-slate-800/50 rounded-b-2xl">
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 flex-shrink-0 bg-gray-50 dark:bg-slate-800/50 rounded-b-2xl">
           <button onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 text-sm font-medium transition-all">
+            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 text-sm font-medium transition-all">
             Cancelar
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="px-5 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 text-sm font-semibold transition-all flex items-center gap-2">
+            className="w-full sm:w-auto justify-center px-5 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 text-sm font-semibold transition-all flex items-center gap-2">
             {saving
               ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
               : <><FaCheck /> Guardar Cambios</>}
@@ -394,16 +394,16 @@ function UsersPageContent() {
   );
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-full">
+    <div className="p-4 sm:p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-full">
 
       {/* Header */}
-      <div className="group relative overflow-hidden rounded-2xl border border-violet-100 dark:border-violet-900/60 bg-white dark:bg-slate-900 p-5 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div className="group relative overflow-hidden rounded-2xl border border-violet-100 dark:border-violet-900/60 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
         <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-violet-50/50 dark:bg-violet-950/20" />
-        <div className="flex items-center gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
           <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-3xs text-base">
             <FaUser />
           </span>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-black text-slate-900 dark:text-slate-50 leading-none">
               Gestión de Usuarios
             </h1>
@@ -416,7 +416,7 @@ function UsersPageContent() {
         {can('CREAR_USUARIOS') && (
           <button
             onClick={() => setIsNewUserOpen(true)}
-            className="relative z-10 flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 shadow-sm hover:shadow-md transition-all font-semibold text-sm"
+            className="relative z-10 w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 shadow-sm hover:shadow-md transition-all font-semibold text-sm"
           >
             <FaUserPlus /> Crear Usuario
           </button>
@@ -439,7 +439,7 @@ function UsersPageContent() {
 
       {/* Tabla */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full">
             <thead>
               <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700">
@@ -571,6 +571,97 @@ function UsersPageContent() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="divide-y divide-gray-100 dark:divide-slate-700/50 sm:hidden">
+          {loading ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-16">
+              <div className="animate-spin w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full" />
+              <span className="text-sm text-gray-500 dark:text-slate-400">Cargando usuarios...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-4 py-16 text-center text-gray-400 dark:text-slate-500 text-sm">
+              {search ? 'No se encontraron usuarios con ese criterio.' : 'No hay usuarios registrados.'}
+            </div>
+          ) : (
+            filtered.map((u) => {
+              const overrideCount = Object.keys(u.overrides).length;
+
+              return (
+                <div
+                  key={u.id}
+                  className={`space-y-4 p-4 ${!u.is_active ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {u.full_name?.charAt(0).toUpperCase() ?? '?'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="break-words text-sm font-semibold text-gray-900 dark:text-slate-100">
+                        {u.full_name}
+                      </div>
+                      <div className="break-all text-xs text-gray-400 dark:text-slate-500">
+                        @{u.username} · {u.email}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold ${u.is_active
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400 border border-gray-200 dark:border-slate-600'
+                    }`}>
+                      {u.is_active ? <FaCheck /> : <FaTimes />}
+                      {u.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[u.role]}`}>
+                      {ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                    {overrideCount > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-full font-medium">
+                        <FaShieldAlt className="text-[10px]" />
+                        {overrideCount} personalizado{overrideCount !== 1 ? 's' : ''}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 dark:text-slate-500">Defaults del rol</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+                    {can('GESTIONAR_PERMISOS') && (
+                      <button
+                        onClick={() => setPermissionsUser(u)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all"
+                      >
+                        <FaShieldAlt /> Permisos
+                      </button>
+                    )}
+                    {can('EDITAR_USUARIOS') && (
+                      <button
+                        onClick={() => setPasswordUser(u)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
+                      >
+                        <FaKey /> Contraseña
+                      </button>
+                    )}
+                    {can('EDITAR_USUARIOS') && (
+                      <button
+                        onClick={() => handleStatusChange(u)}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                          u.is_active
+                            ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-100'
+                            : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {u.is_active ? <FaToggleOff /> : <FaToggleOn />}
+                        {u.is_active ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
