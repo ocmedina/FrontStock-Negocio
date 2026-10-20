@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Sistema de Gestión de Stock y Ventas",
   manifest: "/manifest.json",
   icons: {
-    icon: "/Logo-nuevo.png",
+    icon: "/Logo-nuevo.png?v=2",
   },
 };
 
