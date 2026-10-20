@@ -76,7 +76,7 @@ export default function WelcomeModal() {
             <div className="text-center space-y-4 animate-fadeIn">
               <div className="w-16 h-16 mx-auto rounded-3xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-3 shadow-md relative">
                 <img
-                  src="/favicon.png"
+                  src="/Logo-nuevo.png"
                   alt="FrontStock Logo"
                   className="w-10 h-10 object-contain rounded-lg"
                 />

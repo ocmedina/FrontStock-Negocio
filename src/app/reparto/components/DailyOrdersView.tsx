@@ -48,6 +48,8 @@ interface DailyOrdersViewProps {
   onEditOrder: (orderId: string) => void;
   onPrintRemito: (orderId: string) => void;
   onDeliverOrder: (order: Order) => void;
+  onNotDeliveredOrder: (order: Order) => void;
+  onRescheduleOrder: (order: Order) => void;
   onCancelOrder: (order: Order) => void;
 }
 
@@ -66,6 +68,8 @@ export default function DailyOrdersView({
   onEditOrder,
   onPrintRemito,
   onDeliverOrder,
+  onNotDeliveredOrder,
+  onRescheduleOrder,
   onCancelOrder,
 }: DailyOrdersViewProps) {
   // Parsear fecha con T12:00:00 evita desfasajes horarios
@@ -101,6 +105,9 @@ export default function DailyOrdersView({
     .reduce((s, o) => s + (o.amount_paid || 0), 0);
   const totalCheque = deliveredOrders
     .filter((o) => (o.payment_method || "").toLowerCase() === "cheque")
+    .reduce((s, o) => s + (o.amount_paid || 0), 0);
+  const totalMixto = deliveredOrders
+    .filter((o) => (o.payment_method || "").toLowerCase() === "mixto")
     .reduce((s, o) => s + (o.amount_paid || 0), 0);
 
   const fmt = (n: number) =>
@@ -191,6 +198,14 @@ export default function DailyOrdersView({
                 <span className="text-xs font-black text-purple-800 dark:text-purple-350">{fmt(totalCheque)}</span>
               </div>
             )}
+            {totalMixto > 0 && (
+              <div className="flex items-center justify-between bg-indigo-50/50 dark:bg-indigo-950/15 rounded-xl px-3 py-2 border border-indigo-100/30 dark:border-indigo-900/10">
+                <span className="text-[10px] font-black text-indigo-800 dark:text-indigo-400 flex items-center gap-1.5 uppercase">
+                  💳 Mixto
+                </span>
+                <span className="text-xs font-black text-indigo-800 dark:text-indigo-350">{fmt(totalMixto)}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-850">
@@ -278,7 +293,7 @@ export default function DailyOrdersView({
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider w-fit ${
                       order.status === "pendiente"
                         ? "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450 border border-amber-500/10"
-                        : order.status === "cancelado"
+                        : order.status === "cancelado" || order.status === "no_entregado"
                         ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-500/10"
                         : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10"
                     }`}
@@ -287,6 +302,8 @@ export default function DailyOrdersView({
                       <FaClock />
                     ) : order.status === "cancelado" ? (
                       <FaBan />
+                    ) : order.status === "no_entregado" ? (
+                      <FaExclamationTriangle />
                     ) : (
                       <FaCheckCircle />
                     )}
@@ -294,6 +311,8 @@ export default function DailyOrdersView({
                       ? "Pendiente"
                       : order.status === "cancelado"
                       ? "Cancelado"
+                      : order.status === "no_entregado"
+                      ? "No entregado"
                       : "Entregado"}
                   </span>
                   
@@ -347,6 +366,13 @@ export default function DailyOrdersView({
                           <FaTruck /> Entregar
                         </button>
                         <button
+                          onClick={() => onNotDeliveredOrder(order)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-all shadow-sm"
+                          title="Registrar entrega fallida"
+                        >
+                          <FaExclamationTriangle /> No entregado
+                        </button>
+                        <button
                           onClick={() => onCancelOrder(order)}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black rounded-lg transition-all shadow-sm"
                           title="Cancelar Pedido"
@@ -354,6 +380,15 @@ export default function DailyOrdersView({
                           <FaBan /> Cancelar
                         </button>
                       </>
+                    )}
+                    {order.status === "no_entregado" && (
+                      <button
+                        onClick={() => onRescheduleOrder(order)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-lg transition-all shadow-sm"
+                        title="Reprogramar entrega"
+                      >
+                        <FaCalendarAlt /> Reprogramar
+                      </button>
                     )}
                   </div>
                 </div>

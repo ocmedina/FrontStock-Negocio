@@ -55,9 +55,17 @@ export default function ChristmasLogo({
         </div>
       )}
 
-      {/* Original Logo Text */}
-      <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-purple-700 transition-all font-outfit tracking-tight whitespace-nowrap">
-        {logoText}
+      <span className="flex items-center gap-2">
+        <img
+          src="/Logo-nuevo.png"
+          alt="FrontStock logo"
+          className={isCollapsed ? "w-8 h-8 object-contain" : "w-9 h-9 object-contain"}
+        />
+        {!isCollapsed && (
+          <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-purple-700 transition-all font-outfit tracking-tight whitespace-nowrap">
+            {logoText}
+          </span>
+        )}
       </span>
     </Link>
   );

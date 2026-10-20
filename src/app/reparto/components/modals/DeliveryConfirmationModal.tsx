@@ -7,6 +7,7 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import { Database } from "@/lib/database.types";
+import toast from "react-hot-toast";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type Order = {
@@ -30,8 +31,12 @@ interface DeliveryConfirmationModalProps {
   onConfirm: (
     orderId: string,
     amountPaid: number,
-    paymentMethod: string
-  ) => void;
+    paymentMethod: string,
+    paymentBreakdown?: {
+      cash: number;
+      transfer: number;
+    }
+  ) => Promise<boolean>;
 }
 
 export default function DeliveryConfirmationModal({
@@ -70,9 +75,41 @@ export default function DeliveryConfirmationModal({
   const handleConfirm = async () => {
     setIsDelivering(true);
     const paid = parseFloat(amountPaid) || 0;
-    await onConfirm(order.id, paid, paymentMethod);
+    const paymentBreakdown =
+      paymentMethod === "mixto"
+        ? {
+            cash: parseFloat(amountCash) || 0,
+            transfer: parseFloat(amountTransfer) || 0,
+          }
+        : undefined;
+
+    if (paid < 0 || paid > order.total_amount) {
+      toast.error("El monto recibido no puede superar el total del pedido.");
+      setIsDelivering(false);
+      return;
+    }
+
+    if (
+      paymentMethod === "mixto" &&
+      (!paymentBreakdown ||
+        paymentBreakdown.cash < 0 ||
+        paymentBreakdown.transfer < 0 ||
+        Math.abs(paymentBreakdown.cash + paymentBreakdown.transfer - paid) >
+          0.01)
+    ) {
+      toast.error("Los importes de efectivo y transferencia no coinciden.");
+      setIsDelivering(false);
+      return;
+    }
+
+    const confirmed = await onConfirm(
+      order.id,
+      paid,
+      paymentMethod,
+      paymentBreakdown
+    );
     setIsDelivering(false);
-    onClose();
+    if (confirmed) onClose();
   };
 
   const total = order.total_amount;

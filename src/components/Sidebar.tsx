@@ -289,8 +289,8 @@ export default function Sidebar({
               className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight flex items-center gap-2"
             >
               <img
-                src="/favicon.png"
-                alt="FrontStock Logo"
+                src="/Logo-nuevo.png"
+                alt="FrontStock logo"
                 className="w-7 h-7 object-contain rounded-lg shadow-sm"
               />
               <span>FrontStock</span>
@@ -301,8 +301,8 @@ export default function Sidebar({
               className="flex items-center justify-center mx-auto"
             >
               <img
-                src="/favicon.png"
-                alt="FrontStock Logo"
+                src="/Logo-nuevo.png"
+                alt="FrontStock logo"
                 className="w-7 h-7 object-contain rounded-lg shadow-sm"
               />
             </Link>

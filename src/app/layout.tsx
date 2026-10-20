@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Sistema de Gestión de Stock y Ventas",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.png",
+    icon: "/Logo-nuevo.png",
   },
 };
 
@@ -27,8 +27,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
           disableTransitionOnChange
         >
           <ConditionalChristmasDecorations

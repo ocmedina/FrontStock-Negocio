@@ -27,7 +27,8 @@ export function ThemeToggle() {
         <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
             className="p-2 rounded-lg bg-gray-100 dark:bg-slate-900 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-800/80 transition-colors text-gray-800 dark:text-slate-200"
-            aria-label="Alternar tema"
+            aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+            title={isDark ? "Activar modo claro" : "Activar modo oscuro"}
         >
             {isDark ? (
                 <Sun className="h-5 w-5" />

@@ -20,6 +20,8 @@ import AddProductModal from "./components/modals/AddProductModal";
 import DeliveryConfirmationModal from "./components/modals/DeliveryConfirmationModal";
 import RemitoModal from "./components/modals/RemitoModal";
 import CancelOrderModal from "./components/modals/CancelOrderModal";
+import NotDeliveredModal from "./components/modals/NotDeliveredModal";
+import RescheduleDeliveryModal from "./components/modals/RescheduleDeliveryModal";
 import OrderDetailsModal from "./components/modals/OrderDetailsModal";
 import EditOrderModal from "./components/modals/EditOrderModal";
 
@@ -34,6 +36,9 @@ type Order = {
   amount_paid: number;
   amount_pending: number;
   payment_method: string | null;
+  delivery_failure_reason?: string | null;
+  delivery_failure_notes?: string | null;
+  scheduled_delivery_date?: string | null;
   status: string;
   created_at: string;
   profile_id: string;
@@ -67,12 +72,18 @@ export default function RepartoPage() {
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isCancelOrderModalOpen, setIsCancelOrderModalOpen] = useState(false);
+  const [isNotDeliveredModalOpen, setIsNotDeliveredModalOpen] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
 
   // Selection States
   const [selectedOrderForDelivery, setSelectedOrderForDelivery] =
     useState<Order | null>(null);
   const [selectedOrderForCancel, setSelectedOrderForCancel] =
+    useState<Order | null>(null);
+  const [selectedOrderForNotDelivered, setSelectedOrderForNotDelivered] =
+    useState<Order | null>(null);
+  const [selectedOrderForReschedule, setSelectedOrderForReschedule] =
     useState<Order | null>(null);
   const [selectedOrderIdForRemito, setSelectedOrderIdForRemito] = useState<
     string | null
@@ -128,7 +139,7 @@ export default function RepartoPage() {
     async (_userId: string, date: string, page: number) => {
       try {
         const dailySelectFields =
-          "id, total_amount, status, created_at, customer_id, profile_id, amount_paid, amount_pending, payment_method, customers(full_name, address, reference)";
+          "id, total_amount, status, created_at, scheduled_delivery_date, customer_id, profile_id, amount_paid, amount_pending, payment_method, delivery_failure_reason, delivery_failure_notes, customers(full_name, address, reference)";
         // Create start and end timestamps for the selected date in Argentina timezone
         // We assume the date string is YYYY-MM-DD
         const startDate = `${date}T00:00:00-03:00`;
@@ -146,8 +157,8 @@ export default function RepartoPage() {
           .from("orders")
           .select(dailySelectFields, { count: "exact" })
           // Sin filtro de profile_id: se muestran todos los pedidos del negocio
-          .gte("created_at", startDate)
-          .lt("created_at", endDate)
+          .gte("scheduled_delivery_date", date)
+          .lt("scheduled_delivery_date", nextDay)
           .order("created_at", { ascending: false })
           .range(from, to);
 
@@ -159,14 +170,14 @@ export default function RepartoPage() {
           supabase
             .from("orders")
             .select("id", { count: "exact", head: true })
-            .gte("created_at", startDate)
-            .lt("created_at", endDate)
+            .gte("scheduled_delivery_date", date)
+            .lt("scheduled_delivery_date", nextDay)
             .eq("status", "pendiente"),
           supabase
             .from("orders")
             .select("id", { count: "exact", head: true })
-            .gte("created_at", startDate)
-            .lt("created_at", endDate)
+            .gte("scheduled_delivery_date", date)
+            .lt("scheduled_delivery_date", nextDay)
             .eq("status", "entregado"),
         ]);
 
@@ -188,7 +199,7 @@ export default function RepartoPage() {
       let query = (supabase as any)
         .from("orders")
         .select(
-          "id, total_amount, status, created_at, customer_id, profile_id, customers(full_name, address, reference)",
+          "id, total_amount, status, created_at, scheduled_delivery_date, customer_id, profile_id, amount_paid, amount_pending, payment_method, delivery_failure_reason, delivery_failure_notes, customers(full_name, address, reference)",
           { count: "exact" }
         )
         .order("created_at", { ascending: false });
@@ -261,7 +272,6 @@ export default function RepartoPage() {
         },
         (payload) => {
           console.log("Order change detected:", payload);
-          fetchDailyHistory(currentUser.id, selectedDate);
           fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
           fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
         }
@@ -415,6 +425,7 @@ export default function RepartoPage() {
           total_amount: total,
           status: "pendiente",
           created_at: createdDateString,
+          scheduled_delivery_date: selectedDate,
         })
         .select()
         .single();
@@ -469,21 +480,37 @@ export default function RepartoPage() {
   const handleConfirmDelivery = async (
     orderId: string,
     amountPaid: number,
-    paymentMethod: string
-  ) => {
+    paymentMethod: string,
+    paymentBreakdown?: {
+      cash: number;
+      transfer: number;
+    }
+  ): Promise<boolean> => {
     // Buscar el pedido en ambas listas (diarios y historial)
     const order =
       dailyOrders.find((o) => o.id === orderId) ||
       allOrders.find((o) => o.id === orderId);
     if (!order) {
       toast.error("No se encontró el pedido");
-      return;
+      return false;
     }
 
     const total = order.total_amount;
     const debtGenerated = total - amountPaid;
 
     try {
+      const { data: currentOrder, error: currentOrderError } = await supabase
+        .from("orders")
+        .select("status")
+        .eq("id", orderId)
+        .single();
+
+      if (currentOrderError) throw currentOrderError;
+      if (currentOrder?.status !== "pendiente") {
+        toast.error("Este pedido ya fue procesado por otro usuario.");
+        return false;
+      }
+
       // 1. Actualizar la deuda del cliente (si es necesario)
       if (debtGenerated > 0) {
         const { data: customerData } = await supabase
@@ -523,23 +550,48 @@ export default function RepartoPage() {
         });
       }
 
-      if (amountPaid > 0) {
+      if (paymentMethod === "mixto" && paymentBreakdown) {
+        if (paymentBreakdown.cash > 0) {
+          movements.push({
+            customer_id: order.customer_id,
+            order_id: order.id,
+            type: "pago",
+            amount: paymentBreakdown.cash,
+            payment_method: "efectivo",
+            comment: "Pago en entrega (mixto - efectivo)",
+          });
+        }
+        if (paymentBreakdown.transfer > 0) {
+          movements.push({
+            customer_id: order.customer_id,
+            order_id: order.id,
+            type: "pago",
+            amount: paymentBreakdown.transfer,
+            payment_method: "transferencia",
+            comment: "Pago en entrega (mixto - transferencia)",
+          });
+        }
+      } else if (amountPaid > 0) {
         movements.push({
           customer_id: order.customer_id,
           order_id: order.id,
           type: "pago",
           amount: amountPaid,
+          payment_method: paymentMethod,
           comment: `Pago en entrega (${paymentMethod})`,
         });
       }
 
       if (movements.length > 0) {
-        await supabase.from("payments").insert(movements);
+        const { error: paymentsError } = await supabase
+          .from("payments")
+          .insert(movements);
+        if (paymentsError) throw paymentsError;
       }
 
       // 3. Marcar pedido como 'entregado' y actualizar método de pago usando RPC
       // Primero actualizamos los datos de pago
-      await (supabase as any)
+      const { error: orderPaymentError } = await (supabase as any)
         .from("orders")
         .update({
           payment_method: paymentMethod,
@@ -547,6 +599,7 @@ export default function RepartoPage() {
           amount_pending: total - amountPaid,
         })
         .eq("id", orderId);
+      if (orderPaymentError) throw orderPaymentError;
 
       // Luego llamamos al RPC para cambiar estado y descontar stock
       const { error } = await supabase.rpc("handle_order_status_change", {
@@ -563,9 +616,11 @@ export default function RepartoPage() {
         fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
         fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
       }
+      return true;
     } catch (error: any) {
       toast.error("Error al marcar el pedido como entregado");
       console.error(error);
+      return false;
     }
   };
 
@@ -593,6 +648,77 @@ export default function RepartoPage() {
     }
   };
 
+  const handleNotDelivered = async (
+    orderId: string,
+    reason: string,
+    notes: string
+  ): Promise<boolean> => {
+    try {
+      const { data: currentOrder, error: checkError } = await supabase
+        .from("orders")
+        .select("status")
+        .eq("id", orderId)
+        .single();
+      if (checkError) throw checkError;
+      if (currentOrder?.status !== "pendiente") {
+        toast.error("Este pedido ya fue procesado.");
+        return false;
+      }
+
+      const { error } = await (supabase as any)
+        .from("orders")
+        .update({
+          status: "no_entregado",
+          delivery_failure_reason: reason,
+          delivery_failure_notes: notes || null,
+        })
+        .eq("id", orderId)
+        .eq("status", "pendiente");
+      if (error) throw error;
+
+      toast.success("Se registró la entrega como no realizada.");
+      if (currentUser) {
+        fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+        fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
+      }
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo registrar la entrega fallida");
+      console.error(error);
+      return false;
+    }
+  };
+
+  const handleReschedule = async (
+    orderId: string,
+    date: string
+  ): Promise<boolean> => {
+    try {
+      const { error } = await (supabase as any)
+        .from("orders")
+        .update({
+          status: "pendiente",
+          scheduled_delivery_date: date,
+          delivery_failure_reason: null,
+          delivery_failure_notes: null,
+        })
+        .eq("id", orderId)
+        .eq("status", "no_entregado");
+      if (error) throw error;
+
+      toast.success("Entrega reprogramada correctamente.");
+      if (currentUser) {
+        fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
+        fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
+      }
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo reprogramar la entrega");
+      console.error(error);
+      return false;
+    }
+  };
+
   // Handle customer added
   const handleCustomerAdded = (newCustomer: Customer) => {
     setCustomers((prev) =>
@@ -615,7 +741,7 @@ export default function RepartoPage() {
   const filteredHistoryOrders = useMemo(() => allOrders, [allOrders]);
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950 min-h-screen font-sans">
+    <div className="bg-slate-100 dark:bg-slate-950 min-h-screen font-sans">
       <AddProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -653,6 +779,18 @@ export default function RepartoPage() {
         order={selectedOrderForCancel}
         onClose={() => setIsCancelOrderModalOpen(false)}
         onConfirm={handleCancelOrder}
+      />
+      <NotDeliveredModal
+        isOpen={isNotDeliveredModalOpen}
+        order={selectedOrderForNotDelivered}
+        onClose={() => setIsNotDeliveredModalOpen(false)}
+        onConfirm={handleNotDelivered}
+      />
+      <RescheduleDeliveryModal
+        isOpen={isRescheduleModalOpen}
+        order={selectedOrderForReschedule}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        onConfirm={handleReschedule}
       />
       <OrderDetailsModal
         isOpen={isOrderDetailsModalOpen}
@@ -729,6 +867,14 @@ export default function RepartoPage() {
             setSelectedOrderForCancel(order);
             setIsCancelOrderModalOpen(true);
           }}
+          onNotDeliveredOrder={(order) => {
+            setSelectedOrderForNotDelivered(order);
+            setIsNotDeliveredModalOpen(true);
+          }}
+          onRescheduleOrder={(order) => {
+            setSelectedOrderForReschedule(order);
+            setIsRescheduleModalOpen(true);
+          }}
         />
       )}
 
@@ -769,6 +915,14 @@ export default function RepartoPage() {
             setSelectedOrderForCancel(order);
             setIsCancelOrderModalOpen(true);
           }}
+          onNotDeliveredOrder={(order) => {
+            setSelectedOrderForNotDelivered(order);
+            setIsNotDeliveredModalOpen(true);
+          }}
+          onRescheduleOrder={(order) => {
+            setSelectedOrderForReschedule(order);
+            setIsRescheduleModalOpen(true);
+          }}
         />
       )}
 
@@ -783,4 +937,3 @@ export default function RepartoPage() {
     </div>
   );
 }
-

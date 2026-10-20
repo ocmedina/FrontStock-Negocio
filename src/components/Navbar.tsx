@@ -242,8 +242,8 @@ export default function Navbar() {
               className="text-base font-black text-slate-900 dark:text-slate-50 tracking-tight flex items-center gap-2"
             >
               <img
-                src="/favicon.png"
-                alt="FrontStock Logo"
+                src="/Logo-nuevo.png"
+                alt="FrontStock logo"
                 className="w-7 h-7 object-contain rounded-lg shadow-sm"
               />
               <span className="hidden sm:inline">FrontStock</span>

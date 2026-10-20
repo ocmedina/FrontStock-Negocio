@@ -40,8 +40,8 @@ export default function CustomLoader({ size = 100, text }: CustomLoaderProps) {
                     style={{ width: innerSize, height: innerSize }}
                 >
                     <Image
-                        src="/Carga.png.png" // Using double extension as found in original implementation
-                        alt="Cargando..."
+                        src="/Logo-nuevo.png"
+                        alt="FrontStock"
                         fill
                         className="object-contain filter drop-shadow-[0_4px_6px_rgba(99,102,241,0.25)]"
                         priority

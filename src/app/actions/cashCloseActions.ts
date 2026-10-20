@@ -117,6 +117,39 @@ export async function getDeliveryCashClose(
     const delivered = orders.filter((o) => o.status === 'entregado');
     const pending = orders.filter((o) => o.status === 'pendiente');
     const cancelled = orders.filter((o) => o.status === 'cancelado');
+    const deliveredOrderIds = delivered.map((o) => o.id);
+
+    const paymentByOrder = new Map<
+      string,
+      { efectivo: number; transferencia: number; total: number }
+    >();
+
+    if (deliveredOrderIds.length > 0) {
+      const { data: paymentRows, error: paymentsError } = await supabase
+        .from('payments')
+        .select('order_id, amount, payment_method')
+        .in('order_id', deliveredOrderIds)
+        .eq('type', 'pago');
+
+      if (paymentsError) throw paymentsError;
+
+      for (const payment of (paymentRows || []) as any[]) {
+        if (!payment.order_id) continue;
+
+        const breakdown = paymentByOrder.get(payment.order_id) || {
+          efectivo: 0,
+          transferencia: 0,
+          total: 0,
+        };
+        const amount = Number(payment.amount) || 0;
+        const method = (payment.payment_method || '').toLowerCase().trim();
+
+        if (method === 'efectivo') breakdown.efectivo += amount;
+        if (method === 'transferencia') breakdown.transferencia += amount;
+        breakdown.total += amount;
+        paymentByOrder.set(payment.order_id, breakdown);
+      }
+    }
 
     const collected: PaymentBreakdown = {
       efectivo: 0,
@@ -135,6 +168,11 @@ export async function getDeliveryCashClose(
     for (const o of delivered) {
       const paid = o.amount_paid;
       const method = (o.payment_method || 'otros').toLowerCase().trim();
+      const paymentBreakdown = paymentByOrder.get(o.id);
+      const hasMixedBreakdown =
+        method === 'mixto' &&
+        paymentBreakdown &&
+        paymentBreakdown.total > 0;
 
       if (method === 'efectivo') collected.efectivo += paid;
       else if (method === 'transferencia') collected.transferencia += paid;
@@ -143,7 +181,14 @@ export async function getDeliveryCashClose(
       else if (method === 'cheque') collected.cheque += paid;
       else if (method === 'tarjeta_debito' || method === 'tarjeta_de_debito') collected.tarjeta_debito += paid;
       else if (method === 'tarjeta_credito' || method === 'tarjeta_de_credito') collected.tarjeta_credito += paid;
-      else if (method === 'mixto' || method === 'mixtos') collected.mixto += paid;
+      else if (method === 'mixto' || method === 'mixtos') {
+        if (hasMixedBreakdown) {
+          collected.efectivo += paymentBreakdown.efectivo;
+          collected.transferencia += paymentBreakdown.transferencia;
+        } else {
+          collected.mixto += paid;
+        }
+      }
 
       collected.total += paid;
       debtGenerated += o.amount_pending;

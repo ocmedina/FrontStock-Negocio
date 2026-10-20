@@ -220,15 +220,15 @@ const styles = StyleSheet.create({
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 2,
     gap: 4
   },
   footerLogo: {
-    width: 45,
-    height: 45,
+    width: 72,
+    height: 18,
+    objectFit: 'contain',
     opacity: 0.85,
-    marginTop: -12,
-    marginBottom: -12
   },
   footerText: { 
     fontSize: 7, 
@@ -479,10 +479,10 @@ export default function InvoicePDFDocument({ invoiceData, settings }: { invoiceD
             <Image
               style={styles.footerLogo}
               src={typeof window !== 'undefined'
-                ? `${window.location.origin}/frontio-logo.png`
-                : '/frontio-logo.png'}
+                ? `${window.location.origin}/Frontio-Logo-Nuevo.png`
+                : '/Frontio-Logo-Nuevo.png'}
             />
-            <Text style={styles.footerText}>Diseñado por Frontio Web Solutions</Text>
+            <Text style={styles.footerText}>Diseñado por Frontio Software & Systems</Text>
             <Text style={styles.footerText}>·</Text>
             <Text style={styles.footerUrl}>www.frontio.com.ar</Text>
           </View>

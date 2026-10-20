@@ -56,8 +56,8 @@ export default function FrontStockWelcome() {
         <div className="text-center mb-16 animate-fadeIn">
           <div className="inline-flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl shadow-xl mb-6 relative">
             <img
-              src="/favicon.png"
-              alt="FrontStock Logo"
+              src="/Logo-nuevo.png"
+              alt="FrontStock logo"
               className="w-16 h-16 object-contain rounded-2xl"
             />
             <span className="absolute -top-1 -right-1 flex h-4 w-4">

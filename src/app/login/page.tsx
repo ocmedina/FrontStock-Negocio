@@ -111,8 +111,8 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl mb-4 relative">
             <img
-              src="/favicon.png"
-              alt="FrontStock Logo"
+              src="/Logo-nuevo.png"
+              alt="FrontStock logo"
               className="w-12 h-12 object-contain rounded-xl"
             />
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
