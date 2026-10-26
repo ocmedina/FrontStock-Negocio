@@ -84,6 +84,7 @@ export type Database = {
           customer_id: string
           id: string
           payment_method: string | null
+          scheduled_delivery_date: string | null
           status: string
         }
         Insert: {
@@ -92,6 +93,7 @@ export type Database = {
           customer_id: string
           id?: string
           payment_method?: string | null
+          scheduled_delivery_date?: string | null
           status?: string
         }
         Update: {
@@ -100,6 +102,7 @@ export type Database = {
           customer_id?: string
           id?: string
           payment_method?: string | null
+          scheduled_delivery_date?: string | null
           status?: string
         }
         Relationships: [

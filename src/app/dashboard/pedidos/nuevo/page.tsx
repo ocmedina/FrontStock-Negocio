@@ -471,6 +471,7 @@ export default function NewOrderPage() {
         payment_method: paymentMethod,
         amount_paid: amountReceived,
         amount_pending: totalAmount - amountReceived,
+        scheduled_delivery_date: deliveryDate,
         created_at: createdDateString,
       };
 
