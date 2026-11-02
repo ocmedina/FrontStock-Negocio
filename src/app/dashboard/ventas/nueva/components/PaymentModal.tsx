@@ -1,8 +1,9 @@
 "use client";
 
-import { FaTimes } from "react-icons/fa";
+import { useState } from "react";
+import { FaTimes, FaCheck, FaGift, FaSearch } from "react-icons/fa";
 import { formatCurrency } from "@/lib/numberFormat";
-import { Supplier } from "../types";
+import { ReferralDiscount, Supplier } from "../types";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -36,6 +37,8 @@ interface PaymentModalProps {
   setSelectedSupplierId: (id: string | null) => void;
   suppliers: Supplier[];
   customerPriorDebt?: number;
+  referralDiscount: ReferralDiscount | null;
+  onApplyReferralCode: (code: string) => Promise<boolean>;
 }
 
 export default function PaymentModal({
@@ -64,7 +67,13 @@ export default function PaymentModal({
   setSelectedSupplierId,
   suppliers,
   customerPriorDebt = 0,
+  referralDiscount,
+  onApplyReferralCode,
 }: PaymentModalProps) {
+  const [referralCode, setReferralCode] = useState("");
+  const [checkingReferral, setCheckingReferral] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const debtDifference = useMixedPayment
@@ -172,6 +181,71 @@ export default function PaymentModal({
 
           {/* Form panel */}
           <div className="space-y-6">
+          <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/60 dark:bg-indigo-950/25 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                <FaGift className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-indigo-900 dark:text-indigo-200">
+                  Código de referido
+                </p>
+                <p className="text-[11px] text-indigo-700/70 dark:text-indigo-300/70">
+                  Aplicá el beneficio antes de confirmar
+                </p>
+              </div>
+            </div>
+            {referralDiscount ? (
+              <div className="flex items-center justify-between rounded-xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 px-3 py-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FaCheck className="text-emerald-500 flex-shrink-0" />
+                  <span className="font-mono font-bold text-xs text-slate-800 dark:text-slate-100 truncate">
+                    {referralDiscount.referral_code}
+                  </span>
+                </div>
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                  -{referralDiscount.discount_percent}%
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3" />
+                    <input
+                      value={referralCode}
+                      onChange={(event) => {
+                        setReferralCode(event.target.value.toUpperCase());
+                        setReferralError(null);
+                      }}
+                      placeholder="Ej: REF-AB12CD"
+                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-xs font-mono font-bold tracking-wide outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={checkingReferral || !referralCode.trim()}
+                    onClick={async () => {
+                      setCheckingReferral(true);
+                      setReferralError(null);
+                      const applied = await onApplyReferralCode(referralCode);
+                      if (applied) setReferralCode("");
+                      else setReferralError("Código inválido, vencido o ya utilizado.");
+                      setCheckingReferral(false);
+                    }}
+                    className="px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold transition-colors"
+                  >
+                    {checkingReferral ? "..." : "Aplicar"}
+                  </button>
+                </div>
+                {referralError && (
+                  <p className="mt-2 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                    {referralError}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
 
           {!useMixedPayment ? (
             <div className="space-y-6">

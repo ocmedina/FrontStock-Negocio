@@ -559,6 +559,102 @@ export type Database = {
           }
         ]
       }
+      referrals: {
+        Row: {
+          id: string
+          referrer_customer_id: string
+          referred_customer_id: string | null
+          referral_code: string
+          status: string
+          referrer_discount_percent: number
+          referred_discount_percent: number
+          referrer_discount_used: boolean
+          referred_discount_used: boolean
+          referrer_sale_id: string | null
+          referred_sale_id: string | null
+          created_at: string
+          completed_at: string | null
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          referrer_customer_id: string
+          referred_customer_id?: string | null
+          referral_code: string
+          status?: string
+          referrer_discount_percent?: number
+          referred_discount_percent?: number
+          referrer_discount_used?: boolean
+          referred_discount_used?: boolean
+          referrer_sale_id?: string | null
+          referred_sale_id?: string | null
+          created_at?: string
+          completed_at?: string | null
+          expires_at?: string | null
+        }
+        Update: {
+          id?: string
+          referrer_customer_id?: string
+          referred_customer_id?: string | null
+          referral_code?: string
+          status?: string
+          referrer_discount_percent?: number
+          referred_discount_percent?: number
+          referrer_discount_used?: boolean
+          referred_discount_used?: boolean
+          referrer_sale_id?: string | null
+          referred_sale_id?: string | null
+          created_at?: string
+          completed_at?: string | null
+          expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referrer_customer_id_fkey"
+            columns: ["referrer_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referred_customer_id_fkey"
+            columns: ["referred_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      referral_settings: {
+        Row: {
+          id: number
+          referrer_discount_percent: number
+          referred_discount_percent: number
+          max_referrals_per_customer: number
+          is_active: boolean
+          expiration_days: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          referrer_discount_percent?: number
+          referred_discount_percent?: number
+          max_referrals_per_customer?: number
+          is_active?: boolean
+          expiration_days?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          referrer_discount_percent?: number
+          referred_discount_percent?: number
+          max_referrals_per_customer?: number
+          is_active?: boolean
+          expiration_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -567,6 +663,21 @@ export type Database = {
       cancel_customer_payment_transaction: {
         Args: {
           p_payment_id: number
+        }
+        Returns: Json
+      }
+      consume_referral_discount: {
+        Args: {
+          p_referral_id: string
+          p_role: string
+          p_sale_id: string
+        }
+        Returns: Json
+      }
+      claim_referral_for_customer: {
+        Args: {
+          p_referral_code: string
+          p_referred_customer_id: string
         }
         Returns: Json
       }

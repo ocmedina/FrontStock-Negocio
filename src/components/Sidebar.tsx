@@ -22,6 +22,7 @@ import {
   HiOutlineChevronRight,
   HiOutlineCash,
   HiOutlineDesktopComputer,
+  HiOutlineGift,
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { hasPermission } from "@/lib/permissions";
@@ -54,6 +55,13 @@ const navSections = {
       href: "/dashboard/clientes",
       label: "Clientes",
       icon: HiOutlineUsers,
+      colorClass: "text-indigo-500",
+      activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
+    },
+    {
+      href: "/dashboard/referidos",
+      label: "Referidos",
+      icon: HiOutlineGift,
       colorClass: "text-indigo-500",
       activeBg: "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-500",
     },

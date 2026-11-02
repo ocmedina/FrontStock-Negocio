@@ -15,6 +15,7 @@ import {
   SaleTab,
   Product,
   CartItem,
+  ReferralDiscount,
 } from "./types";
 import ProductSearch from "./components/ProductSearch";
 import PaymentModal from "./components/PaymentModal";
@@ -31,6 +32,8 @@ import SaleTicketModal from "../components/SaleTicketModal";
 import { useRealtimeProductStock } from "@/hooks/useRealtimeProductStock";
 import { useGlobalBarcodeScanner } from "@/hooks/useGlobalBarcodeScanner";
 import { getTerminalPrinterSettings } from "@/lib/printerSettings";
+import ReferralBadge from "@/components/ReferralBadge";
+import { linkReferral, markReferralDiscountUsed } from "@/app/actions/referralActions";
 
 export default function NewSalePage() {
   const { activeRegister } = useRegister();
@@ -41,7 +44,6 @@ export default function NewSalePage() {
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [isPrinterModalOpen, setIsPrinterModalOpen] = useState(false);
-
   // Sistema de pestañas
   const [tabs, setTabs] = useState<SaleTab[]>([
     {
@@ -63,6 +65,8 @@ export default function NewSalePage() {
       voucherTypeId: "FB",
       pointOfSale: 1,
       observations: "",
+      referralDiscount: null,
+      applyReferralDiscount: true,
     },
   ]);
   const [activeTabId, setActiveTabId] = useState(1);
@@ -87,6 +91,8 @@ export default function NewSalePage() {
   const showPaymentPanel = activeTab.showPaymentPanel;
   const payToSupplier = activeTab.payToSupplier;
   const selectedSupplierId = activeTab.selectedSupplierId;
+  const referralDiscount = activeTab.referralDiscount ?? null;
+  const applyReferralDiscount = activeTab.applyReferralDiscount ?? true;
 
   const selectedVoucherId = activeTab.voucherTypeId || "FB";
 
@@ -125,7 +131,11 @@ export default function NewSalePage() {
   };
 
   const setSelectedCustomer = (customer: Customer | null) => {
-    updateActiveTab({ selectedCustomer: customer });
+    updateActiveTab({
+      selectedCustomer: customer,
+      referralDiscount: null,
+      applyReferralDiscount: true,
+    });
   };
 
   // Estado de deuda unificada en cuenta corriente en tiempo real
@@ -241,6 +251,40 @@ export default function NewSalePage() {
     updateActiveTab({ selectedSupplierId });
   };
 
+  const setReferralDiscount = (referralDiscount: ReferralDiscount | null) => {
+    updateActiveTab({ referralDiscount });
+  };
+
+  const setApplyReferralDiscount = (applyReferralDiscount: boolean) => {
+    updateActiveTab({ applyReferralDiscount });
+  };
+
+  const handleApplyReferralCode = async (code: string) => {
+    if (!selectedCustomer) return false;
+    const result = await linkReferral(code, selectedCustomer.id);
+    if (!result.success) return false;
+
+    const linked = result.referral as {
+      id: string;
+      referral_code: string;
+      referred_discount_percent: number;
+    };
+    setReferralDiscount({
+      id: linked.id,
+      referral_code: linked.referral_code,
+      discount_percent: Number(linked.referred_discount_percent),
+      role: "referred",
+    });
+    setApplyReferralDiscount(true);
+    if (paymentMethod !== "cuenta_corriente" && !useMixedPayment) {
+      setAmountPaid(
+        (total * (1 - Number(linked.referred_discount_percent) / 100)).toFixed(2)
+      );
+    }
+    toast.success(`Descuento de ${linked.referred_discount_percent}% aplicado`);
+    return true;
+  };
+
   // Funciones para manejo de pestañas
   const addNewTab = () => {
     const defaultCustomer =
@@ -267,6 +311,8 @@ export default function NewSalePage() {
       voucherTypeId: "FB",
       pointOfSale: 1,
       observations: "",
+      referralDiscount: null,
+      applyReferralDiscount: true,
     };
 
     setTabs([...tabs, newTab]);
@@ -442,7 +488,7 @@ export default function NewSalePage() {
   }, [selectedCustomer, companySettings]);
 
   const calculatedTotal = useMemo(() => {
-    return cart.reduce((sum, item) => {
+    const rawTotal = cart.reduce((sum, item) => {
       const price =
         item.customPrice !== undefined
           ? item.customPrice
@@ -451,7 +497,14 @@ export default function NewSalePage() {
               : item.price_minorista) || 0;
       return sum + (price * item.quantity);
     }, 0);
-  }, [cart, selectedCustomer]);
+
+    if (referralDiscount && applyReferralDiscount && rawTotal > 0) {
+      const discountAmount = (rawTotal * referralDiscount.discount_percent) / 100;
+      return Math.max(0, Math.round((rawTotal - discountAmount) * 100) / 100);
+    }
+
+    return rawTotal;
+  }, [cart, selectedCustomer, referralDiscount, applyReferralDiscount]);
 
   useEffect(() => {
     if (!selectedCustomer) {
@@ -797,6 +850,21 @@ export default function NewSalePage() {
 
       const newSupplierDebt = txResult.new_supplier_debt;
 
+      // Si se aplicó un descuento de referido, marcarlo como utilizado
+      if (txResult.sale_id && referralDiscount && applyReferralDiscount) {
+        const referralResult = await markReferralDiscountUsed(
+          referralDiscount.id,
+          referralDiscount.role,
+          txResult.sale_id
+        );
+        if (!referralResult.success) {
+          toast.error(
+            `La venta se registró, pero no se pudo consumir el descuento: ${referralResult.error}`
+          );
+        }
+        setReferralDiscount(null);
+      }
+
       // No longer auto-generating background invoices from Nueva Venta.
       // Generation is managed manually from the Invoices registry page.
 
@@ -901,6 +969,8 @@ export default function NewSalePage() {
     calculations,
     activeVoucherType,
     activeRegister,
+    referralDiscount,
+    applyReferralDiscount,
   ]);
 
   // Atajos de teclado F10, F12, F2 y Ctrl+T
@@ -1188,6 +1258,28 @@ export default function NewSalePage() {
                         )}
                       </div>
                     )}
+
+                    {/* BENEFICIO DE REFERIDO */}
+                    <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-900/50 space-y-2">
+                      <ReferralBadge
+                        customerId={selectedCustomer.id}
+                        onDiscountAvailable={(d) => {
+                          setReferralDiscount(d);
+                          if (d) setApplyReferralDiscount(true);
+                        }}
+                      />
+                      {referralDiscount && (
+                        <label className="flex items-center gap-2 p-2 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold text-emerald-800 dark:text-emerald-200 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={applyReferralDiscount}
+                            onChange={(e) => setApplyReferralDiscount(e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span>Aplicar {referralDiscount.discount_percent}% de descuento</span>
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1212,6 +1304,13 @@ export default function NewSalePage() {
                     <span>Productos</span>
                     <span>{cart.reduce((acc, item) => acc + item.quantity, 0)}</span>
                   </div>
+
+                  {referralDiscount && applyReferralDiscount && (
+                    <div className="flex justify-between items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/40">
+                      <span>Descuento Referido ({referralDiscount.discount_percent}%)</span>
+                      <span className="font-black">-{referralDiscount.discount_percent}%</span>
+                    </div>
+                  )}
 
                   <div className="border-t border-dashed border-gray-200 dark:border-slate-700 pt-4 flex justify-between items-center">
                     <span className="text-xl font-bold text-gray-900 dark:text-slate-50">Total</span>
@@ -1273,6 +1372,8 @@ export default function NewSalePage() {
         setSelectedSupplierId={setSelectedSupplierId}
         suppliers={suppliers}
         customerPriorDebt={customerDebtInfo.totalDebt}
+        referralDiscount={referralDiscount}
+        onApplyReferralCode={handleApplyReferralCode}
       />
 
       <ProductSearchModal

@@ -80,6 +80,10 @@ export const PERMISSIONS = {
   GESTIONAR_CAJAS:        [ROLES.ADMIN],
   CAMBIAR_CAJA:           [ROLES.ADMIN, ROLES.SUPERVENDEDOR],
 
+  // ── Referidos ─────────────────────────────────────────────────────────
+  VER_REFERIDOS:          [ROLES.ADMIN, ROLES.SUPERVENDEDOR, ROLES.VENDEDOR],
+  GESTIONAR_REFERIDOS:    [ROLES.ADMIN, ROLES.SUPERVENDEDOR],
+
   // ── Dashboard ─────────────────────────────────────────────────────────
   VER_DASHBOARD:          [ROLES.ADMIN, ROLES.SUPERVENDEDOR],
   VER_DASHBOARD_COMPLETO: [ROLES.ADMIN, ROLES.SUPERVENDEDOR],
@@ -141,6 +145,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   GESTIONAR_CAJAS:        'Administrar puestos de caja',
   CAMBIAR_CAJA:           'Cambiar puesto de caja activo',
 
+  VER_REFERIDOS:          'Ver programa de referidos',
+  GESTIONAR_REFERIDOS:    'Gestionar programa y configuración de referidos',
+
   VER_DASHBOARD:          'Acceso al Dashboard',
   VER_DASHBOARD_COMPLETO: 'Ver dashboard completo',
   VER_DASHBOARD_LIMITADO: 'Ver dashboard básico',
@@ -152,6 +159,10 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
   {
     label: '💰 Ventas',
     permissions: ['CREAR_VENTAS', 'VER_VENTAS', 'ANULAR_VENTAS'],
+  },
+  {
+    label: '🎁 Programa de Referidos',
+    permissions: ['VER_REFERIDOS', 'GESTIONAR_REFERIDOS'],
   },
   {
     label: '📦 Productos',

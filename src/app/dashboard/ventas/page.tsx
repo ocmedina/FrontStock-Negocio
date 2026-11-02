@@ -39,7 +39,8 @@ const ITEMS_PER_PAGE = 10; // Puedes ajustar cuántas ventas mostrar por página
 export default function SalesHistoryPage() {
   const [sales, setSales] = useState<any[]>([]);
   const [registers, setRegisters] = useState<CashRegister[]>([]);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Fecha de hoy por defecto
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all"); // Filtro por método de pago
   const [registerFilter, setRegisterFilter] = useState("all"); // Filtro por caja/puesto
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,10 +80,20 @@ export default function SalesHistoryPage() {
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    // --- FILTRO POR DÍA ESPECÍFICO (Zona Horaria Argentina UTC-3) ---
-    if (date) {
-      const { startUTC, endUTC } = getUTCInterval(date, 'America/Argentina/Buenos_Aires');
-      query = query.gte("created_at", startUTC).lte("created_at", endUTC);
+    // --- FILTRO POR RANGO DE FECHAS (Zona Horaria Argentina UTC-3) ---
+    if (startDate) {
+      const { startUTC } = getUTCInterval(
+        startDate,
+        "America/Argentina/Buenos_Aires"
+      );
+      query = query.gte("created_at", startUTC);
+    }
+    if (endDate) {
+      const { endUTC } = getUTCInterval(
+        endDate,
+        "America/Argentina/Buenos_Aires"
+      );
+      query = query.lte("created_at", endUTC);
     }
 
     // --- FILTRO POR MÉTODO DE PAGO ---
@@ -108,7 +119,7 @@ export default function SalesHistoryPage() {
 
   useEffect(() => {
     fetchSales();
-  }, [date, currentPage, paymentFilter, registerFilter]); // Se ejecuta si la fecha, página o filtro de pago cambian
+  }, [startDate, endDate, currentPage, paymentFilter, registerFilter]);
 
   const handleCancelSale = async (saleId: string) => {
     if (
@@ -333,25 +344,53 @@ export default function SalesHistoryPage() {
         <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-4 flex items-center gap-2">
           <FaSearch className="text-blue-600" /> Filtros de Búsqueda
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Filtro por fecha */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Fecha desde */}
           <div className="space-y-2">
             <label
-              htmlFor="saleDate"
+              htmlFor="startDate"
               className="block text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"
             >
-              <FaCalendarAlt className="text-blue-500" /> Filtrar por fecha
+              <FaCalendarAlt className="text-blue-500" /> Desde
             </label>
             <input
               type="date"
-              id="saleDate"
-              value={date}
+              id="startDate"
+              value={startDate}
+              max={endDate || undefined}
               onChange={(e) => {
-                setDate(e.target.value);
+                setStartDate(e.target.value);
                 setCurrentPage(1);
               }}
               onClick={(e) => {
                 // Mantener la posición actual al abrir el datepicker
+                const currentScrollPos = window.scrollY;
+                setTimeout(() => {
+                  window.scrollTo(0, currentScrollPos);
+                }, 100);
+              }}
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-50"
+            />
+          </div>
+
+          {/* Fecha hasta */}
+          <div className="space-y-2">
+            <label
+              htmlFor="endDate"
+              className="block text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"
+            >
+              <FaCalendarAlt className="text-blue-500" /> Hasta
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              onClick={(e) => {
                 const currentScrollPos = window.scrollY;
                 setTimeout(() => {
                   window.scrollTo(0, currentScrollPos);
@@ -488,7 +527,9 @@ export default function SalesHistoryPage() {
                     <div className="flex flex-col items-center gap-3">
                       <FaInbox className="text-6xl text-gray-300" />
                       <span className="text-gray-500 dark:text-slate-400 font-medium">
-                        No hay ventas para la fecha seleccionada
+                        {startDate || endDate
+                          ? "No hay ventas para el rango seleccionado"
+                          : "No hay ventas registradas"}
                       </span>
                       <span className="text-gray-400 text-sm">
                         Intenta cambiar los filtros de búsqueda
@@ -688,7 +729,9 @@ export default function SalesHistoryPage() {
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm p-6 text-center">
             <FaInbox className="w-12 h-12 mx-auto text-gray-300" />
             <p className="text-gray-600 dark:text-slate-300 mt-3">
-              No hay ventas para la fecha seleccionada
+              {startDate || endDate
+                ? "No hay ventas para el rango seleccionado"
+                : "No hay ventas registradas"}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               Ajusta la fecha o el metodo de pago

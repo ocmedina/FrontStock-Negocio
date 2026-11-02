@@ -11,6 +11,15 @@ export type CartItem = Product & {
   taxRateVal?: number;
 };
 
+export type ReferralDiscount = {
+  id: string;
+  referral_code: string;
+  discount_percent: number;
+  role: "referrer" | "referred";
+  referrer_name?: string;
+  referred_name?: string;
+};
+
 export type SaleTab = {
   id: number;
   name: string;
@@ -27,6 +36,8 @@ export type SaleTab = {
   voucherTypeId?: string;
   pointOfSale?: number;
   observations?: string;
+  referralDiscount?: ReferralDiscount | null;
+  applyReferralDiscount?: boolean;
 };
 
 export type Supplier = {
