@@ -50,6 +50,7 @@ ALTER TABLE referral_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Authenticated users can read referrals" ON referrals;
 DROP POLICY IF EXISTS "Authenticated users can insert referrals" ON referrals;
 DROP POLICY IF EXISTS "Authenticated users can update referrals" ON referrals;
+DROP POLICY IF EXISTS "Authenticated users can delete referrals" ON referrals;
 DROP POLICY IF EXISTS "Authenticated users can read referral_settings" ON referral_settings;
 DROP POLICY IF EXISTS "Authenticated users can update referral_settings" ON referral_settings;
 
@@ -78,6 +79,17 @@ CREATE POLICY "Authenticated users can update referrals" ON referrals
     )
   )
   WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM profiles
+      WHERE profiles.id = auth.uid()
+        AND profiles.role IN ('administrador', 'supervendedor')
+    )
+  );
+
+CREATE POLICY "Authenticated users can delete referrals" ON referrals
+  FOR DELETE TO authenticated
+  USING (
     EXISTS (
       SELECT 1
       FROM profiles

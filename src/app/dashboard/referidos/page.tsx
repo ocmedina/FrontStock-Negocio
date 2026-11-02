@@ -7,6 +7,7 @@ import {
   getReferralSettings,
   updateReferralSettings,
   createReferralCode,
+  deleteReferral,
   linkReferral,
   getReferralStats,
 } from "@/app/actions/referralActions";
@@ -25,6 +26,7 @@ import {
   FaTimes,
   FaCheckCircle,
   FaClock,
+  FaTrash,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
@@ -74,6 +76,7 @@ export default function ReferidosPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tableExists, setTableExists] = useState(true);
 
   // Modales
@@ -165,6 +168,25 @@ export default function ReferidosPage() {
       `¡Hola! ${name} te invita a comprar en nuestro negocio con un ${settings.referred_discount_percent}% de descuento en tu primera compra.\n\nAccedé a tu beneficio aquí: ${url}\nO presentá el código: *${code}*`
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
+  };
+
+  const handleDeleteReferral = async (referral: ReferralItem) => {
+    const confirmed = window.confirm(
+      `¿Eliminar el código ${referral.referral_code}? Esta acción no se puede deshacer.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(referral.id);
+    const result = await deleteReferral(referral.id);
+    setDeletingId(null);
+
+    if (!result.success) {
+      toast.error(result.error || "No se pudo eliminar el referido");
+      return;
+    }
+
+    setReferrals((current) => current.filter((item) => item.id !== referral.id));
+    toast.success("Referido eliminado");
   };
 
   // Crear nuevo código
@@ -604,6 +626,15 @@ export default function ReferidosPage() {
                             className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 transition-colors shadow-2xs"
                           >
                             <FaWhatsapp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReferral(r)}
+                            disabled={deletingId === r.id}
+                            title="Eliminar referido"
+                            className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors shadow-2xs disabled:opacity-50"
+                          >
+                            <FaTrash className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>

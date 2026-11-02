@@ -158,6 +158,22 @@ export async function getAllReferrals() {
   return data || [];
 }
 
+// ─── Eliminar un referido ────────────────────────────────────────────────────
+export async function deleteReferral(referralId: string) {
+  const supabase = await createClient();
+
+  const { error } = await (supabase.from("referrals" as any) as any)
+    .delete()
+    .eq("id", referralId);
+
+  if (error) {
+    console.error("Error deleting referral:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 // ─── Vincular un referido (cuando un nuevo cliente usa el código) ────────────
 export async function linkReferral(referralCode: string, referredCustomerId: string) {
   const supabase = await createClient();
