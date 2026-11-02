@@ -24,6 +24,8 @@ interface UpdateItem {
   date: string;
   title: string;
   description: string;
+  details: string;
+  highlights: string[];
   type: UpdateType;
   icon: typeof HiOutlineScale;
 }
@@ -35,6 +37,13 @@ const UPDATES: UpdateItem[] = [
     title: "Cajas simultáneas y unificadas",
     description:
       "Trabajá con varias cajas al mismo tiempo y consultá sus movimientos y cierres desde una gestión unificada.",
+    details:
+      "La gestión de cajas ahora permite que distintos puestos trabajen en paralelo sin perder el control de los movimientos. Cada caja conserva sus operaciones y, al mismo tiempo, podés consultar la información general del negocio desde una vista unificada.",
+    highlights: [
+      "Abrí y operá varias cajas simultáneamente.",
+      "Consultá movimientos, retiros y cierres por caja.",
+      "Mantené una visión consolidada de la operación diaria.",
+    ],
     type: "feature",
     icon: HiOutlineRefresh,
   },
@@ -44,6 +53,14 @@ const UPDATES: UpdateItem[] = [
     title: "Programa de referidos",
     description:
       "Generá códigos, aplicá descuentos durante una venta, consultá el estado de cada referido y eliminá códigos cuando sea necesario.",
+    details:
+      "El programa de referidos permite premiar a tus clientes y atraer nuevos compradores. Generá un código desde Referidos, compartilo y aplicalo en Nueva Venta cuando el cliente realice su primera compra.",
+    highlights: [
+      "Creá y compartí códigos únicos para cada cliente.",
+      "Aplicá el código en el modal de pago de una nueva venta.",
+      "Controlá descuentos, estados y clientes vinculados.",
+      "Eliminá códigos que ya no quieras mantener activos.",
+    ],
     type: "feature",
     icon: HiOutlineLightningBolt,
   },
@@ -53,6 +70,13 @@ const UPDATES: UpdateItem[] = [
     title: "Nuevo filtro en Historial",
     description:
       "Encontrá movimientos más rápido usando los nuevos filtros del área de Historial.",
+    details:
+      "El área de Historial incorpora filtros para ubicar operaciones sin recorrer toda la lista. Combiná los criterios disponibles para revisar ventas, movimientos y registros de un período específico.",
+    highlights: [
+      "Filtrá los registros según el criterio que necesites.",
+      "Reducí el tiempo de búsqueda en historiales extensos.",
+      "Revisá la información con una lectura más ordenada.",
+    ],
     type: "improvement",
     icon: HiOutlineAdjustments,
   },
@@ -62,6 +86,14 @@ const UPDATES: UpdateItem[] = [
     title: "Nueva gestión de usuarios",
     description:
       "Administrá usuarios, roles, permisos y estado de acceso desde una vista más clara y centralizada.",
+    details:
+      "La nueva gestión de usuarios concentra la administración de accesos del sistema en un solo lugar. Desde allí podés revisar los usuarios existentes, asignar roles y controlar quién puede ingresar y qué acciones puede realizar.",
+    highlights: [
+      "Consultá todos los usuarios desde una vista centralizada.",
+      "Asigná y actualizá roles según las responsabilidades.",
+      "Controlá el estado de acceso de cada usuario.",
+      "Organizá mejor los permisos del equipo.",
+    ],
     type: "feature",
     icon: HiOutlineScale,
   },
@@ -94,6 +126,7 @@ export default function UpdatesCenter({
   const [isOpen, setIsOpen] = useState(forceOpen);
   const [isMounted, setIsMounted] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [selectedUpdate, setSelectedUpdate] = useState<UpdateItem | null>(null);
   const [seen, setSeen] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -131,6 +164,11 @@ export default function UpdatesCenter({
     const nextSeen = [...seen, id];
     setSeen(nextSeen);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSeen));
+  };
+
+  const openDetails = (item: UpdateItem) => {
+    markAsRead(item.id);
+    setSelectedUpdate(item);
   };
 
   return (
@@ -235,7 +273,16 @@ export default function UpdatesCenter({
                 return (
                   <article
                     key={item.id}
-                    onClick={() => markAsRead(item.id)}
+                    onClick={() => openDetails(item)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openDetails(item);
+                      }
+                    }}
+                    aria-label={`Ver detalles de ${item.title}`}
                     className={`group rounded-2xl border bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-slate-900 ${
                       isUnread
                         ? "border-blue-200 shadow-sm dark:border-blue-900/60"
@@ -272,6 +319,56 @@ export default function UpdatesCenter({
                 );
               })}
             </div>
+
+            {selectedUpdate && (
+              <div className="absolute inset-0 z-10 flex flex-col bg-white dark:bg-slate-900">
+                <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800 sm:px-6">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUpdate(null)}
+                    className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+                    aria-label="Volver a novedades"
+                  >
+                    <FaChevronRight className="rotate-180" />
+                  </button>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    Detalle de la novedad
+                  </span>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                    <selectedUpdate.icon className="h-6 w-6" />
+                  </div>
+                  <div className="mt-5 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${typeStyles[selectedUpdate.type]}`}>
+                      {typeLabels[selectedUpdate.type]}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {selectedUpdate.date}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {selectedUpdate.title}
+                  </h3>
+                  <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                    {selectedUpdate.details}
+                  </p>
+                  <div className="mt-7 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
+                    <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200">
+                      ¿Qué podés hacer?
+                    </h4>
+                    <ul className="mt-3 space-y-3">
+                      {selectedUpdate.highlights.map((highlight) => (
+                        <li key={highlight} className="flex gap-2.5 text-sm leading-6 text-blue-950/80 dark:text-blue-100/80">
+                          <FaCheck className="mt-1 shrink-0 text-xs text-blue-600 dark:text-blue-400" />
+                          <span>{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
           </aside>
           </div>,
           document.body
