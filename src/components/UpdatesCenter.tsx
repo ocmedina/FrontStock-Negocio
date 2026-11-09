@@ -28,9 +28,82 @@ interface UpdateItem {
   highlights: string[];
   type: UpdateType;
   icon: typeof HiOutlineScale;
+  important?: boolean;
 }
 
 const UPDATES: UpdateItem[] = [
+  {
+    id: "sucursales-stock-separado-v1",
+    date: "09 Nov 2026",
+    title: "IMPORTANTE: stock separado por sucursal",
+    description:
+      "Cada sucursal tiene ahora su propio inventario, operaciones y existencias independientes.",
+    details:
+      "El catálogo de productos es compartido, pero el stock real se administra por sucursal. Cuando cambiás la sucursal activa, el sistema muestra únicamente las existencias correspondientes a ese local. Una sucursal nueva comienza sin stock hasta que se cargan productos o se recibe una transferencia.",
+    highlights: [
+      "El administrador puede cambiar de sucursal desde el selector superior.",
+      "Los usuarios asignados solo trabajan con su sucursal.",
+      "El stock de una sucursal no modifica el de otra.",
+      "Los productos sin stock siguen visibles en Inventario para poder reponerlos.",
+    ],
+    type: "feature",
+    icon: HiOutlineScale,
+    important: true,
+  },
+  {
+    id: "reparto-por-sucursal-v1",
+    date: "09 Nov 2026",
+    title: "IMPORTANTE: Reparto trabaja con la sucursal activa",
+    description:
+      "Los pedidos de Reparto se crean, consultan y entregan dentro de la sucursal seleccionada.",
+    details:
+      "La búsqueda de productos en Reparto consulta el stock disponible de la sucursal activa. Cada pedido guarda su sucursal de origen y, al entregarlo, descontar stock o revertirlo, la operación se aplica únicamente a ese inventario.",
+    highlights: [
+      "Solo aparecen productos con stock disponible en esa sucursal.",
+      "Cada pedido queda asociado a una sucursal.",
+      "Entregar o cancelar un pedido actualiza el stock correcto.",
+      "El historial de Reparto queda separado por sucursal.",
+    ],
+    type: "improvement",
+    icon: HiOutlineRefresh,
+    important: true,
+  },
+  {
+    id: "remitos-datos-sucursal-v1",
+    date: "09 Nov 2026",
+    title: "Remitos con datos de la sucursal",
+    description:
+      "Los remitos A4 y térmicos muestran la información comercial de la sucursal correspondiente.",
+    details:
+      "Al generar un remito desde Historial, Pedidos, Reparto o el detalle individual, se cargan el nombre, dirección, localidad, provincia, teléfono, email y datos fiscales de la sucursal del pedido. El logo continúa siendo el logo global configurado.",
+    highlights: [
+      "Los pedidos nuevos guardan su sucursal automáticamente.",
+      "El remito A4 y el ticket térmico usan la misma información.",
+      "El logo global existente se mantiene.",
+      "Los pedidos antiguos necesitan tener branch_id para identificar su sucursal.",
+    ],
+    type: "improvement",
+    icon: HiOutlineAdjustments,
+    important: true,
+  },
+  {
+    id: "usuarios-sucursal-asignada-v1",
+    date: "09 Nov 2026",
+    title: "Usuarios asignados a una sucursal",
+    description:
+      "Cada usuario puede quedar vinculado a una sucursal para trabajar con un alcance controlado.",
+    details:
+      "Los usuarios no administradores utilizan la sucursal asignada por el administrador y no pueden cambiarla. El administrador mantiene acceso al selector para revisar cada sucursal por separado.",
+    highlights: [
+      "Asigná la sucursal desde Configuración > Usuarios.",
+      "El usuario verá el stock y las operaciones de su local.",
+      "El administrador puede consultar todas las sucursales.",
+      "La caja y los pedidos respetan la sucursal seleccionada.",
+    ],
+    type: "feature",
+    icon: HiOutlineScale,
+    important: true,
+  },
   {
     id: "cajas-simultaneas-unificadas-v1",
     date: "02 Nov 2026",
@@ -298,6 +371,12 @@ export default function UpdatesCenter({
                           <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${typeStyles[item.type]}`}>
                             {typeLabels[item.type]}
                           </span>
+                          {item.important && (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                              <FaBell className="text-[9px]" />
+                              Importante
+                            </span>
+                          )}
                           {isUnread && (
                             <span className="h-1.5 w-1.5 rounded-full bg-blue-600" title="Sin leer" />
                           )}
@@ -343,6 +422,12 @@ export default function UpdatesCenter({
                     <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${typeStyles[selectedUpdate.type]}`}>
                       {typeLabels[selectedUpdate.type]}
                     </span>
+                    {selectedUpdate.important && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                        <FaBell className="text-[9px]" />
+                        Lectura recomendada
+                      </span>
+                    )}
                     <span className="text-xs font-semibold text-slate-400">
                       {selectedUpdate.date}
                     </span>
