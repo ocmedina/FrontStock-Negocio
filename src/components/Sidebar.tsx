@@ -26,6 +26,7 @@ import {
 } from "react-icons/hi";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { hasPermission } from "@/lib/permissions";
+import ActiveBranchBadge from "@/components/ActiveBranchBadge";
 
 const navSections = {
   comercial: [
@@ -488,6 +489,9 @@ export default function Sidebar({
         {/* User Footer Panel */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/30 flex-shrink-0">
           <div className="flex flex-col gap-3">
+            <div className="lg:hidden">
+              <ActiveBranchBadge />
+            </div>
             
             {/* User Profile Summary */}
             <div
