@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaBuilding, FaCheck, FaEdit, FaPlus, FaTimes } from 'react-icons/fa';
+import { FaBuilding, FaCheck, FaEdit, FaPlus, FaSearch, FaTimes } from 'react-icons/fa';
 import { supabase } from '@/lib/supabaseClient';
 import {
   createBranch,
@@ -21,10 +21,12 @@ export default function BranchesSettings() {
   const [branches, setBranches] = useState<BranchRecord[]>([]);
   const [copyProducts, setCopyProducts] = useState<Array<{ id: string; name: string; sku: string | null; stock: number }>>([]);
   const [selectedCopyProductIds, setSelectedCopyProductIds] = useState<string[]>([]);
+  const [copyProductSearch, setCopyProductSearch] = useState('');
   const [cloneSourceId, setCloneSourceId] = useState<number | null>(null);
   const [cloneTargetId, setCloneTargetId] = useState<number | null>(null);
   const [cloneProducts, setCloneProducts] = useState<Array<{ id: string; name: string; sku: string | null; stock: number }>>([]);
   const [selectedCloneProductIds, setSelectedCloneProductIds] = useState<string[]>([]);
+  const [cloneProductSearch, setCloneProductSearch] = useState('');
   const [cloningStock, setCloningStock] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -47,6 +49,7 @@ export default function BranchesSettings() {
     setForm(emptyForm);
     setSelectedCopyProductIds([]);
     setCopyProducts([]);
+    setCopyProductSearch('');
     setEditingId(null);
   };
 
@@ -119,6 +122,7 @@ export default function BranchesSettings() {
 
   useEffect(() => {
     const loadCopyProducts = async () => {
+      setCopyProductSearch('');
       if (!form.copy_stock_from) {
         setCopyProducts([]);
         setSelectedCopyProductIds([]);
@@ -133,6 +137,7 @@ export default function BranchesSettings() {
 
   useEffect(() => {
     const loadCloneProducts = async () => {
+      setCloneProductSearch('');
       if (!cloneSourceId) {
         setCloneProducts([]);
         setSelectedCloneProductIds([]);
@@ -222,8 +227,31 @@ export default function BranchesSettings() {
     setCloneTargetId(null);
     setCloneProducts([]);
     setSelectedCloneProductIds([]);
+    setCloneProductSearch('');
     await loadBranches();
   };
+
+  const normalizeText = (text: string) =>
+    text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+  const filteredCopyProducts = copyProducts.filter((product) => {
+    const query = normalizeText(copyProductSearch.trim());
+    if (!query) return true;
+    const nameMatch = normalizeText(product.name).includes(query);
+    const skuMatch = product.sku ? normalizeText(product.sku).includes(query) : false;
+    return Boolean(nameMatch || skuMatch);
+  });
+
+  const filteredCloneProducts = cloneProducts.filter((product) => {
+    const query = normalizeText(cloneProductSearch.trim());
+    if (!query) return true;
+    const nameMatch = normalizeText(product.name).includes(query);
+    const skuMatch = product.sku ? normalizeText(product.sku).includes(query) : false;
+    return Boolean(nameMatch || skuMatch);
+  });
 
   return (
     <div className="space-y-6">
@@ -334,55 +362,111 @@ export default function BranchesSettings() {
             </label>
 
             {copyProducts.length > 0 && (
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                    Productos a copiar
+                    Productos a copiar ({selectedCopyProductIds.length} de {copyProducts.length} seleccionados)
                   </span>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-                      onClick={() => setSelectedCopyProductIds(copyProducts.map((product) => product.id))}
-                    >
-                      Seleccionar todos
-                    </button>
-                    <button
-                      type="button"
-                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
-                      onClick={() => setSelectedCopyProductIds([])}
-                    >
-                      Deseleccionar todos
-                    </button>
+                    {copyProductSearch.trim() ? (
+                      <>
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                          onClick={() =>
+                            setSelectedCopyProductIds((current) =>
+                              Array.from(new Set([...current, ...filteredCopyProducts.map((p) => p.id)]))
+                            )
+                          }
+                        >
+                          Seleccionar filtrados ({filteredCopyProducts.length})
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                          onClick={() => {
+                            const filteredIds = new Set(filteredCopyProducts.map((p) => p.id));
+                            setSelectedCopyProductIds((current) => current.filter((id) => !filteredIds.has(id)));
+                          }}
+                        >
+                          Deseleccionar filtrados
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                          onClick={() => setSelectedCopyProductIds(copyProducts.map((product) => product.id))}
+                        >
+                          Seleccionar todos
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                          onClick={() => setSelectedCopyProductIds([])}
+                        >
+                          Deseleccionar todos
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="max-h-52 space-y-2 overflow-y-auto">
-                  {copyProducts.map((product) => (
-                    <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm text-gray-700 dark:text-slate-300">
-                      <span className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedCopyProductIds.includes(product.id)}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            setSelectedCopyProductIds((current) =>
-                              checked
-                                ? [...new Set([...current, product.id])]
-                                : current.filter((item) => item !== product.id)
-                            );
-                          }}
-                        />
-                        <span>
-                          <span className="font-medium">{product.name}</span>
-                          {product.sku && (
-                            <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">{product.sku}</span>
-                          )}
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                  <input
+                    type="text"
+                    value={copyProductSearch}
+                    onChange={(event) => setCopyProductSearch(event.target.value)}
+                    placeholder="Buscar producto por nombre o SKU..."
+                    className="w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/60 pl-9 pr-8 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  {copyProductSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCopyProductSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
+                      title="Limpiar búsqueda"
+                    >
+                      <FaTimes className="text-xs" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                  {filteredCopyProducts.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-gray-500 dark:text-slate-400">
+                      No se encontraron productos que coincidan con &quot;{copyProductSearch}&quot;
+                    </div>
+                  ) : (
+                    filteredCopyProducts.map((product) => (
+                      <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCopyProductIds.includes(product.id)}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              setSelectedCopyProductIds((current) =>
+                                checked
+                                  ? [...new Set([...current, product.id])]
+                                  : current.filter((item) => item !== product.id)
+                              );
+                            }}
+                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span>
+                            <span className="font-medium">{product.name}</span>
+                            {product.sku && (
+                              <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">{product.sku}</span>
+                            )}
+                          </span>
                         </span>
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-slate-400">Stock: {product.stock}</span>
-                    </label>
-                  ))}
+                        <span className="text-xs text-gray-500 dark:text-slate-400">Stock: {product.stock}</span>
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -446,55 +530,111 @@ export default function BranchesSettings() {
         </div>
 
         {cloneProducts.length > 0 && (
-          <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                Productos a copiar
+                Productos a clonar ({selectedCloneProductIds.length} de {cloneProducts.length} seleccionados)
               </span>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-                  onClick={() => setSelectedCloneProductIds(cloneProducts.map((product) => product.id))}
-                >
-                  Seleccionar todos
-                </button>
-                <button
-                  type="button"
-                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  onClick={() => setSelectedCloneProductIds([])}
-                >
-                  Deseleccionar todos
-                </button>
+                {cloneProductSearch.trim() ? (
+                  <>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                      onClick={() =>
+                        setSelectedCloneProductIds((current) =>
+                          Array.from(new Set([...current, ...filteredCloneProducts.map((p) => p.id)]))
+                        )
+                      }
+                    >
+                      Seleccionar filtrados ({filteredCloneProducts.length})
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      onClick={() => {
+                        const filteredIds = new Set(filteredCloneProducts.map((p) => p.id));
+                        setSelectedCloneProductIds((current) => current.filter((id) => !filteredIds.has(id)));
+                      }}
+                    >
+                      Deseleccionar filtrados
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                      onClick={() => setSelectedCloneProductIds(cloneProducts.map((product) => product.id))}
+                    >
+                      Seleccionar todos
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      onClick={() => setSelectedCloneProductIds([])}
+                    >
+                      Deseleccionar todos
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="max-h-52 space-y-2 overflow-y-auto">
-              {cloneProducts.map((product) => (
-                <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm text-gray-700 dark:text-slate-300">
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedCloneProductIds.includes(product.id)}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setSelectedCloneProductIds((current) =>
-                          checked
-                            ? [...new Set([...current, product.id])]
-                            : current.filter((item) => item !== product.id)
-                        );
-                      }}
-                    />
-                    <span>
-                      <span className="font-medium">{product.name}</span>
-                      {product.sku && (
-                        <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">{product.sku}</span>
-                      )}
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+              <input
+                type="text"
+                value={cloneProductSearch}
+                onChange={(event) => setCloneProductSearch(event.target.value)}
+                placeholder="Buscar producto por nombre o SKU..."
+                className="w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/60 pl-9 pr-8 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              />
+              {cloneProductSearch && (
+                <button
+                  type="button"
+                  onClick={() => setCloneProductSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
+                  title="Limpiar búsqueda"
+                >
+                  <FaTimes className="text-xs" />
+                </button>
+              )}
+            </div>
+
+            <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+              {filteredCloneProducts.length === 0 ? (
+                <div className="py-6 text-center text-xs text-gray-500 dark:text-slate-400">
+                  No se encontraron productos que coincidan con &quot;{cloneProductSearch}&quot;
+                </div>
+              ) : (
+                filteredCloneProducts.map((product) => (
+                  <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedCloneProductIds.includes(product.id)}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setSelectedCloneProductIds((current) =>
+                            checked
+                              ? [...new Set([...current, product.id])]
+                              : current.filter((item) => item !== product.id)
+                          );
+                        }}
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span>
+                        <span className="font-medium">{product.name}</span>
+                        {product.sku && (
+                          <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">{product.sku}</span>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-slate-400">Stock: {product.stock}</span>
-                </label>
-              ))}
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Stock: {product.stock}</span>
+                  </label>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -505,7 +645,7 @@ export default function BranchesSettings() {
           disabled={cloningStock || !cloneSourceId || !cloneTargetId}
           className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
         >
-          {cloningStock ? 'Clonando...' : 'Clonar stock'}
+          {cloningStock ? 'Clonando...' : selectedCloneProductIds.length > 0 ? `Clonar stock (${selectedCloneProductIds.length})` : 'Clonar stock'}
         </button>
       </div>
 
