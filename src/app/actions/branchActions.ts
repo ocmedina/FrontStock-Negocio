@@ -80,6 +80,8 @@ export async function createBranch(input: {
   start_date?: string;
   point_of_sale?: number | null;
   logo_url?: string;
+  clone_from_branch_id?: number | null;
+  clone_product_ids?: string[];
 }): Promise<{ success: boolean; data?: BranchRecord; error?: string }> {
   try {
     await requireAdmin();
@@ -99,10 +101,25 @@ export async function createBranch(input: {
       .single();
 
     if (error) throw error;
+
+    const targetBranchId = Number(data.id);
+    const sourceBranchId = input.clone_from_branch_id ? Number(input.clone_from_branch_id) : null;
+
+    if (sourceBranchId && sourceBranchId !== targetBranchId) {
+      const cloneProductIds = (input.clone_product_ids ?? []).filter(Boolean);
+      const { error: cloneError } = await supabase.rpc('clone_branch_stock', {
+        p_source_branch_id: sourceBranchId,
+        p_target_branch_id: targetBranchId,
+        p_product_ids: cloneProductIds.length > 0 ? cloneProductIds : null,
+      });
+
+      if (cloneError) throw cloneError;
+    }
+
     return {
       success: true,
       data: {
-        id: Number(data.id),
+        id: targetBranchId,
         name: data.name,
         description: data.description ?? null,
         is_active: Boolean(data.is_active),

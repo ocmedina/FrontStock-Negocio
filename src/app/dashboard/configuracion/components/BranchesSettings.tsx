@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaBuilding, FaCheck, FaEdit, FaPlus, FaTimes } from 'react-icons/fa';
+import { supabase } from '@/lib/supabaseClient';
 import {
   createBranch,
   listBranchesForSettings,
@@ -13,11 +14,18 @@ import {
 const emptyForm = {
   name: '', description: '', is_active: false, fantasy_name: '', address: '',
   locality: '', province: '', phone: '', email: '', cuit: '', iibb: '',
-  iva_condition: '', start_date: '', point_of_sale: '', logo_url: '',
+  iva_condition: '', start_date: '', point_of_sale: '', logo_url: '', copy_stock_from: '',
 };
 
 export default function BranchesSettings() {
   const [branches, setBranches] = useState<BranchRecord[]>([]);
+  const [copyProducts, setCopyProducts] = useState<Array<{ id: string; name: string; sku: string | null; stock: number }>>([]);
+  const [selectedCopyProductIds, setSelectedCopyProductIds] = useState<string[]>([]);
+  const [cloneSourceId, setCloneSourceId] = useState<number | null>(null);
+  const [cloneTargetId, setCloneTargetId] = useState<number | null>(null);
+  const [cloneProducts, setCloneProducts] = useState<Array<{ id: string; name: string; sku: string | null; stock: number }>>([]);
+  const [selectedCloneProductIds, setSelectedCloneProductIds] = useState<string[]>([]);
+  const [cloningStock, setCloningStock] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +45,105 @@ export default function BranchesSettings() {
 
   const resetForm = () => {
     setForm(emptyForm);
+    setSelectedCopyProductIds([]);
+    setCopyProducts([]);
     setEditingId(null);
   };
+
+  const loadProductsForBranchCopy = async (sourceBranchId: number, target: 'create' | 'clone') => {
+    const { data: stockRows, error: stockError } = await supabase
+      .from('branch_stock' as any)
+      .select('product_id, stock')
+      .eq('branch_id', sourceBranchId);
+
+    if (stockError) {
+      toast.error('No se pudieron cargar los productos para copiar stock');
+      if (target === 'create') {
+        setCopyProducts([]);
+        setSelectedCopyProductIds([]);
+      } else {
+        setCloneProducts([]);
+        setSelectedCloneProductIds([]);
+      }
+      return;
+    }
+
+    const productIds = (stockRows ?? []).map((row) => row.product_id).filter(Boolean);
+    if (productIds.length === 0) {
+      if (target === 'create') {
+        setCopyProducts([]);
+        setSelectedCopyProductIds([]);
+      } else {
+        setCloneProducts([]);
+        setSelectedCloneProductIds([]);
+      }
+      return;
+    }
+
+    const { data: products, error: productsError } = await supabase
+      .from('products' as any)
+      .select('id, name, sku')
+      .in('id', productIds);
+
+    if (productsError) {
+      toast.error('No se pudieron cargar los productos para copiar stock');
+      if (target === 'create') {
+        setCopyProducts([]);
+        setSelectedCopyProductIds([]);
+      } else {
+        setCloneProducts([]);
+        setSelectedCloneProductIds([]);
+      }
+      return;
+    }
+
+    const nextProducts = (products ?? []).map((product: any) => {
+      const match = (stockRows ?? []).find((row) => row.product_id === product.id);
+      return {
+        id: String(product.id),
+        name: product.name,
+        sku: product.sku ?? null,
+        stock: Number(match?.stock ?? 0),
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+
+    if (target === 'create') {
+      setCopyProducts(nextProducts);
+      setSelectedCopyProductIds(nextProducts.map((product) => product.id));
+      return;
+    }
+
+    setCloneProducts(nextProducts);
+    setSelectedCloneProductIds(nextProducts.map((product) => product.id));
+  };
+
+  useEffect(() => {
+    const loadCopyProducts = async () => {
+      if (!form.copy_stock_from) {
+        setCopyProducts([]);
+        setSelectedCopyProductIds([]);
+        return;
+      }
+
+      await loadProductsForBranchCopy(Number(form.copy_stock_from), 'create');
+    };
+
+    void loadCopyProducts();
+  }, [form.copy_stock_from]);
+
+  useEffect(() => {
+    const loadCloneProducts = async () => {
+      if (!cloneSourceId) {
+        setCloneProducts([]);
+        setSelectedCloneProductIds([]);
+        return;
+      }
+
+      await loadProductsForBranchCopy(cloneSourceId, 'clone');
+    };
+
+    void loadCloneProducts();
+  }, [cloneSourceId]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -46,6 +151,8 @@ export default function BranchesSettings() {
     const input = {
       ...form,
       point_of_sale: form.point_of_sale ? Number(form.point_of_sale) : null,
+      clone_from_branch_id: form.copy_stock_from ? Number(form.copy_stock_from) : null,
+      clone_product_ids: editingId === null ? selectedCopyProductIds : undefined,
     };
     const result = editingId === null
       ? await createBranch(input)
@@ -79,7 +186,43 @@ export default function BranchesSettings() {
       start_date: branch.start_date ?? '',
       point_of_sale: branch.point_of_sale ? String(branch.point_of_sale) : '',
       logo_url: branch.logo_url ?? '',
+      copy_stock_from: '',
     });
+    setCopyProducts([]);
+    setSelectedCopyProductIds([]);
+  };
+
+  const handleCloneStock = async () => {
+    if (!cloneSourceId || !cloneTargetId) {
+      toast.error('Seleccioná sucursal origen y sucursal destino');
+      return;
+    }
+
+    if (cloneSourceId === cloneTargetId) {
+      toast.error('La sucursal origen y destino deben ser distintas');
+      return;
+    }
+
+    setCloningStock(true);
+    const { error } = await supabase.rpc('clone_branch_stock', {
+      p_source_branch_id: cloneSourceId,
+      p_target_branch_id: cloneTargetId,
+      p_product_ids: selectedCloneProductIds.length > 0 ? selectedCloneProductIds : null,
+    });
+
+    setCloningStock(false);
+
+    if (error) {
+      toast.error(error.message || 'No se pudo clonar el stock');
+      return;
+    }
+
+    toast.success('Stock clonado correctamente');
+    setCloneSourceId(null);
+    setCloneTargetId(null);
+    setCloneProducts([]);
+    setSelectedCloneProductIds([]);
+    await loadBranches();
   };
 
   return (
@@ -172,6 +315,80 @@ export default function BranchesSettings() {
           </div>
         </div>
 
+        {editingId === null && branches.length > 0 && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+              Copiar stock desde otra sucursal
+              <select
+                value={form.copy_stock_from}
+                onChange={(event) => setForm((current) => ({ ...current, copy_stock_from: event.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 font-normal text-gray-900 dark:text-white"
+              >
+                <option value="">No copiar stock</option>
+                {branches
+                  .filter((branch) => branch.is_active)
+                  .map((branch) => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+              </select>
+            </label>
+
+            {copyProducts.length > 0 && (
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                    Productos a copiar
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                      onClick={() => setSelectedCopyProductIds(copyProducts.map((product) => product.id))}
+                    >
+                      Seleccionar todos
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      onClick={() => setSelectedCopyProductIds([])}
+                    >
+                      Deseleccionar todos
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-52 space-y-2 overflow-y-auto">
+                  {copyProducts.map((product) => (
+                    <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm text-gray-700 dark:text-slate-300">
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedCopyProductIds.includes(product.id)}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setSelectedCopyProductIds((current) =>
+                              checked
+                                ? [...new Set([...current, product.id])]
+                                : current.filter((item) => item !== product.id)
+                            );
+                          }}
+                        />
+                        <span>
+                          <span className="font-medium">{product.name}</span>
+                          {product.sku && (
+                            <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">{product.sku}</span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-slate-400">Stock: {product.stock}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
           <input
             type="checkbox"
@@ -190,6 +407,107 @@ export default function BranchesSettings() {
           {saving ? 'Guardando...' : editingId === null ? 'Crear sucursal' : 'Guardar cambios'}
         </button>
       </form>
+
+      <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/40 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold text-gray-900 dark:text-slate-100">Clonar stock entre sucursales</h4>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+            Sucursal origen
+            <select
+              value={cloneSourceId ?? ''}
+              onChange={(event) => setCloneSourceId(event.target.value ? Number(event.target.value) : null)}
+              className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 font-normal text-gray-900 dark:text-white"
+            >
+              <option value="">Seleccioná origen</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+            Sucursal destino
+            <select
+              value={cloneTargetId ?? ''}
+              onChange={(event) => setCloneTargetId(event.target.value ? Number(event.target.value) : null)}
+              className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 font-normal text-gray-900 dark:text-white"
+            >
+              <option value="">Seleccioná destino</option>
+              {branches
+                .filter((branch) => branch.id !== cloneSourceId)
+                .map((branch) => (
+                  <option key={branch.id} value={branch.id}>{branch.name}</option>
+                ))}
+            </select>
+          </label>
+        </div>
+
+        {cloneProducts.length > 0 && (
+          <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                Productos a copiar
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                  onClick={() => setSelectedCloneProductIds(cloneProducts.map((product) => product.id))}
+                >
+                  Seleccionar todos
+                </button>
+                <button
+                  type="button"
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  onClick={() => setSelectedCloneProductIds([])}
+                >
+                  Deseleccionar todos
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-52 space-y-2 overflow-y-auto">
+              {cloneProducts.map((product) => (
+                <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm text-gray-700 dark:text-slate-300">
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedCloneProductIds.includes(product.id)}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setSelectedCloneProductIds((current) =>
+                          checked
+                            ? [...new Set([...current, product.id])]
+                            : current.filter((item) => item !== product.id)
+                        );
+                      }}
+                    />
+                    <span>
+                      <span className="font-medium">{product.name}</span>
+                      {product.sku && (
+                        <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">{product.sku}</span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Stock: {product.stock}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => void handleCloneStock()}
+          disabled={cloningStock || !cloneSourceId || !cloneTargetId}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+        >
+          {cloningStock ? 'Clonando...' : 'Clonar stock'}
+        </button>
+      </div>
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700">
         <div className="bg-white dark:bg-slate-900 px-5 py-3 font-bold text-gray-900 dark:text-slate-100">

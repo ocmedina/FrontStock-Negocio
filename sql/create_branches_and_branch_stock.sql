@@ -304,6 +304,65 @@ CREATE TRIGGER trg_apply_branch_stock_movement
 AFTER INSERT ON public.stock_movements
 FOR EACH ROW EXECUTE FUNCTION public.apply_branch_stock_movement();
 
+CREATE OR REPLACE FUNCTION public.clone_branch_stock(
+  p_source_branch_id BIGINT,
+  p_target_branch_id BIGINT,
+  p_product_ids UUID[] DEFAULT NULL
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+DECLARE
+  v_copied_count INTEGER := 0;
+BEGIN
+  IF p_source_branch_id IS NULL OR p_target_branch_id IS NULL THEN
+    RAISE EXCEPTION 'Debe indicar la sucursal origen y destino';
+  END IF;
+
+  IF p_source_branch_id = p_target_branch_id THEN
+    RETURN 0;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.branches
+    WHERE id = p_source_branch_id AND is_active = true
+  ) THEN
+    RAISE EXCEPTION 'La sucursal origen no existe o no está activa';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.branches
+    WHERE id = p_target_branch_id AND is_active = true
+  ) THEN
+    RAISE EXCEPTION 'La sucursal destino no existe o no está activa';
+  END IF;
+
+  INSERT INTO public.branch_stock (branch_id, product_id, stock, stock_minimo, updated_at)
+  SELECT
+    p_target_branch_id,
+    bs.product_id,
+    bs.stock,
+    bs.stock_minimo,
+    now()
+  FROM public.branch_stock bs
+  WHERE bs.branch_id = p_source_branch_id
+    AND (
+      p_product_ids IS NULL
+      OR array_length(p_product_ids, 1) IS NULL
+      OR bs.product_id = ANY (p_product_ids)
+    )
+  ON CONFLICT (branch_id, product_id) DO NOTHING;
+
+  GET DIAGNOSTICS v_copied_count = ROW_COUNT;
+  RETURN v_copied_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.clone_branch_stock(BIGINT, BIGINT, UUID[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.clone_branch_stock(BIGINT, BIGINT, UUID[]) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.transfer_branch_stock(
   p_product_id UUID,
   p_from_branch_id BIGINT,
