@@ -84,7 +84,7 @@ export default function OrderDetailsModal({
     try {
       const { data: order, error } = await supabase
         .from("orders")
-        .select("*, customers(*), order_items(*, products(*))")
+        .select("*, customers(*), branches(*), order_items(*, products(*))")
         .eq("id", id)
         .single();
 

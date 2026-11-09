@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import MobileBottomNav from "./MobileBottomNav";
 import TimeWeatherIndicator from "./TimeWeatherIndicator";
 import UpdatesCenter from "./UpdatesCenter";
+import ActiveBranchBadge from "./ActiveBranchBadge";
 
 export default function SidebarLayout({
     children,
@@ -33,6 +34,7 @@ export default function SidebarLayout({
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <ActiveBranchBadge />
                         <TimeWeatherIndicator />
                     </div>
                 </header>

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useBranch } from "@/contexts/BranchContext";
 import { User } from "@supabase/supabase-js";
 import { Database } from "@/lib/database.types";
 import { formatCurrency } from "@/lib/numberFormat";
@@ -383,6 +384,7 @@ function ProductSearch({
 }
 
 export default function NewPurchasePage() {
+  const { activeBranch, isLoading: isBranchLoading } = useBranch();
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
@@ -505,6 +507,10 @@ export default function NewPurchasePage() {
   };
 
   const handleFinalizePurchase = async () => {
+    if (isBranchLoading || !activeBranch) {
+      toast.error("Seleccioná una sucursal activa antes de registrar la compra");
+      return;
+    }
     if (!validateForm()) return;
 
     setLoading(true);
@@ -559,9 +565,10 @@ export default function NewPurchasePage() {
       // 3. Actualizar stock de todos los productos
       toast.loading("Actualizando inventario...", { id: toastId });
       const stockUpdatePromises = cart.map((item) =>
-        supabase.rpc("increment_stock", {
-          product_id_in: item.product.id,
-          quantity_in: item.quantity,
+        supabase.rpc("increment_branch_stock" as any, {
+          p_branch_id: activeBranch.id,
+          p_product_id: item.product.id,
+          p_quantity: item.quantity,
         })
       );
 

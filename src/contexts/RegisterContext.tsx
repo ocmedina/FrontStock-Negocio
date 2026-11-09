@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/lib/supabaseClient';
 import { getActiveRegisters, type Register } from '@/app/actions/registerActions';
 import toast from 'react-hot-toast';
+import { useBranch } from '@/contexts/BranchContext';
 
 interface RegisterContextType {
   registers: Register[];
@@ -19,16 +20,23 @@ const RegisterContext = createContext<RegisterContextType | undefined>(undefined
 const STORAGE_KEY = 'frontstock_active_register_id';
 
 export function RegisterProvider({ children }: { children: React.ReactNode }) {
+  const { activeBranch, isLoading: branchLoading } = useBranch();
   const [registers, setRegisters] = useState<Register[]>([]);
   const [activeRegister, setActiveRegister] = useState<Register | null>(null);
   const [isAssignedFixed, setIsAssignedFixed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const initRegisters = useCallback(async () => {
+    if (!activeBranch) {
+      setRegisters([]);
+      setActiveRegister(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       // 1. Obtener cajas activas
-      const result = await getActiveRegisters();
+      const result = await getActiveRegisters(activeBranch.id);
       const activeList = result.data || [];
       setRegisters(activeList);
 
@@ -66,7 +74,8 @@ export function RegisterProvider({ children }: { children: React.ReactNode }) {
 
       // 3. Si no tiene caja fija, leer de localStorage o asignar la primera activa
       setIsAssignedFixed(false);
-      const savedId = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+      const storageKey = `${STORAGE_KEY}_${activeBranch.id}`;
+      const savedId = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
       const parsedId = savedId ? parseInt(savedId, 10) : null;
 
       const matched = parsedId ? activeList.find((r) => r.id === parsedId) : null;
@@ -74,18 +83,18 @@ export function RegisterProvider({ children }: { children: React.ReactNode }) {
 
       setActiveRegister(resolved);
       if (resolved && typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, String(resolved.id));
+        localStorage.setItem(storageKey, String(resolved.id));
       }
     } catch (err) {
       console.error('[RegisterContext] Error initializing registers:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeBranch]);
 
   useEffect(() => {
-    initRegisters();
-  }, [initRegisters]);
+    if (!branchLoading) void initRegisters();
+  }, [branchLoading, initRegisters]);
 
   const setActiveRegisterById = useCallback(
     (registerId: number) => {
@@ -98,12 +107,12 @@ export function RegisterProvider({ children }: { children: React.ReactNode }) {
       if (match) {
         setActiveRegister(match);
         if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, String(match.id));
+          localStorage.setItem(`${STORAGE_KEY}_${activeBranch?.id ?? 'none'}`, String(match.id));
         }
         toast.success(`Caja activa: ${match.name}`, { id: 'active-register-toast' });
       }
     },
-    [registers, isAssignedFixed]
+    [registers, isAssignedFixed, activeBranch]
   );
 
   return (

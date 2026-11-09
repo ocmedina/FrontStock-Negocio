@@ -13,8 +13,10 @@ import {
 } from "react-icons/fa";
 import ExpensesTable from "./components/ExpensesTable";
 import ExpenseModal from "./components/ExpenseModal";
+import { useBranch } from "@/contexts/BranchContext";
 
 export default function FinancesPage() {
+    const { activeBranch } = useBranch();
     const [loading, setLoading] = useState(true);
     const [expenses, setExpenses] = useState<any[]>([]);
     const [summary, setSummary] = useState({
@@ -37,7 +39,7 @@ export default function FinancesPage() {
 
     useEffect(() => {
         fetchData();
-    }, [selectedMonth]);
+    }, [selectedMonth, activeBranch]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -53,18 +55,20 @@ export default function FinancesPage() {
             const endDate = new Date(`${endOfMonth}T23:59:59.999`).toISOString();
 
             // 1. Fetch Expenses
-            const { data: expensesData, error: expensesError } = await supabase
+            let expensesQuery = supabase
                 .from("expenses")
                 .select("*")
                 .gte("date", startOfMonth)
                 .lte("date", endOfMonth)
                 .order("date", { ascending: false });
+            if (activeBranch) expensesQuery = expensesQuery.eq("branch_id", activeBranch.id);
+            const { data: expensesData, error: expensesError } = await expensesQuery;
 
             if (expensesError) throw expensesError;
             setExpenses(expensesData || []);
 
             // 2. Fetch Orders (Reparto)
-            const { data: ordersData, error: ordersError } = await supabase
+            let ordersQuery = supabase
                 .from("orders")
                 .select(`
           total_amount,
@@ -79,11 +83,13 @@ export default function FinancesPage() {
                 .gte("created_at", startDate)
                 .lte("created_at", endDate)
                 .neq("status", "cancelado");
+            if (activeBranch) ordersQuery = ordersQuery.eq("branch_id", activeBranch.id);
+            const { data: ordersData, error: ordersError } = await ordersQuery;
 
             if (ordersError) throw ordersError;
 
             // 3. Fetch Sales (Mostrador)
-            const { data: deskSalesData, error: deskSalesError } = await supabase
+            let deskSalesQuery = supabase
                 .from("sales")
                 .select(`
           total_amount,
@@ -98,6 +104,8 @@ export default function FinancesPage() {
                 .gte("created_at", startDate)
                 .lte("created_at", endDate)
                 .eq("is_cancelled", false); // Solo no canceladas
+            if (activeBranch) deskSalesQuery = deskSalesQuery.eq("branch_id", activeBranch.id);
+            const { data: deskSalesData, error: deskSalesError } = await deskSalesQuery;
 
             // NOTA: Si sale error de "column is_cancelled does not exist", verificar nombre exacto.
             // Si sale error de permiso, ejecutar policy para sales.

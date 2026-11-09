@@ -11,6 +11,7 @@ import {
   type UserRegisterAssignment,
 } from "@/app/actions/registerActions";
 import { useRegister } from "@/hooks/useRegister";
+import { useBranch } from "@/contexts/BranchContext";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
 import {
@@ -31,6 +32,7 @@ import {
 
 export default function CashRegistersPage() {
   const { user, role } = useAuth();
+  const { activeBranch } = useBranch();
   const {
     activeRegister,
     setActiveRegisterById,
@@ -53,7 +55,7 @@ export default function CashRegistersPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [regsRes, usersRes] = await Promise.all([
-      getRegisters(),
+      getRegisters(activeBranch?.id),
       getUserRegisterAssignments(),
     ]);
 
@@ -68,7 +70,7 @@ export default function CashRegistersPage() {
     }
 
     setLoading(false);
-  }, []);
+  }, [activeBranch]);
 
   useEffect(() => {
     fetchData();
@@ -113,7 +115,7 @@ export default function CashRegistersPage() {
           toast.error(res.error || "Error al actualizar la caja.");
         }
       } else {
-        const res = await createRegister(formName, formDesc, formPos);
+        const res = await createRegister(formName, formDesc, formPos, activeBranch?.id);
         if (res.success) {
           toast.success("Caja creada con éxito.");
           setIsModalOpen(false);

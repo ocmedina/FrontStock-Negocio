@@ -19,9 +19,11 @@ import {
   FaGift,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { useBranch } from "@/contexts/BranchContext";
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { activeBranch } = useBranch();
   const [sku, setSku] = useState("");
   const [barcode, setBarcode] = useState("");
   const [name, setName] = useState("");
@@ -122,19 +124,64 @@ export default function NewProductPage() {
         cost_price: costPrice ? parseFloat(costPrice) : null,
         price_minorista: parseFloat(priceMinorista),
         price_mayorista: parseFloat(priceMayorista),
-        stock: parseInt(stock, 10),
+        stock: 0,
         brand_id: selectedBrand ? parseInt(selectedBrand) : null,
         category_id: selectedCategory ? parseInt(selectedCategory) : null,
         promotion: promotionPayload,
       },
-    ]);
+    ]).select("id").single();
 
     if (error) {
+      if (error.code === "23505" && activeBranch) {
+        const { data: existingProduct, error: existingError } = await supabase
+          .from("products")
+          .select("id, name")
+          .eq("sku", sku)
+          .maybeSingle();
+
+        if (!existingError && existingProduct) {
+          const { error: stockError } = await (supabase as any).rpc(
+            "increment_branch_stock",
+            {
+              p_branch_id: activeBranch.id,
+              p_product_id: existingProduct.id,
+              p_quantity: parseInt(stock, 10),
+            }
+          );
+
+          if (!stockError) {
+            toast.success(
+              `El producto "${existingProduct.name}" ya existía. Se asignaron ${stock} unidades a la sucursal activa.`,
+              { id: loadingToast }
+            );
+            router.push("/dashboard/products");
+            router.refresh();
+            return;
+          }
+        }
+      }
       toast.error(`Error al crear el producto: ${error.message}`, {
         id: loadingToast,
       });
       console.error(error);
     } else {
+      const createdProductId = (data as { id: string } | null)?.id;
+      if (activeBranch && createdProductId) {
+        const { error: stockError } = await (supabase as any).rpc(
+          "increment_branch_stock",
+          {
+            p_branch_id: activeBranch.id,
+            p_product_id: createdProductId,
+            p_quantity: parseInt(stock, 10),
+          }
+        );
+        if (stockError) {
+          toast.error(`Producto creado, pero no se pudo asignar el stock: ${stockError.message}`, {
+            id: loadingToast,
+          });
+          return;
+        }
+      }
       toast.success("✅ Producto creado exitosamente", { id: loadingToast });
       router.push("/dashboard/products");
       router.refresh();

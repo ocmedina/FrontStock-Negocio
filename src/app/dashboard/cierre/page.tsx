@@ -8,6 +8,7 @@ import {
   type DeskCashCloseResult,
 } from "@/app/actions/cashCloseActions";
 import { getActiveRegisters, CashRegister } from "@/app/actions/registerActions";
+import { useBranch } from "@/contexts/BranchContext";
 import CashShiftControl from "./components/CashShiftControl";
 import {
   FaTruck,
@@ -419,6 +420,7 @@ function RepartoTab() {
 // ─── Mostrador Tab ────────────────────────────────────────────────────────────
 
 function MostradorTab() {
+  const { activeBranch } = useBranch();
   const [date, setDate] = useState(todayAR);
   const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [selectedRegister, setSelectedRegister] = useState<string>("all");
@@ -428,8 +430,12 @@ function MostradorTab() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    getActiveRegisters().then((res) => setRegisters(res.data || []));
-  }, []);
+    if (activeBranch) {
+      getActiveRegisters(activeBranch.id).then((res) => setRegisters(res.data || []));
+    } else {
+      setRegisters([]);
+    }
+  }, [activeBranch]);
 
   const load = useCallback(async (d: string, regVal?: string) => {
     setLoading(true);

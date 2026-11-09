@@ -19,9 +19,11 @@ async function getOrderDetails(orderId: string) {
       created_at,
       total_amount,
       status,
+      branch_id,
       payment_method,
       amount_paid,
       amount_pending,
+      branches ( id, name, fantasy_name, address, locality, province, phone, email, cuit, iibb, iva_condition, point_of_sale, logo_url ),
       customers ( full_name, customer_type, phone, address, reference ),
       profiles ( full_name ),
       order_items (

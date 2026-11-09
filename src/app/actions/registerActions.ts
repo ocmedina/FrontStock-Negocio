@@ -27,7 +27,7 @@ export type UserRegisterAssignment = {
 
 // ─── Listar todas las cajas ───────────────────────────────────────────────────
 
-export async function getRegisters(): Promise<{
+export async function getRegisters(branchId?: number): Promise<{
   success: boolean;
   data?: Register[];
   error?: string;
@@ -37,11 +37,13 @@ export async function getRegisters(): Promise<{
 
     const supabase = createLooseAdminClient();
 
-    const [registersRes, profilesRes] = await Promise.all([
-      supabase
+    let registersQuery = supabase
         .from('registers' as any)
         .select('*')
-        .order('id', { ascending: true }),
+        .order('id', { ascending: true });
+    if (branchId) registersQuery = registersQuery.eq('branch_id', branchId);
+    const [registersRes, profilesRes] = await Promise.all([
+      registersQuery,
       supabase
         .from('profiles')
         .select('register_id'),
@@ -90,7 +92,7 @@ export async function getRegisters(): Promise<{
 
 // ─── Listar solo cajas activas ────────────────────────────────────────────────
 
-export async function getActiveRegisters(): Promise<{
+export async function getActiveRegisters(branchId?: number): Promise<{
   success: boolean;
   data?: Register[];
   error?: string;
@@ -99,11 +101,13 @@ export async function getActiveRegisters(): Promise<{
     await requireAuth();
 
     const supabase = createLooseAdminClient();
-    const { data, error } = await supabase
+    let registersQuery = supabase
       .from('registers' as any)
       .select('id, name, description, is_active, point_of_sale, created_at')
       .eq('is_active', true)
       .order('id', { ascending: true });
+    if (branchId) registersQuery = registersQuery.eq('branch_id', branchId);
+    const { data, error } = await registersQuery;
 
     if (error) {
       // Fallback si la tabla aún se está migrando
@@ -211,7 +215,8 @@ export async function assignUserRegister(
 export async function createRegister(
   name: string,
   description?: string,
-  point_of_sale: number = 1
+  point_of_sale: number = 1,
+  branchId?: number
 ): Promise<{ success: boolean; data?: Register; error?: string }> {
   try {
     await requirePermission('GESTIONAR_CAJAS');
@@ -229,6 +234,7 @@ export async function createRegister(
         description: description?.trim() || null,
         point_of_sale: pos,
         is_active: true,
+        ...(branchId ? { branch_id: branchId } : {}),
       })
       .select()
       .single();
@@ -326,4 +332,3 @@ export async function getUserRegisterAssignments(): Promise<{
     return { success: false, error: msg };
   }
 }
-

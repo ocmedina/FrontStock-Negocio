@@ -21,6 +21,7 @@ type FullOrder = {
   status: string;
   created_at: string;
   profile_id: string;
+  branch_id: number;
   customers: Customer;
   order_items: {
     id: string;
@@ -66,7 +67,7 @@ export default function EditOrderModal({
         try {
           const { data: order, error } = await (supabase as any)
             .from("orders")
-            .select("*, customers(*), order_items(*, products(*))")
+            .select("*, customers(*), branches(*), order_items(*, products(*))")
             .eq("id", orderId)
             .single();
 
@@ -74,6 +75,17 @@ export default function EditOrderModal({
 
           if (order) {
             setOrderData(order as FullOrder);
+            const productIds = order.order_items.map((item: any) => item.product_id);
+            const { data: branchStock, error: stockError } = await (supabase as any)
+              .from("branch_stock")
+              .select("product_id, stock")
+              .eq("branch_id", order.branch_id)
+              .in("product_id", productIds);
+            if (stockError) throw stockError;
+
+            const stockByProduct = new Map(
+              (branchStock || []).map((row: any) => [row.product_id, row.stock])
+            );
             const items = order.order_items.map((item: any) => ({
               id: item.id,
               product_id: item.product_id,
@@ -81,7 +93,7 @@ export default function EditOrderModal({
               quantity: item.quantity,
               price: item.price,
               original_quantity: item.quantity,
-              stock: item.products?.stock || 0,
+              stock: stockByProduct.get(item.product_id) || 0,
             }));
             setEditedItems(items);
           }
@@ -149,19 +161,12 @@ export default function EditOrderModal({
 
           // Ajustar stock del producto SOLO si el pedido ya fue entregado
           if (orderData.status === "entregado") {
-            const { data: productData } = await supabase
-              .from("products")
-              .select("stock")
-              .eq("id", item.product_id)
-              .single();
-
-            if (productData) {
-              const newStock = productData.stock - quantityDiff;
-              await supabase
-                .from("products")
-                .update({ stock: Math.max(0, newStock) })
-                .eq("id", item.product_id);
-            }
+            const { error: stockError } = await (supabase as any).rpc("adjust_branch_stock", {
+              p_branch_id: orderData.branch_id,
+              p_product_id: item.product_id,
+              p_delta: -quantityDiff,
+            });
+            if (stockError) throw stockError;
           }
         }
       }
@@ -175,19 +180,12 @@ export default function EditOrderModal({
       for (const removedItem of removedItems) {
         // Devolver stock SOLO si el pedido ya fue entregado
         if (orderData.status === "entregado") {
-          const { data: productData } = await supabase
-            .from("products")
-            .select("stock")
-            .eq("id", removedItem.product_id)
-            .single();
-
-          if (productData) {
-            const newStock = productData.stock + removedItem.quantity;
-            await supabase
-              .from("products")
-              .update({ stock: newStock })
-              .eq("id", removedItem.product_id);
-          }
+          const { error: stockError } = await (supabase as any).rpc("adjust_branch_stock", {
+            p_branch_id: orderData.branch_id,
+            p_product_id: removedItem.product_id,
+            p_delta: removedItem.quantity,
+          });
+          if (stockError) throw stockError;
         }
 
         // Eliminar item

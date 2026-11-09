@@ -38,49 +38,20 @@ export default function OrderDetailsClient({
     setLoading(true);
     const loadingToast = toast.loading("Actualizando estado...");
 
-    if (newStatus === "confirmado" && order.status === "pendiente") {
-      for (const item of order.order_items) {
-        if (!item.products || item.products.stock < item.quantity) {
-          toast.error(`Stock insuficiente para "${item.products?.name}".`);
-          setLoading(false);
-          toast.dismiss(loadingToast);
-          return;
-        }
-      }
-      for (const item of order.order_items) {
-        const newStock = item.products.stock - item.quantity;
-        await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.products.id);
-      }
-      toast.success("Stock descontado correctamente.");
-    }
-
-    if (newStatus === "cancelado" && order.status === "confirmado") {
-      for (const item of order.order_items) {
-        const newStock = (item.products.stock || 0) + item.quantity;
-        await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.products.id);
-      }
-      toast.success("Stock devuelto al inventario.");
-    }
-
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status: newStatus })
-      .eq("id", order.id)
-      .select()
-      .single();
+    const { error } = await supabase.rpc("handle_order_status_change", {
+      order_id_param: order.id,
+      new_status_param: newStatus,
+    });
 
     toast.dismiss(loadingToast);
 
     if (error) {
       toast.error(`Error al cambiar el estado: ${error.message}`);
-    } else if (data) {
-      setOrder((prevOrder: typeof order) => ({ ...prevOrder, ...data }));
+    } else {
+      setOrder((prevOrder: typeof order) => ({
+        ...prevOrder,
+        status: newStatus,
+      }));
       toast.success(`Pedido actualizado a "${newStatus}".`);
     }
 

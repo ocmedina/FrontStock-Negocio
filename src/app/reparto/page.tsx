@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
 import { Database } from "@/lib/database.types";
 import { useRouter } from "next/navigation";
+import { useBranch } from "@/contexts/BranchContext";
 
 // Components
 import DeliveryHeader from "./components/DeliveryHeader";
@@ -53,6 +54,7 @@ const DAILY_PAGE_SIZE = 10;
 const HISTORY_PAGE_SIZE = 10;
 
 export default function RepartoPage() {
+  const { activeBranch } = useBranch();
   const [view, setView] = useState("new_order");
   const [dailyOrders, setDailyOrders] = useState<Order[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -159,6 +161,7 @@ export default function RepartoPage() {
           // Sin filtro de profile_id: se muestran todos los pedidos del negocio
           .gte("scheduled_delivery_date", date)
           .lt("scheduled_delivery_date", nextDay)
+          .eq("branch_id", activeBranch?.id)
           .order("created_at", { ascending: false })
           .range(from, to);
 
@@ -172,12 +175,14 @@ export default function RepartoPage() {
             .select("id", { count: "exact", head: true })
             .gte("scheduled_delivery_date", date)
             .lt("scheduled_delivery_date", nextDay)
+            .eq("branch_id", activeBranch?.id)
             .eq("status", "pendiente"),
           supabase
             .from("orders")
             .select("id", { count: "exact", head: true })
             .gte("scheduled_delivery_date", date)
             .lt("scheduled_delivery_date", nextDay)
+            .eq("branch_id", activeBranch?.id)
             .eq("status", "entregado"),
         ]);
 
@@ -187,7 +192,7 @@ export default function RepartoPage() {
         toast.error("No se pudo cargar el historial.");
       }
     },
-    []
+    [activeBranch]
   );
 
   // Fetch all orders history
@@ -204,6 +209,7 @@ export default function RepartoPage() {
         )
         .order("created_at", { ascending: false });
 
+      query = query.eq("branch_id", activeBranch?.id);
       if (filter !== "all") {
         query = query.eq("status", filter);
       }
@@ -216,7 +222,7 @@ export default function RepartoPage() {
     } catch (error: any) {
       toast.error("No se pudo cargar el historial completo.");
     }
-  }, []);
+  }, [activeBranch]);
 
   // Load initial data
   useEffect(() => {
@@ -239,14 +245,14 @@ export default function RepartoPage() {
   ]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !activeBranch) return;
     fetchDailyHistory(currentUser.id, selectedDate, dailyPage);
-  }, [currentUser, selectedDate, dailyPage, fetchDailyHistory]);
+  }, [activeBranch, currentUser, selectedDate, dailyPage, fetchDailyHistory]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !activeBranch) return;
     fetchAllOrdersHistory(currentUser.id, historyPage, historyFilter);
-  }, [currentUser, historyPage, historyFilter, fetchAllOrdersHistory]);
+  }, [activeBranch, currentUser, historyPage, historyFilter, fetchAllOrdersHistory]);
 
   useEffect(() => {
     setDailyPage(1);
@@ -379,6 +385,11 @@ export default function RepartoPage() {
   // For now, I'll add the logic here and check where to place the button.
 
   const handleFinalizeOrder = async () => {
+    if (!activeBranch) {
+      toast.error("Selecciona una sucursal activa antes de crear el pedido");
+      return;
+    }
+
     if (!selectedCustomer || cart.length === 0 || !currentUser?.id) {
       toast.error("Faltan datos para completar el pedido.");
       return;
@@ -395,10 +406,11 @@ export default function RepartoPage() {
     try {
       // 1. Verificar stock actual en tiempo real
       for (const item of cart) {
-        const { data: productData, error: stockError } = await supabase
-          .from("products")
+        const { data: productData, error: stockError } = await (supabase as any)
+          .from("branch_stock")
           .select("stock")
-          .eq("id", item.id)
+          .eq("branch_id", activeBranch.id)
+          .eq("product_id", item.id)
           .single();
 
         if (stockError)
@@ -422,6 +434,7 @@ export default function RepartoPage() {
         .insert({
           customer_id: selectedCustomer.id,
           profile_id: currentUser.id,
+          branch_id: activeBranch.id,
           total_amount: total,
           status: "pendiente",
           created_at: createdDateString,

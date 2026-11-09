@@ -33,10 +33,12 @@ import {
 import { getUTCInterval } from "@/lib/date-utils";
 import SaleTicketModal from "./components/SaleTicketModal";
 import { getActiveRegisters, CashRegister } from "@/app/actions/registerActions";
+import { useBranch } from "@/contexts/BranchContext";
 
 const ITEMS_PER_PAGE = 10; // Puedes ajustar cuántas ventas mostrar por página
 
 export default function SalesHistoryPage() {
+  const { activeBranch, isLoading: branchLoading } = useBranch();
   const [sales, setSales] = useState<any[]>([]);
   const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [startDate, setStartDate] = useState("");
@@ -51,10 +53,11 @@ export default function SalesHistoryPage() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
   useEffect(() => {
-    getActiveRegisters().then((res) => {
+    if (!activeBranch) return;
+    getActiveRegisters(activeBranch.id).then((res) => {
       setRegisters(res.data || []);
     });
-  }, []);
+  }, [activeBranch]);
 
   const fetchSales = async () => {
     setLoading(true);
@@ -79,6 +82,7 @@ export default function SalesHistoryPage() {
       )
       .order("created_at", { ascending: false })
       .range(from, to);
+    if (activeBranch) query = query.eq("branch_id", activeBranch.id);
 
     // --- FILTRO POR RANGO DE FECHAS (Zona Horaria Argentina UTC-3) ---
     if (startDate) {
@@ -119,7 +123,7 @@ export default function SalesHistoryPage() {
 
   useEffect(() => {
     fetchSales();
-  }, [startDate, endDate, currentPage, paymentFilter, registerFilter]);
+  }, [activeBranch, branchLoading, startDate, endDate, currentPage, paymentFilter, registerFilter]);
 
   const handleCancelSale = async (saleId: string) => {
     if (

@@ -214,6 +214,7 @@ const styles = StyleSheet.create({
 
 export default function OrderPDFDocument({ order }: { order: any }) {
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [branch, setBranch] = useState<any>(order?.branches ?? null);
   const documentTitle = order?.document_title || "Remito de Pedido";
   const documentNumberLabel =
     order?.document_number_label || "Número de Pedido";
@@ -224,6 +225,19 @@ export default function OrderPDFDocument({ order }: { order: any }) {
   const thankYouText = isBudgetDocument
     ? "Gracias por su consulta"
     : "¡Gracias por su compra!";
+
+  useEffect(() => {
+    if (order?.branches || !order?.branch_id) return;
+    supabase
+      .from("branches" as any)
+      .select("*")
+      .eq("id", order.branch_id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) console.error("Error cargando sucursal del remito:", error);
+        else setBranch(data);
+      });
+  }, [order]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -243,9 +257,15 @@ export default function OrderPDFDocument({ order }: { order: any }) {
   }, []);
 
   const logoUrl = settings["logo_url"] || "https://via.placeholder.com/150";
-  const nombre = settings["business_name"] || "FrontStock";
-  const direccion = settings["business_address"] || "Calle Falsa 123, Ciudad";
-  const telefono = settings["business_phone"] || "0000-000000";
+  const nombre = branch?.fantasy_name || branch?.name || settings["business_name"] || "FrontStock";
+  const direccion = [branch?.address || settings["business_address"], branch?.locality, branch?.province].filter(Boolean).join(", ") || "Dirección no configurada";
+  const telefono = branch?.phone || settings["business_phone"] || "";
+  const fiscal = [
+    branch?.cuit && `CUIT: ${branch.cuit}`,
+    branch?.iibb && `IIBB: ${branch.iibb}`,
+    branch?.iva_condition,
+    branch?.point_of_sale && `Pto. venta: ${branch.point_of_sale}`,
+  ].filter(Boolean).join(" - ");
 
   return (
     <Document>
@@ -258,6 +278,8 @@ export default function OrderPDFDocument({ order }: { order: any }) {
             <Text style={styles.companyName}>{nombre}</Text>
             <Text style={styles.companyAddress}>{direccion}</Text>
             <Text style={styles.companyAddress}>{telefono}</Text>
+            {branch?.email && <Text style={styles.companyAddress}>{branch.email}</Text>}
+            {fiscal && <Text style={styles.companyAddress}>{fiscal}</Text>}
           </View>
         </View>
 

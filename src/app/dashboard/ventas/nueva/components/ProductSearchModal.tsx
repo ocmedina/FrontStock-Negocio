@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Product } from "../types";
 import toast from "react-hot-toast";
 import { FaTimes, FaSearch } from "react-icons/fa";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface ProductSearchModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function ProductSearchModal({
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const { activeBranch } = useBranch();
 
   // Scroll automático al elemento seleccionado cuando cambia el índice
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function ProductSearchModal({
       setSearchQuery("");
       setSelectedIndex(0);
     }
-  }, [isOpen]);
+  }, [isOpen, activeBranch]);
 
   const loadProducts = async () => {
     setIsLoading(true);
@@ -52,8 +54,18 @@ export default function ProductSearchModal({
         .order("name");
 
       if (error) throw error;
-      setProducts(data || []);
-      setFilteredProducts(data || []);
+      const { data: stockData } = await (supabase as any)
+        .from("branch_stock")
+        .select("product_id, stock")
+        .eq("branch_id", activeBranch?.id);
+      const availableIds = new Set(
+        (stockData || [])
+          .filter((item: any) => Number(item.stock) > 0)
+          .map((item: any) => item.product_id)
+      );
+      const availableProducts = (data || []).filter((product) => availableIds.has(product.id));
+      setProducts(availableProducts);
+      setFilteredProducts(availableProducts);
     } catch (error) {
       console.error("Error cargando productos:", error);
       toast.error("Error al cargar productos");

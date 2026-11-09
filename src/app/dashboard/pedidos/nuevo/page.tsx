@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { getAppliedPromotion } from "@/lib/promotions";
+import { useBranch } from "@/contexts/BranchContext";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -36,6 +37,7 @@ type CartItem = Product & {
 
 export default function NewOrderPage() {
   const router = useRouter();
+  const { activeBranch } = useBranch();
 
   // Core Data States
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -158,6 +160,11 @@ export default function NewOrderPage() {
   // Load Data
   useEffect(() => {
     async function loadData() {
+      if (!activeBranch) {
+        setLoading(true);
+        return;
+      }
+
       try {
         const { data: customersData, error: customersError } = await supabase
           .from("customers")
@@ -175,6 +182,16 @@ export default function NewOrderPage() {
 
         if (customersError) throw customersError;
         if (productsError) throw productsError;
+        const { data: stockData, error: stockError } = await (supabase as any)
+          .from("branch_stock")
+          .select("product_id, stock")
+          .eq("branch_id", activeBranch.id);
+        if (stockError) throw stockError;
+        const availableIds = new Set(
+          (stockData || [])
+            .filter((item: any) => Number(item.stock) > 0)
+            .map((item: any) => item.product_id)
+        );
 
         // Fetch pending debt details dynamically to calculate correct debt in-memory
         const { data: ordersDebtData } = await supabase
@@ -224,17 +241,22 @@ export default function NewOrderPage() {
         }));
 
         setCustomers(customersWithRealDebt);
-        setProducts(productsData || []);
+        setProducts((productsData || []).filter((product) => availableIds.has(product.id)));
         setCurrentUser(session?.user ?? null);
       } catch (error) {
-        console.error("Error loading order interface data:", error);
-        toast.error("Error al iniciar los datos.");
+        const message = error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null
+            ? JSON.stringify(error)
+            : String(error);
+        console.error("Error loading order interface data:", message, error);
+        toast.error(`Error al iniciar los datos: ${message}`);
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, []);
+  }, [activeBranch, router]);
 
   // Click Outside Handlers for Dropdowns
   useEffect(() => {
@@ -399,6 +421,10 @@ export default function NewOrderPage() {
 
   // Submit Order Creation
   const handleCreateOrder = async () => {
+    if (!activeBranch) {
+      toast.error("Selecciona una sucursal activa antes de crear el pedido");
+      return;
+    }
     if (!selectedCustomer) {
       toast.error("Selecciona un cliente");
       return;
@@ -466,6 +492,7 @@ export default function NewOrderPage() {
       const orderPayload = {
         customer_id: selectedCustomer.id,
         profile_id: currentUser.id,
+        branch_id: activeBranch.id,
         total_amount: totalAmount,
         status: "pendiente",
         payment_method: paymentMethod,

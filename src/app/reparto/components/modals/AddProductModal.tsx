@@ -3,6 +3,7 @@ import { FaTimes, FaSearch, FaSpinner } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { Database } from "@/lib/database.types";
+import { useBranch } from "@/contexts/BranchContext";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
@@ -17,6 +18,7 @@ export default function AddProductModal({
   onClose,
   onProductAdd,
 }: AddProductModalProps) {
+  const { activeBranch } = useBranch();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -35,16 +37,46 @@ export default function AddProductModal({
     const fetchProducts = async () => {
       setIsSearching(true);
       try {
-        const { data, error } = await supabase
+        if (!activeBranch) {
+          setResults([]);
+          return;
+        }
+
+        const { data: productData, error: productError } = await supabase
           .from("products")
           .select("*")
-          .ilike("name", `%${query}%`)
           .eq("is_active", true)
-          .gt("stock", 0)
-          .limit(10);
+          .ilike("name", `%${query}%`)
+          .limit(25);
 
-        if (error) throw error;
-        setResults(data || []);
+        if (productError) throw productError;
+
+        const productIds = (productData || []).map((product) => product.id);
+        if (productIds.length === 0) {
+          setResults([]);
+          return;
+        }
+
+        const { data: stockData, error: stockError } = await (supabase as any)
+          .from("branch_stock")
+          .select("product_id, stock")
+          .eq("branch_id", activeBranch.id)
+          .in("product_id", productIds)
+          .gt("stock", 0);
+
+        if (stockError) throw stockError;
+
+        const stockByProduct = new Map(
+          (stockData || []).map((row: any) => [row.product_id, Number(row.stock || 0)])
+        );
+        setResults(
+          (productData || [])
+            .filter((product) => stockByProduct.has(product.id))
+            .map((product) => ({
+              ...product,
+              stock: stockByProduct.get(product.id) || 0,
+            }))
+        );
       } catch (error) {
         toast.error("Error al buscar productos");
       } finally {
@@ -54,7 +86,7 @@ export default function AddProductModal({
 
     const debounce = setTimeout(fetchProducts, 300);
     return () => clearTimeout(debounce);
-  }, [query, isOpen]);
+  }, [activeBranch, query, isOpen]);
 
   if (!isOpen) return null;
 

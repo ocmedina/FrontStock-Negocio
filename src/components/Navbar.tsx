@@ -27,6 +27,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import TimeWeatherIndicator from "@/components/TimeWeatherIndicator";
 import { hasPermission } from "@/lib/permissions";
 import ActiveRegisterBadge from "@/components/ActiveRegisterBadge";
+import ActiveBranchBadge from "@/components/ActiveBranchBadge";
 
 const navSections = {
   comercial: [
@@ -317,6 +318,7 @@ export default function Navbar() {
 
           {/* User Menu - Desktop */}
           <div className="hidden lg:flex items-center gap-2.5 relative flex-shrink-0">
+            <ActiveBranchBadge />
             <ActiveRegisterBadge />
             <TimeWeatherIndicator />
             <ThemeToggle />
@@ -380,6 +382,7 @@ export default function Navbar() {
 
           {/* Botón menú móvil */}
           <div className="lg:hidden flex items-center gap-2">
+            <ActiveBranchBadge compact />
             <ActiveRegisterBadge compact />
             <ThemeToggle />
             <button

@@ -34,6 +34,7 @@ import {
 import MassUpdateModal from "./components/MassUpdateModal";
 import BarcodeModal from "./components/BarcodeModal";
 import CustomPricesModal from "./components/CustomPricesModal";
+import { useBranch } from "@/contexts/BranchContext";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 const ITEMS_PER_PAGE = 10;
@@ -69,6 +70,7 @@ const getInitialProductsState = () => {
 };
 
 export default function ProductsPage() {
+  const { activeBranch, isLoading: isBranchLoading } = useBranch();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
@@ -159,79 +161,86 @@ export default function ProductsPage() {
     fetchUserRole();
   }, []);
 
-  // Obtener estadísticas de stock
+  const fetchBranchProducts = async () => {
+    if (!activeBranch) return [];
+
+    const [{ data: productData, error: productError }, { data: stockData, error: stockError }] =
+      await Promise.all([
+        supabase.from("products").select("*").eq("is_active", true).order("name", { ascending: true }),
+        (supabase as any)
+          .from("branch_stock")
+          .select("product_id, stock")
+          .eq("branch_id", activeBranch.id),
+      ]);
+
+    if (productError) throw productError;
+    if (stockError) throw stockError;
+
+    const stockByProduct = new Map(
+      (stockData ?? []).map((item: { product_id: string; stock: number | null }) => [
+        item.product_id,
+        Number(item.stock ?? 0),
+      ])
+    );
+
+    return (productData ?? [])
+      .filter((product) => stockByProduct.has(product.id))
+      .map((product) => ({
+        ...product,
+        stock: stockByProduct.get(product.id) ?? 0,
+      })) as Product[];
+  };
+
+  // Obtener estadísticas de stock de la sucursal activa
   useEffect(() => {
     const fetchStats = async () => {
-      const [totalRes, sinStockRes, stockBajoRes, conStockRes] =
-        await Promise.all([
-          supabase
-            .from("products")
-            .select("id", { count: "exact", head: true })
-            .eq("is_active", true),
-          supabase
-            .from("products")
-            .select("id", { count: "exact", head: true })
-            .eq("is_active", true)
-            .eq("stock", 0),
-          supabase
-            .from("products")
-            .select("id", { count: "exact", head: true })
-            .eq("is_active", true)
-            .gt("stock", 0)
-            .lte("stock", 10),
-          supabase
-            .from("products")
-            .select("id", { count: "exact", head: true })
-            .eq("is_active", true)
-            .gt("stock", 10),
-        ]);
-
-      setStats({
-        total: totalRes.count || 0,
-        sinStock: sinStockRes.count || 0,
-        stockBajo: stockBajoRes.count || 0,
-        conStock: conStockRes.count || 0,
-      });
+      if (!activeBranch) return;
+      try {
+        const productsForBranch = await fetchBranchProducts();
+        setStats({
+          total: productsForBranch.length,
+          sinStock: productsForBranch.filter((product) => product.stock === 0).length,
+          stockBajo: productsForBranch.filter((product) => product.stock > 0 && product.stock <= 10).length,
+          conStock: productsForBranch.filter((product) => product.stock > 10).length,
+        });
+      } catch (error) {
+        console.error("Error fetching branch stock stats:", error);
+      }
     };
-    fetchStats();
-  }, [refreshKey]);
+    void fetchStats();
+  }, [activeBranch, refreshKey]);
 
   useEffect(() => {
     const fetchProducts = async () => {
+      if (!activeBranch || isBranchLoading) return;
       setLoading(true);
-
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
-      let query = supabase
-        .from("products")
-        .select("*", { count: "exact" })
-        .eq("is_active", true)
-        .order("name", { ascending: true });
-
-      if (searchTerm.trim()) {
-        query = query.or(
-          `name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`
-        );
-      }
-
-      if (stockFilter === "sin_stock") {
-        query = query.eq("stock", 0);
-      } else if (stockFilter === "stock_bajo") {
-        query = query.gt("stock", 0).lte("stock", 10);
-      } else if (stockFilter === "con_stock") {
-        query = query.gt("stock", 10);
-      }
-
-      const { data, error, count } = await query.range(from, to);
-
-      if (error) {
+      try {
+        const allProducts = await fetchBranchProducts();
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+        const filteredProducts = allProducts.filter((product) => {
+          const matchesSearch =
+            !normalizedSearch ||
+            product.name.toLowerCase().includes(normalizedSearch) ||
+            (product.sku ?? "").toLowerCase().includes(normalizedSearch);
+          const matchesStock =
+            stockFilter === "sin_stock"
+              ? product.stock === 0
+              : stockFilter === "stock_bajo"
+                ? product.stock > 0 && product.stock <= 10
+                : stockFilter === "con_stock"
+                  ? product.stock > 10
+                  : true;
+          return matchesSearch && matchesStock;
+        });
+        const from = (currentPage - 1) * ITEMS_PER_PAGE;
+        setProducts(filteredProducts.slice(from, from + ITEMS_PER_PAGE));
+        setTotalCount(filteredProducts.length);
+      } catch (error) {
         console.error("Error fetching products:", error);
-      } else {
-        setProducts(data || []);
-        setTotalCount(count || 0);
+        toast.error("No se pudo cargar el stock de la sucursal");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     const timeoutId = setTimeout(() => {
@@ -239,7 +248,7 @@ export default function ProductsPage() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [currentPage, searchTerm, stockFilter, refreshKey]);
+  }, [activeBranch, isBranchLoading, currentPage, searchTerm, stockFilter, refreshKey]);
 
   // 1. Persist state to sessionStorage and update URL query params
   useEffect(() => {
@@ -277,30 +286,25 @@ export default function ProductsPage() {
   const handleExportCurrentStock = async () => {
     try {
       const XLSX = await import("xlsx");
+      const allProducts = await fetchBranchProducts();
+      const normalizedSearch = searchTerm.trim().toLowerCase();
+      const data = allProducts.filter((product) => {
+        const matchesSearch =
+          !normalizedSearch ||
+          product.name.toLowerCase().includes(normalizedSearch) ||
+          (product.sku ?? "").toLowerCase().includes(normalizedSearch);
+        const matchesStock =
+          stockFilter === "sin_stock"
+            ? product.stock === 0
+            : stockFilter === "stock_bajo"
+              ? product.stock > 0 && product.stock <= 10
+              : stockFilter === "con_stock"
+                ? product.stock > 10
+                : true;
+        return matchesSearch && matchesStock;
+      });
 
-      let query = supabase
-        .from("products")
-        .select("sku, name, price_minorista, price_mayorista, stock")
-        .eq("is_active", true)
-        .order("name", { ascending: true });
-
-      if (searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
-      }
-
-      if (stockFilter === "sin_stock") {
-        query = query.eq("stock", 0);
-      } else if (stockFilter === "stock_bajo") {
-        query = query.gt("stock", 0).lte("stock", 10);
-      } else if (stockFilter === "con_stock") {
-        query = query.gt("stock", 10);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
+      if (data.length === 0) {
         toast.error("No hay productos para exportar con los filtros actuales");
         return;
       }

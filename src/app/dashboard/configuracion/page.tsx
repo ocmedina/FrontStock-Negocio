@@ -21,9 +21,10 @@ import {
   HiOutlineDatabase
 } from 'react-icons/hi';
 import SystemMaintenanceTab from './components/SystemMaintenanceTab';
+import BranchesSettings from './components/BranchesSettings';
 import { FaBroom } from 'react-icons/fa';
 
-type Tab = 'general' | 'branding' | 'appearance' | 'migration' | 'maintenance';
+type Tab = 'general' | 'branches' | 'branding' | 'appearance' | 'migration' | 'maintenance';
 
 type MigrationResult = {
   table: string;
@@ -362,6 +363,17 @@ export default function SettingsPage() {
               General
             </button>
             <button
+              onClick={() => setActiveTab('branches')}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
+                ${activeTab === 'branches'
+                  ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm ring-1 ring-gray-200 dark:ring-slate-700'
+                  : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-slate-200'
+                }`}
+            >
+              <FaBuilding className="text-lg flex-shrink-0" />
+              Sucursales
+            </button>
+            <button
               onClick={() => setActiveTab('branding')}
               className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
                 ${activeTab === 'branding'
@@ -428,12 +440,13 @@ export default function SettingsPage() {
                 <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex justify-between items-center">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                     {activeTab === 'general' && 'Información General'}
+                    {activeTab === 'branches' && 'Sucursales'}
                     {activeTab === 'branding' && 'Marca y Logo'}
                     {activeTab === 'appearance' && 'Estilos y Apariencia'}
                     {activeTab === 'migration' && 'Migración de Datos'}
                     {activeTab === 'maintenance' && 'Limpieza y Mantenimiento del Sistema'}
                   </h2>
-                  {activeTab !== 'migration' && activeTab !== 'maintenance' && (
+                  {activeTab !== 'migration' && activeTab !== 'maintenance' && activeTab !== 'branches' && (
                     <button
                       onClick={handleSaveSettings}
                       disabled={saving}
@@ -455,6 +468,8 @@ export default function SettingsPage() {
 
                 <div className="p-6 lg:p-8">
                   {/* SECCIÓN GENERAL */}
+                  {activeTab === 'branches' && <BranchesSettings />}
+
                   {activeTab === 'general' && (
                     <div className="space-y-6 max-w-4xl">
                       <h3 className="text-sm font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-gray-100 dark:border-slate-800 pb-2">

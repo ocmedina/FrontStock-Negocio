@@ -13,7 +13,14 @@ export type UserWithPermissions = {
   email: string | null;
   role: Role;
   is_active: boolean;
+  branch_id: number | null;
   overrides: Record<string, boolean>; // permission → granted
+};
+
+export type BranchOption = {
+  id: number;
+  name: string;
+  is_active: boolean;
 };
 
 // ─── Listar todos los usuarios con sus overrides ──────────────────────────────
@@ -31,7 +38,7 @@ export async function listUsers(): Promise<{
     const [profilesResult, overridesResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, full_name, username, email, role, is_active')
+        .select('id, full_name, username, email, role, is_active, branch_id')
         .order('full_name', { ascending: true }),
       supabase
         .from('user_permissions')
@@ -55,6 +62,7 @@ export async function listUsers(): Promise<{
       email: p.email,
       role: p.role as Role,
       is_active: p.is_active ?? true,
+      branch_id: p.branch_id ? Number(p.branch_id) : null,
       overrides: overridesByProfile[p.id] ?? {},
     }));
 
@@ -64,6 +72,68 @@ export async function listUsers(): Promise<{
     console.error('[listUsers]', msg);
     return { success: false, error: msg };
   }
+}
+
+export async function listBranches(): Promise<{
+  success: boolean;
+  data?: BranchOption[];
+  error?: string;
+}> {
+  try {
+    await requirePermission('VER_USUARIOS');
+    const supabase = createLooseAdminClient();
+    const { data, error } = await supabase
+      .from('branches' as any)
+      .select('id, name, is_active')
+      .order('id', { ascending: true });
+
+    if (error) throw error;
+    return {
+      success: true,
+      data: ((data || []) as any[]).map((branch) => ({
+        id: Number(branch.id),
+        name: branch.name,
+        is_active: Boolean(branch.is_active),
+      })),
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error('[listBranches]', msg);
+    return { success: false, error: msg };
+  }
+}
+
+export async function assignUserBranch(
+profileId: string,
+branchId: number | null
+): Promise<{ success: boolean; error?: string }> {
+try {
+  await requirePermission('EDITAR_USUARIOS');
+  const supabase = createLooseAdminClient();
+
+  if (branchId !== null) {
+    const { data: branch, error: branchError } = await supabase
+      .from('branches' as any)
+      .select('id, is_active')
+      .eq('id', branchId)
+      .single();
+    if (branchError) throw branchError;
+    if (!branch?.is_active) {
+      return { success: false, error: 'La sucursal seleccionada está inactiva.' };
+      }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ branch_id: branchId } as any)
+    .eq('id', profileId);
+  if (error) throw error;
+  return { success: true };
+} catch (err) {
+  const msg = err instanceof Error ? err.message : JSON.stringify(err);
+  console.error('[assignUserBranch]', msg);
+  return { success: false, error: msg };
+}
 }
 
 // ─── Actualizar rol de un usuario ─────────────────────────────────────────────
@@ -206,4 +276,3 @@ export async function resetUserPermissions(
     return { success: false, error: msg };
   }
 }
-

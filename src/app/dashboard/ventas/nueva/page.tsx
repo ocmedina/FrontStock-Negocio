@@ -35,6 +35,21 @@ import { getTerminalPrinterSettings } from "@/lib/printerSettings";
 import ReferralBadge from "@/components/ReferralBadge";
 import { linkReferral, markReferralDiscountUsed } from "@/app/actions/referralActions";
 
+function findDefaultCustomer(customers: Customer[]) {
+  return (
+    customers.find(
+      (customer) =>
+        customer.full_name.trim().toLowerCase() === "consumidor final"
+    ) ||
+    customers.find(
+      (customer) =>
+        customer.customer_type === "minorista" &&
+        customer.full_name.trim().toLowerCase().includes("consumidor final")
+    ) ||
+    null
+  );
+}
+
 export default function NewSalePage() {
   const { activeRegister } = useRegister();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -287,10 +302,7 @@ export default function NewSalePage() {
 
   // Funciones para manejo de pestañas
   const addNewTab = () => {
-    const defaultCustomer =
-      customers.find((c) => c.full_name === "Consumidor Final") ||
-      customers[0] ||
-      null;
+    const defaultCustomer = findDefaultCustomer(customers);
 
     const newTab: SaleTab = {
       id: nextTabId,
@@ -379,13 +391,7 @@ export default function NewSalePage() {
 
         if (customersData) {
           setCustomers(customersData);
-          let defaultCustomer = customersData.find(
-            (c) => c.full_name === "Consumidor Final"
-          );
-          if (!defaultCustomer && customersData.length > 0) {
-            defaultCustomer = customersData[0];
-          }
-          setSelectedCustomer(defaultCustomer || null);
+          setSelectedCustomer(findDefaultCustomer(customersData));
         }
 
         // Cargar proveedores

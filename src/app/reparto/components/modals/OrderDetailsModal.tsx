@@ -58,7 +58,7 @@ export default function OrderDetailsModal({
         try {
           const { data: order, error } = await (supabase as any)
             .from("orders")
-            .select("*, customers(*), order_items(*, products(*))")
+            .select("*, customers(*), branches(*), order_items(*, products(*))")
             .eq("id", orderId)
             .single();
 

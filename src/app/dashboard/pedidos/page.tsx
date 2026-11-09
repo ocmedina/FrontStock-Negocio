@@ -37,6 +37,7 @@ import toast from "react-hot-toast";
 import OrderStatusChanger from "@/components/OrderStatusChanger";
 import PDFDownloadButton from "@/components/pdf/PDFDownloadButton";
 import OrderDetailsModal, { type FullOrderDetails } from "./components/OrderDetailsModal";
+import { useBranch } from "@/contexts/BranchContext";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -130,7 +131,7 @@ function RemitoModal({
         try {
           const { data: order, error } = await supabase
             .from("orders")
-            .select("*, customers(*), order_items(*, products(*))")
+            .select("*, customers(*), branches(*), order_items(*, products(*))")
             .eq("id", orderId)
             .single();
 
@@ -322,6 +323,7 @@ const getInitialOrdersState = () => {
 };
 
 export default function OrdersPage() {
+  const { activeBranch, isLoading: branchLoading } = useBranch();
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -565,6 +567,7 @@ export default function OrdersPage() {
         { count: "exact" }
       )
       .order("created_at", { ascending: false });
+    if (activeBranch) query = query.eq("branch_id", activeBranch.id);
 
     if (statusFilter !== "todos") query = query.eq("status", statusFilter);
     
@@ -595,7 +598,7 @@ export default function OrdersPage() {
     }
 
     setLoading(false);
-  }, [currentPage, statusFilter, dateFilter, searchQuery, deliveryDayFilter]);
+  }, [activeBranch, branchLoading, currentPage, statusFilter, dateFilter, searchQuery, deliveryDayFilter]);
 
   useEffect(() => {
     const debounce = setTimeout(fetchOrders, 300);

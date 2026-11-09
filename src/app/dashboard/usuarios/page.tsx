@@ -14,7 +14,7 @@ import ChangePasswordModal from '@/components/ChangePasswordModal';
 import {
   listUsers, updateUserRole, updateUserStatus,
   saveUserPermissions, resetUserPermissions,
-  type UserWithPermissions,
+  listBranches, assignUserBranch, type UserWithPermissions, type BranchOption,
 } from '@/app/actions/userManagementActions';
 import {
   ROLES, PERMISSION_GROUPS, PERMISSION_LABELS,
@@ -352,18 +352,33 @@ function UsersPageContent() {
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);
   const [permissionsUser, setPermissionsUser] = useState<UserWithPermissions | null>(null);
   const [passwordUser, setPasswordUser] = useState<any>(null);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const { can, isAdmin } = useAuth();
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const result = await listUsers();
-    if (result.success && result.data) {
-      setUsers(result.data);
+    const [usersResult, branchesResult] = await Promise.all([listUsers(), listBranches()]);
+    if (usersResult.success && usersResult.data) {
+      setUsers(usersResult.data);
+      if (branchesResult.success) setBranches(branchesResult.data ?? []);
     } else {
       toast.error('Error al cargar usuarios');
     }
     setLoading(false);
   }, []);
+
+  const handleBranchChange = async (user: UserWithPermissions, value: string) => {
+    const branchId = value === 'global' ? null : Number(value);
+    const result = await assignUserBranch(user.id, branchId);
+    if (!result.success) {
+      toast.error(result.error || 'Error al asignar sucursal');
+      return;
+    }
+    toast.success('Sucursal asignada');
+    setUsers((current) =>
+      current.map((item) => item.id === user.id ? { ...item, branch_id: branchId } : item)
+    );
+  };
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -449,6 +464,9 @@ function UsersPageContent() {
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
                   Rol
                 </th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
+                  Sucursal
+                </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wider hidden md:table-cell">
                   Permisos
                 </th>
@@ -463,7 +481,7 @@ function UsersPageContent() {
             <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16">
+                  <td colSpan={6} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <div className="animate-spin w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full" />
                       <span className="text-sm text-gray-500 dark:text-slate-400">Cargando usuarios...</span>
@@ -472,7 +490,7 @@ function UsersPageContent() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-gray-400 dark:text-slate-500 text-sm">
+                  <td colSpan={6} className="text-center py-16 text-gray-400 dark:text-slate-500 text-sm">
                     {search ? 'No se encontraron usuarios con ese criterio.' : 'No hay usuarios registrados.'}
                   </td>
                 </tr>
@@ -504,6 +522,20 @@ function UsersPageContent() {
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[u.role]}`}>
                           {ROLE_LABELS[u.role] ?? u.role}
                         </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <select
+                          value={u.branch_id ?? 'global'}
+                          onChange={(event) => void handleBranchChange(u, event.target.value)}
+                          disabled={!can('EDITAR_USUARIOS') || u.role === 'administrador'}
+                          className="max-w-40 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-xs text-gray-700 dark:text-slate-200 disabled:opacity-60"
+                        >
+                          <option value="global">Global</option>
+                          {branches.filter((branch) => branch.is_active).map((branch) => (
+                            <option key={branch.id} value={branch.id}>{branch.name}</option>
+                          ))}
+                        </select>
                       </td>
 
                       {/* Permisos (override count) */}

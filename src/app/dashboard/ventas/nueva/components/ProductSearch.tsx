@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Product } from "../types";
 import toast from "react-hot-toast";
 import { FaSearch, FaBarcode } from "react-icons/fa";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface ProductSearchProps {
   onProductSelect: (product: Product) => void;
@@ -20,6 +21,7 @@ export default function ProductSearch({
   const [isLoading, setIsLoading] = useState(false);
   const [barcodeBuffer, setBarcodeBuffer] = useState("");
   const [lastKeyTime, setLastKeyTime] = useState(0);
+  const { activeBranch } = useBranch();
 
   // Detectar entrada de lector de código de barras
   useEffect(() => {
@@ -78,6 +80,16 @@ export default function ProductSearch({
         .maybeSingle();
 
       if (exactMatch) {
+        const { data: stock } = await (supabase as any)
+          .from("branch_stock")
+          .select("stock")
+          .eq("branch_id", activeBranch?.id)
+          .eq("product_id", exactMatch.id)
+          .maybeSingle();
+        if (!stock || Number(stock.stock) <= 0) {
+          toast.error("Ese producto no tiene stock en la sucursal activa");
+          return;
+        }
         // Agregar directamente al carrito
         onProductSelect(exactMatch);
         toast.success(`✓ ${exactMatch.name} agregado`);
@@ -92,16 +104,17 @@ export default function ProductSearch({
         .eq("is_active", true)
         .limit(5);
 
-      if (similarProducts && similarProducts.length > 0) {
+      const availableProducts = await filterBranchProducts(similarProducts || []);
+      if (availableProducts.length > 0) {
         // Si hay solo un resultado, agregarlo automáticamente
-        if (similarProducts.length === 1) {
-          onProductSelect(similarProducts[0]);
-          toast.success(`✓ ${similarProducts[0].name} agregado`);
+        if (availableProducts.length === 1) {
+          onProductSelect(availableProducts[0]);
+          toast.success(`✓ ${availableProducts[0].name} agregado`);
         } else {
           // Si hay múltiples resultados, mostrarlos para que el usuario seleccione
-          setResults(similarProducts);
+          setResults(availableProducts);
           setQuery(barcode);
-          toast(`Se encontraron ${similarProducts.length} productos`, {
+          toast(`Se encontraron ${availableProducts.length} productos`, {
             icon: "🔍",
           });
         }
@@ -133,7 +146,7 @@ export default function ProductSearch({
           .limit(5);
 
         if (error) throw error;
-        setResults(data || []);
+        setResults(await filterBranchProducts(data || []));
       } catch (error) {
         console.error("Error buscando productos:", error);
         toast.error("Error al buscar productos");
@@ -144,7 +157,22 @@ export default function ProductSearch({
 
     const debounce = setTimeout(fetchProducts, 300);
     return () => clearTimeout(debounce);
-  }, [query]);
+  }, [query, activeBranch]);
+
+  const filterBranchProducts = async (products: Product[]) => {
+    if (!activeBranch || products.length === 0) return [];
+    const { data } = await (supabase as any)
+      .from("branch_stock")
+      .select("product_id, stock")
+      .eq("branch_id", activeBranch.id)
+      .in("product_id", products.map((product) => product.id));
+    const availableIds = new Set(
+      (data || [])
+        .filter((item: any) => Number(item.stock) > 0)
+        .map((item: any) => item.product_id)
+    );
+    return products.filter((product) => availableIds.has(product.id));
+  };
 
   const handleSelect = (product: Product) => {
     onProductSelect(product);
