@@ -490,7 +490,7 @@ export default function Sidebar({
         <div className="p-4 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/30 flex-shrink-0">
           <div className="flex flex-col gap-3">
             <div className="lg:hidden">
-              <ActiveBranchBadge />
+              <ActiveBranchBadge dropUp />
             </div>
             
             {/* User Profile Summary */}

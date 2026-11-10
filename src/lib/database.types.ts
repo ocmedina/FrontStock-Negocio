@@ -695,6 +695,14 @@ export type Database = {
           p_pay_to_supplier?: boolean
           p_selected_supplier_id?: string | null
           p_customer_full_name?: string | null
+          p_voucher_type_id?: string
+          p_point_of_sale?: number
+          p_observations?: string | null
+          p_subtotal_neto?: number
+          p_iva_amount?: number
+          p_iva_breakdown?: Json
+          p_register_id?: number | null
+          p_branch_id?: number | null
         }
         Returns: Json
       }

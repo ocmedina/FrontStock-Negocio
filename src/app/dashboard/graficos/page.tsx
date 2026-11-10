@@ -33,6 +33,8 @@ import {
   FaEquals,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { useBranch } from "@/contexts/BranchContext";
+import { FaBuilding } from "react-icons/fa";
 
 const COLORS = [
   "#4f46e5", // Indigo
@@ -78,6 +80,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function GraficosPage() {
   const [loading, setLoading] = useState(true);
+  const { branches, activeBranch } = useBranch();
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("active");
   const [dateRange, setDateRange] = useState("month"); // 'week', 'month', 'year'
 
   // Datos
@@ -97,7 +101,7 @@ export default function GraficosPage() {
 
   useEffect(() => {
     fetchAllData();
-  }, [dateRange]);
+  }, [dateRange, selectedBranchId, activeBranch]);
 
   const getDateRange = () => {
     const now = new Date();
@@ -148,29 +152,51 @@ export default function GraficosPage() {
       })();
 
       // Queries en paralelo con carga anidada de items para evitar límites de longitud de URL en POSTGREST
+      let salesQuery = supabase
+        .from("sales")
+        .select("id, created_at, total_amount, payment_method, sale_items (quantity, product_id)")
+        .gte("created_at", start)
+        .lte("created_at", end)
+        .order("created_at", { ascending: true });
+
+      let ordersQuery = (supabase as any)
+        .from("orders")
+        .select("id, created_at, total_amount, status, order_items (quantity, product_id)")
+        .gte("created_at", start)
+        .lte("created_at", end);
+
+      let prevSalesQuery = supabase
+        .from("sales")
+        .select("total_amount")
+        .gte("created_at", prevStart)
+        .lte("created_at", prevEnd);
+
+      let prevOrdersQuery = (supabase as any)
+        .from("orders")
+        .select("total_amount")
+        .eq("status", "entregado")
+        .gte("created_at", prevStart)
+        .lte("created_at", prevEnd);
+
+      const targetBranchId =
+        selectedBranchId === "active"
+          ? activeBranch?.id
+          : selectedBranchId !== "all"
+          ? Number(selectedBranchId)
+          : null;
+
+      if (targetBranchId) {
+        salesQuery = salesQuery.eq("branch_id", targetBranchId);
+        ordersQuery = ordersQuery.eq("branch_id", targetBranchId);
+        prevSalesQuery = prevSalesQuery.eq("branch_id", targetBranchId);
+        prevOrdersQuery = prevOrdersQuery.eq("branch_id", targetBranchId);
+      }
+
       const [salesRes, ordersRes, prevSalesRes, prevOrdersRes] = await Promise.all([
-        supabase
-          .from("sales")
-          .select("id, created_at, total_amount, payment_method, sale_items (quantity, product_id)")
-          .gte("created_at", start)
-          .lte("created_at", end)
-          .order("created_at", { ascending: true }),
-        (supabase as any)
-          .from("orders")
-          .select("id, created_at, total_amount, status, order_items (quantity, product_id)")
-          .gte("created_at", start)
-          .lte("created_at", end),
-        supabase
-          .from("sales")
-          .select("total_amount")
-          .gte("created_at", prevStart)
-          .lte("created_at", prevEnd),
-        (supabase as any)
-          .from("orders")
-          .select("total_amount")
-          .eq("status", "entregado")
-          .gte("created_at", prevStart)
-          .lte("created_at", prevEnd),
+        salesQuery,
+        ordersQuery,
+        prevSalesQuery,
+        prevOrdersQuery,
       ]);
 
       if (salesRes.error) throw salesRes.error;
@@ -427,7 +453,28 @@ export default function GraficosPage() {
             </div>
           </div>
 
-          {/* Segmented control para el rango de fechas */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Selector de Sucursal */}
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-950/80 px-3 py-1.5 rounded-2xl border border-slate-200/50 dark:border-slate-800/60 shadow-inner">
+              <FaBuilding className="text-indigo-500 text-xs" />
+              <select
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+              >
+                <option value="active">
+                  {activeBranch ? `Sucursal: ${activeBranch.name}` : "Sucursal Activa"}
+                </option>
+                <option value="all">Todas las sucursales</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Segmented control para el rango de fechas */}
           <div className="flex bg-slate-100 dark:bg-slate-950/80 p-1 rounded-2xl border border-slate-200/50 dark:border-slate-800/60 self-start md:self-auto relative z-10 shadow-inner">
             {[
               { id: "week", label: "7 días" },
@@ -446,6 +493,7 @@ export default function GraficosPage() {
                 {range.label}
               </button>
             ))}
+          </div>
           </div>
         </div>
 

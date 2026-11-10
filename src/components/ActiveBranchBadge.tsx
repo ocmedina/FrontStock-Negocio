@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { FaBuilding, FaCheck, FaChevronDown, FaLock } from "react-icons/fa";
 import { useBranch } from "@/contexts/BranchContext";
 
-export default function ActiveBranchBadge({ compact = false }: { compact?: boolean }) {
+export default function ActiveBranchBadge({
+  compact = false,
+  dropUp = false,
+}: {
+  compact?: boolean;
+  dropUp?: boolean;
+}) {
   const {
     branches,
     activeBranch,
@@ -36,7 +42,7 @@ export default function ActiveBranchBadge({ compact = false }: { compact?: boole
   }
 
   return (
-    <div className="relative inline-block" ref={dropdownRef}>
+    <div className={`relative inline-block ${isOpen ? "z-50" : ""}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => canSwitch && setIsOpen((open) => !open)}
@@ -58,18 +64,27 @@ export default function ActiveBranchBadge({ compact = false }: { compact?: boole
         )}
         <span className="font-extrabold uppercase tracking-tight">{activeBranch.name}</span>
         {isAssignedFixed && <FaLock className="w-2.5 h-2.5 opacity-60" />}
-        {canSwitch && <FaChevronDown className="w-2.5 h-2.5 opacity-60" />}
+        {canSwitch && (
+          <FaChevronDown
+            className={`w-2.5 h-2.5 opacity-60 transition-transform duration-200 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        )}
       </button>
 
       {isOpen && canSwitch && (
-        <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2">
+        <div
+          className={`absolute right-0 ${
+            dropUp ? "bottom-full mb-2" : "top-full mt-2"
+          } w-60 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-[100] p-2 animate-in fade-in duration-150`}
+        >
           <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
             Cambiar sucursal
           </div>
           <div className="space-y-1 mt-1">
             {branches.map((branch) => (
               <button
-                key={branch.id}
                 type="button"
                 onClick={() => {
                   setActiveBranchById(branch.id);

@@ -19,6 +19,7 @@ import {
   FaGift,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { useBranch } from "@/contexts/BranchContext";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
@@ -28,6 +29,11 @@ export default function EditProductPage() {
   const id = params.id as string;
 
   const [product, setProduct] = useState<Product | null>(null);
+
+  const { activeBranch } = useBranch();
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
+  const [branchStocks, setBranchStocks] = useState<Record<number, number>>({});
+  const [initialBranchStocks, setInitialBranchStocks] = useState<Record<number, number>>({});
 
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
@@ -73,12 +79,13 @@ export default function EditProductPage() {
     const fetchProduct = async () => {
       if (!id) return;
 
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const [productRes, branchesRes, branchStockRes] = await Promise.all([
+        supabase.from("products").select("*").eq("id", id).single(),
+        (supabase as any).from("branches").select("id, name, is_active").eq("is_active", true).order("id", { ascending: true }),
+        (supabase as any).from("branch_stock").select("branch_id, stock").eq("product_id", id),
+      ]);
 
+      const data = productRes.data;
       if (data) {
         setProduct(data);
         setSku(data.sku);
@@ -86,9 +93,22 @@ export default function EditProductPage() {
         setCostPrice(data.cost_price?.toString() || "");
         setPriceMinorista(data.price_minorista?.toString() || "");
         setPriceMayorista(data.price_mayorista?.toString() || "");
-        setStock(data.stock?.toString() || "");
+        setStock(data.stock?.toString() || "0");
         setSelectedBrand(data.brand_id?.toString() || "");
         setSelectedCategory(data.category_id?.toString() || "");
+
+        const activeBranches = (branchesRes.data ?? []) as Array<{ id: number; name: string }>;
+        const stockRows = (branchStockRes.data ?? []) as Array<{ branch_id: number; stock: number | null }>;
+
+        setBranches(activeBranches);
+
+        const stocksMap: Record<number, number> = {};
+        activeBranches.forEach((b) => {
+          const found = stockRows.find((row) => Number(row.branch_id) === Number(b.id));
+          stocksMap[b.id] = found ? Number(found.stock ?? 0) : 0;
+        });
+        setBranchStocks(stocksMap);
+        setInitialBranchStocks(stocksMap);
 
         if (data.promotion) {
           const p = data.promotion as any;
@@ -98,7 +118,7 @@ export default function EditProductPage() {
           setPromoGiftProductId(p.giftProductId || "same");
         }
       } else {
-        console.error("Error fetching product:", error);
+        console.error("Error fetching product:", productRes.error);
         router.push("/dashboard/products");
       }
     };
@@ -109,8 +129,8 @@ export default function EditProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!sku || !name || !priceMinorista || !priceMayorista || !stock) {
-      toast.error("Por favor, completa todos los campos.");
+    if (!sku || !name || !priceMinorista || !priceMayorista) {
+      toast.error("Por favor, completa todos los campos requeridos.");
       return;
     }
 
@@ -140,9 +160,9 @@ export default function EditProductPage() {
     const loadingToast = toast.loading("Actualizando producto...");
 
     try {
-      const currentStock = product?.stock || 0;
-      const newStock = parseInt(stock, 10);
-      const stockDiff = newStock - currentStock;
+      const totalStock = branches.length > 0
+        ? branches.reduce((sum, b) => sum + (Number(branchStocks[b.id]) || 0), 0)
+        : parseInt(stock, 10) || 0;
 
       const updateData: any = {
         sku,
@@ -150,14 +170,11 @@ export default function EditProductPage() {
         cost_price: costPrice ? parseFloat(costPrice) : null,
         price_minorista: parseFloat(priceMinorista),
         price_mayorista: parseFloat(priceMayorista),
+        stock: totalStock,
         brand_id: selectedBrand ? parseInt(selectedBrand) : null,
         category_id: selectedCategory ? parseInt(selectedCategory) : null,
         promotion: promotionPayload,
       };
-
-      if (stockDiff === 0) {
-        updateData.stock = newStock;
-      }
 
       const { error: updateError } = await supabase
         .from("products")
@@ -166,23 +183,46 @@ export default function EditProductPage() {
 
       if (updateError) throw updateError;
 
-      if (stockDiff !== 0) {
+      // Actualizar branch_stock para cada sucursal de forma individual
+      if (branches.length > 0) {
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
-        const { error: movementError } = await supabase.rpc(
-          "log_stock_movement",
-          {
-            p_product_id: id,
-            p_movement_type: "ajuste_manual",
-            p_quantity: stockDiff,
-            p_user_id: user?.id || null,
-            p_notes: "Ajuste manual desde edición de producto",
-          }
-        );
+        for (const b of branches) {
+          const newQty = Number(branchStocks[b.id]) || 0;
+          const oldQty = Number(initialBranchStocks[b.id]) || 0;
 
-        if (movementError) throw movementError;
+          const { error: branchStockError } = await (supabase as any)
+            .from("branch_stock")
+            .upsert(
+              {
+                branch_id: b.id,
+                product_id: id,
+                stock: newQty,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "branch_id,product_id" }
+            );
+
+          if (branchStockError) {
+            console.error(`Error actualizando stock para sucursal ${b.name}:`, branchStockError);
+          }
+
+          const diff = newQty - oldQty;
+          if (diff !== 0) {
+            await (supabase as any).from("stock_movements").insert({
+              product_id: id,
+              branch_id: b.id,
+              user_id: user?.id || null,
+              movement_type: "ajuste_manual",
+              quantity: diff,
+              previous_stock: oldQty,
+              new_stock: newQty,
+              notes: `Ajuste manual desde edición de producto (${b.name})`,
+            });
+          }
+        }
       }
 
       toast.success("✅ Producto actualizado exitosamente", {
@@ -376,7 +416,7 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Costo */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
@@ -432,21 +472,87 @@ export default function EditProductPage() {
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Stock */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
-                  Stock Actual *
-                </label>
-                <input
-                  type="number"
-                  value={stock}
-                  onChange={(e) => setStock(e.target.value)}
-                  required
-                  placeholder="0"
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
-                />
+            {/* SECCIÓN STOCK POR SUCURSAL */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <FaWarehouse className="text-emerald-500 text-xs" />
+                    Stock por Sucursal
+                  </h3>
+                  <p className="text-[10px] text-slate-450 dark:text-slate-500">
+                    Modificá las cantidades de forma independiente para cada sucursal
+                  </p>
+                </div>
+                <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/40 w-fit">
+                  Total consolidado: {branches.reduce((acc, b) => acc + (Number(branchStocks[b.id]) || 0), 0)} unidades
+                </span>
               </div>
+
+              {branches.length === 0 ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
+                    Stock Actual *
+                  </label>
+                  <input
+                    type="number"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    required
+                    placeholder="0"
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {branches.map((b) => {
+                    const isCurrent = activeBranch?.id === b.id;
+                    return (
+                      <div
+                        key={b.id}
+                        className={`p-3.5 rounded-xl border transition-all ${
+                          isCurrent
+                            ? "border-emerald-500/60 bg-emerald-500/5 dark:bg-emerald-950/20 shadow-2xs"
+                            : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${isCurrent ? "bg-emerald-500" : "bg-slate-400"}`} />
+                            {b.name}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded-md">
+                              Activa
+                            </span>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            value={branchStocks[b.id] ?? 0}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setBranchStocks((prev) => ({
+                                ...prev,
+                                [b.id]: isNaN(val) ? 0 : Math.max(0, val),
+                              }));
+                            }}
+                            className="w-full pl-3 pr-16 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-semibold pointer-events-none">
+                            unidades
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

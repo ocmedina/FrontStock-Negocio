@@ -23,7 +23,8 @@ import { useBranch } from "@/contexts/BranchContext";
 
 export default function NewProductPage() {
   const router = useRouter();
-  const { activeBranch } = useBranch();
+  const { branches, activeBranch } = useBranch();
+  const [branchStocks, setBranchStocks] = useState<Record<number, number>>({});
   const [sku, setSku] = useState("");
   const [barcode, setBarcode] = useState("");
   const [name, setName] = useState("");
@@ -67,6 +68,20 @@ export default function NewProductPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      setBranchStocks((prev) => {
+        const next = { ...prev };
+        branches.forEach((b) => {
+          if (next[b.id] === undefined) {
+            next[b.id] = 0;
+          }
+        });
+        return next;
+      });
+    }
+  }, [branches]);
+
   const generateBarcode = () => {
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.floor(Math.random() * 1000)
@@ -86,7 +101,7 @@ export default function NewProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!sku || !name || !priceMinorista || !priceMayorista || !stock) {
+    if (!sku || !name || !priceMinorista || !priceMayorista) {
       toast.error("Por favor, completa todos los campos obligatorios.");
       return;
     }
@@ -116,6 +131,10 @@ export default function NewProductPage() {
 
     const loadingToast = toast.loading("Creando producto...");
 
+    const totalStock = branches.length > 0
+      ? branches.reduce((sum, b) => sum + (Number(branchStocks[b.id]) || 0), 0)
+      : parseInt(stock, 10) || 0;
+
     const { data, error } = await supabase.from("products").insert([
       {
         sku,
@@ -124,7 +143,7 @@ export default function NewProductPage() {
         cost_price: costPrice ? parseFloat(costPrice) : null,
         price_minorista: parseFloat(priceMinorista),
         price_mayorista: parseFloat(priceMayorista),
-        stock: 0,
+        stock: totalStock,
         brand_id: selectedBrand ? parseInt(selectedBrand) : null,
         category_id: selectedCategory ? parseInt(selectedCategory) : null,
         promotion: promotionPayload,
@@ -132,7 +151,7 @@ export default function NewProductPage() {
     ]).select("id").single();
 
     if (error) {
-      if (error.code === "23505" && activeBranch) {
+      if (error.code === "23505") {
         const { data: existingProduct, error: existingError } = await supabase
           .from("products")
           .select("id, name")
@@ -140,24 +159,25 @@ export default function NewProductPage() {
           .maybeSingle();
 
         if (!existingError && existingProduct) {
-          const { error: stockError } = await (supabase as any).rpc(
-            "increment_branch_stock",
-            {
-              p_branch_id: activeBranch.id,
-              p_product_id: existingProduct.id,
-              p_quantity: parseInt(stock, 10),
+          const branchList = branches.length > 0 ? branches : activeBranch ? [activeBranch] : [];
+          for (const b of branchList) {
+            const qty = Number(branchStocks[b.id]) || 0;
+            if (qty > 0) {
+              await (supabase as any).rpc("increment_branch_stock", {
+                p_branch_id: b.id,
+                p_product_id: existingProduct.id,
+                p_quantity: qty,
+              });
             }
-          );
-
-          if (!stockError) {
-            toast.success(
-              `El producto "${existingProduct.name}" ya existía. Se asignaron ${stock} unidades a la sucursal activa.`,
-              { id: loadingToast }
-            );
-            router.push("/dashboard/products");
-            router.refresh();
-            return;
           }
+
+          toast.success(
+            `El producto "${existingProduct.name}" ya existía. Se asignó el stock a las sucursales.`,
+            { id: loadingToast }
+          );
+          router.push("/dashboard/products");
+          router.refresh();
+          return;
         }
       }
       toast.error(`Error al crear el producto: ${error.message}`, {
@@ -166,20 +186,39 @@ export default function NewProductPage() {
       console.error(error);
     } else {
       const createdProductId = (data as { id: string } | null)?.id;
-      if (activeBranch && createdProductId) {
-        const { error: stockError } = await (supabase as any).rpc(
-          "increment_branch_stock",
-          {
-            p_branch_id: activeBranch.id,
-            p_product_id: createdProductId,
-            p_quantity: parseInt(stock, 10),
+      if (createdProductId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        const branchList = branches.length > 0 ? branches : activeBranch ? [activeBranch] : [];
+
+        for (const b of branchList) {
+          const qty = Number(branchStocks[b.id]) || 0;
+          await (supabase as any)
+            .from("branch_stock")
+            .upsert(
+              {
+                branch_id: b.id,
+                product_id: createdProductId,
+                stock: qty,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "branch_id,product_id" }
+            );
+
+          if (qty > 0) {
+            await (supabase as any).from("stock_movements").insert({
+              product_id: createdProductId,
+              branch_id: b.id,
+              user_id: user?.id || null,
+              movement_type: "stock_inicial",
+              quantity: qty,
+              previous_stock: 0,
+              new_stock: qty,
+              notes: `Stock inicial en ${b.name}`,
+            });
           }
-        );
-        if (stockError) {
-          toast.error(`Producto creado, pero no se pudo asignar el stock: ${stockError.message}`, {
-            id: loadingToast,
-          });
-          return;
         }
       }
       toast.success("✅ Producto creado exitosamente", { id: loadingToast });
@@ -365,7 +404,7 @@ export default function NewProductPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Costo */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
@@ -421,21 +460,87 @@ export default function NewProductPage() {
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Stock */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
-                  Stock Inicial *
-                </label>
-                <input
-                  type="number"
-                  value={stock}
-                  onChange={(e) => setStock(e.target.value)}
-                  required
-                  placeholder="0"
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
-                />
+            {/* SECCIÓN STOCK INICIAL POR SUCURSAL */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <FaWarehouse className="text-emerald-500 text-xs" />
+                    Stock Inicial por Sucursal
+                  </h3>
+                  <p className="text-[10px] text-slate-450 dark:text-slate-500">
+                    Definí el stock de entrada para cada sucursal de manera independiente
+                  </p>
+                </div>
+                <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/40 w-fit">
+                  Total consolidado: {branches.reduce((acc, b) => acc + (Number(branchStocks[b.id]) || 0), 0)} unidades
+                </span>
               </div>
+
+              {branches.length === 0 ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
+                    Stock Inicial *
+                  </label>
+                  <input
+                    type="number"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    required
+                    placeholder="0"
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-950 placeholder:text-slate-400"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {branches.map((b) => {
+                    const isCurrent = activeBranch?.id === b.id;
+                    return (
+                      <div
+                        key={b.id}
+                        className={`p-3.5 rounded-xl border transition-all ${
+                          isCurrent
+                            ? "border-emerald-500/60 bg-emerald-500/5 dark:bg-emerald-950/20 shadow-2xs"
+                            : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${isCurrent ? "bg-emerald-500" : "bg-slate-400"}`} />
+                            {b.name}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded-md">
+                              Activa
+                            </span>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            value={branchStocks[b.id] ?? 0}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setBranchStocks((prev) => ({
+                                ...prev,
+                                [b.id]: isNaN(val) ? 0 : Math.max(0, val),
+                              }));
+                            }}
+                            className="w-full pl-3 pr-16 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-semibold pointer-events-none">
+                            unidades
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

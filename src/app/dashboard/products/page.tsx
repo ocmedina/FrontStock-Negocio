@@ -183,12 +183,10 @@ export default function ProductsPage() {
       ])
     );
 
-    return (productData ?? [])
-      .filter((product) => stockByProduct.has(product.id))
-      .map((product) => ({
-        ...product,
-        stock: stockByProduct.get(product.id) ?? 0,
-      })) as Product[];
+    return (productData ?? []).map((product) => ({
+      ...product,
+      stock: stockByProduct.get(product.id) ?? 0,
+    })) as Product[];
   };
 
   // Obtener estadísticas de stock de la sucursal activa
@@ -618,7 +616,7 @@ export default function ProductsPage() {
                     P. Mayorista
                   </th>
                   <th className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[140px]">
-                    Inventario
+                    Inventario {activeBranch ? `(${activeBranch.name})` : ""}
                   </th>
                   <th className="px-6 py-3.5 text-right text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider w-[240px]">
                     Acciones

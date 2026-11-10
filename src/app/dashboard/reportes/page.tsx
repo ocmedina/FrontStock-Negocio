@@ -10,8 +10,10 @@ import {
   FaCashRegister,
   FaChartLine,
   FaExclamationTriangle,
+  FaBuilding,
 } from "react-icons/fa";
 import { getUTCInterval } from "@/lib/date-utils";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface DailyClosingData {
   startingFloat: number;
@@ -49,6 +51,7 @@ interface CashMovement {
 }
 
 export default function ReportsPage() {
+  const { activeBranch } = useBranch();
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [closingData, setClosingData] = useState<DailyClosingData | null>(null);
   const [savedReport, setSavedReport] = useState<any | null>(null);
@@ -64,7 +67,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchDataForDate();
-  }, [date]);
+  }, [date, activeBranch]);
 
   const fetchDataForDate = async () => {
     setLoading(true);
@@ -73,12 +76,17 @@ export default function ReportsPage() {
     setCountedCash("");
 
     try {
-      // 1. Verificar si existe un reporte guardado
-      const { data: existingReport, error: reportError } = await supabase
+      // 1. Verificar si existe un reporte guardado para esta fecha y sucursal
+      let reportQuery = (supabase as any)
         .from("daily_reports")
         .select("report_data")
-        .eq("report_date", date)
-        .maybeSingle();
+        .eq("report_date", date);
+
+      if (activeBranch) {
+        reportQuery = reportQuery.eq("branch_id", activeBranch.id);
+      }
+
+      const { data: existingReport, error: reportError } = await reportQuery.maybeSingle();
 
       if (reportError) throw reportError;
 
@@ -92,25 +100,37 @@ export default function ReportsPage() {
       // Usar la zona horaria de Argentina (UTC-3)
       const { startUTC: startDate, endUTC: endDate } = getUTCInterval(date, 'America/Argentina/Buenos_Aires');
 
-      // Obtener ventas de mostrador, pedidos y movimientos en paralelo
+      // Obtener ventas de mostrador, pedidos y movimientos en paralelo filtrados por sucursal
+      let salesQuery = supabase
+        .from("sales")
+        .select("total_amount, payment_method")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+
+      let ordersQuery = (supabase as any)
+        .from("orders")
+        .select("total_amount, status, created_at")
+        .eq("status", "entregado")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+
+      let movementsQuery = (supabase as any)
+        .from("cash_movements")
+        .select("type, amount")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+
+      if (activeBranch) {
+        salesQuery = salesQuery.eq("branch_id", activeBranch.id);
+        ordersQuery = ordersQuery.eq("branch_id", activeBranch.id);
+        movementsQuery = movementsQuery.eq("branch_id", activeBranch.id);
+      }
+
       const [salesResult, ordersResult, movementsResult, paymentsResult] =
         await Promise.all([
-          supabase
-            .from("sales")
-            .select("total_amount, payment_method")
-            .gte("created_at", startDate)
-            .lte("created_at", endDate),
-          (supabase as any)
-            .from("orders")
-            .select("total_amount, status, created_at")
-            .eq("status", "entregado")
-            .gte("created_at", startDate)
-            .lte("created_at", endDate),
-          supabase
-            .from("cash_movements")
-            .select("type, amount")
-            .gte("created_at", startDate)
-            .lte("created_at", endDate),
+          salesQuery,
+          ordersQuery,
+          movementsQuery,
           supabase
             .from("payments")
             .select("amount, type, comment")
@@ -246,8 +266,9 @@ export default function ReportsPage() {
         difference,
       };
 
-      const { error } = await supabase.from("daily_reports").insert({
+      const { error } = await (supabase as any).from("daily_reports").insert({
         report_date: date,
+        branch_id: activeBranch?.id || null,
         report_data: finalData,
         created_at: new Date().toISOString(),
       });
@@ -274,11 +295,17 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 print:space-y-4">
-      <div className="print:hidden">
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2 sm:gap-3">
           <FaCashRegister className="text-blue-600 text-xl sm:text-2xl" />
           Arqueo y Cierre de Caja
         </h1>
+        {activeBranch && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold">
+            <FaBuilding className="text-[11px]" />
+            Sucursal: {activeBranch.name}
+          </span>
+        )}
       </div>
 
       {/* Selector de fecha */}

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { FaTimes, FaSave, FaExchangeAlt } from "react-icons/fa";
+import { FaTimes, FaSave, FaExchangeAlt, FaBuilding } from "react-icons/fa";
 import toast from "react-hot-toast";
 import ProductSearch from "../../ventas/nueva/components/ProductSearch";
 import { Product } from "../../ventas/nueva/types";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface AdjustmentModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function AdjustmentModal({
   onClose,
   onSuccess,
 }: AdjustmentModalProps) {
+  const { activeBranch } = useBranch();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState("");
   const [type, setType] = useState<"ajuste_manual" | "devolucion">(
@@ -38,6 +40,11 @@ export default function AdjustmentModal({
       return;
     }
 
+    if (!activeBranch) {
+      toast.error("Debe seleccionar una sucursal activa antes de ajustar stock");
+      return;
+    }
+
     const qty = parseInt(quantity);
     if (isNaN(qty) || qty <= 0) {
       toast.error("La cantidad debe ser mayor a 0");
@@ -46,38 +53,75 @@ export default function AdjustmentModal({
 
     setLoading(true);
     try {
-      // 1. Calcular nuevo stock
-      const currentStock = selectedProduct.stock || 0;
-      const adjustment = direction === "increment" ? qty : -qty;
-      const newStock = currentStock + adjustment;
+      // 1. Obtener usuario autenticado
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // 2. Actualizar producto
-      const { error: productError } = await supabase
+      // 2. Obtener el stock actual de este producto en la sucursal activa
+      const { data: branchStockRecord } = await (supabase as any)
+        .from("branch_stock")
+        .select("stock")
+        .eq("branch_id", activeBranch.id)
+        .eq("product_id", selectedProduct.id)
+        .maybeSingle();
+
+      const currentBranchStock = Number(branchStockRecord?.stock ?? selectedProduct.stock ?? 0);
+      const adjustment = direction === "increment" ? qty : -qty;
+      const newBranchStock = Math.max(0, currentBranchStock + adjustment);
+
+      // 3. Actualizar o crear branch_stock para la sucursal activa
+      const { error: branchStockError } = await (supabase as any)
+        .from("branch_stock")
+        .upsert(
+          {
+            branch_id: activeBranch.id,
+            product_id: selectedProduct.id,
+            stock: newBranchStock,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "branch_id,product_id" }
+        );
+
+      if (branchStockError) throw branchStockError;
+
+      // 4. Recalcular y actualizar stock total de products
+      const { data: allBranchStocks } = await (supabase as any)
+        .from("branch_stock")
+        .select("stock")
+        .eq("product_id", selectedProduct.id);
+
+      const totalStock = (allBranchStocks || []).reduce(
+        (acc: number, item: any) => acc + (Number(item.stock) || 0),
+        0
+      );
+
+      await supabase
         .from("products")
-        .update({ stock: newStock })
+        .update({ stock: totalStock })
         .eq("id", selectedProduct.id);
 
-      if (productError) throw productError;
-
-      // 3. Registrar movimiento
-      const { error: movementError } = await supabase
+      // 5. Registrar movimiento de stock con sucursal
+      const { error: movementError } = await (supabase as any)
         .from("stock_movements")
         .insert({
           product_id: selectedProduct.id,
+          user_id: user?.id || null,
+          branch_id: activeBranch.id,
           movement_type: type,
           quantity: adjustment,
-          previous_stock: currentStock,
-          new_stock: newStock,
+          previous_stock: currentBranchStock,
+          new_stock: newBranchStock,
           notes:
             notes ||
-            `Ajuste manual: ${
+            `Ajuste manual (${activeBranch.name}): ${
               direction === "increment" ? "Entrada" : "Salida"
             }`,
         });
 
       if (movementError) throw movementError;
 
-      toast.success("Stock ajustado correctamente");
+      toast.success(`Stock ajustado en ${activeBranch.name}`);
       onSuccess();
       handleClose();
     } catch (error: any) {
@@ -101,9 +145,16 @@ export default function AdjustmentModal({
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slideUp">
         {/* Header */}
         <div className="bg-gray-50 dark:bg-slate-950 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-            <FaExchangeAlt className="text-blue-600" /> Ajuste de Stock
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+              <FaExchangeAlt className="text-blue-600" /> Ajuste de Stock
+            </h2>
+            {activeBranch && (
+              <span className="inline-flex items-center gap-1 mt-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                <FaBuilding className="text-[10px]" /> Sucursal: {activeBranch.name}
+              </span>
+            )}
+          </div>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 dark:text-slate-300 transition-colors"

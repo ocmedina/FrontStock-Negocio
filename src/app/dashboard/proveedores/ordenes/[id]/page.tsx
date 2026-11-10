@@ -14,6 +14,7 @@ import {
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useBranch } from "@/contexts/BranchContext";
 
 type OrderItem = {
   id: string;
@@ -53,6 +54,7 @@ export default function OrderDetailPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const { activeBranch } = useBranch();
   const [order, setOrder] = useState<PurchaseOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -135,37 +137,91 @@ export default function OrderDetailPage({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("No user");
 
-      // Update stock for each product
+      // Update stock for each product in branch_stock
+      const branchId = (order as any).branch_id || activeBranch?.id;
+
       for (const item of order.purchase_order_items) {
-        // Get current stock
-        const { data: product } = await supabase
-          .from("products")
-          .select("stock")
-          .eq("id", item.product_id)
-          .single();
+        if (branchId) {
+          // Obtener stock actual en la sucursal
+          const { data: bStock } = await (supabase as any)
+            .from("branch_stock")
+            .select("stock")
+            .eq("branch_id", branchId)
+            .eq("product_id", item.product_id)
+            .maybeSingle();
 
-        if (!product) continue;
+          const prevStock = Number(bStock?.stock || 0);
+          const newBranchStock = prevStock + item.quantity;
 
-        const newStock = product.stock + item.quantity;
+          // Upsert branch_stock
+          await (supabase as any)
+            .from("branch_stock")
+            .upsert(
+              {
+                branch_id: branchId,
+                product_id: item.product_id,
+                stock: newBranchStock,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "branch_id,product_id" }
+            );
 
-        // Update product stock
-        await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.product_id);
+          // Recalcular stock global sum
+          const { data: allBStocks } = await (supabase as any)
+            .from("branch_stock")
+            .select("stock")
+            .eq("product_id", item.product_id);
 
-        // Create stock movement
-        await supabase.from("stock_movements").insert({
-          product_id: item.product_id,
-          movement_type: "purchase",
-          quantity: item.quantity,
-          new_stock: newStock,
-          notes: `Orden de compra ${order.order_number}`,
-          user_id: user.id,
-        });
+          const totalStock = (allBStocks || []).reduce(
+            (acc: number, bs: any) => acc + (Number(bs.stock) || 0),
+            0
+          );
+
+          await supabase
+            .from("products")
+            .update({ stock: totalStock })
+            .eq("id", item.product_id);
+
+          // Crear movimiento de stock con sucursal
+          await (supabase as any).from("stock_movements").insert({
+            product_id: item.product_id,
+            movement_type: "compra",
+            quantity: item.quantity,
+            previous_stock: prevStock,
+            new_stock: newBranchStock,
+            branch_id: branchId,
+            notes: `Orden de compra ${order.order_number}`,
+            user_id: user.id,
+          });
+        } else {
+          // Fallback global si no hay sucursal
+          const { data: product } = await supabase
+            .from("products")
+            .select("stock")
+            .eq("id", item.product_id)
+            .single();
+
+          if (!product) continue;
+
+          const newStock = (product.stock || 0) + item.quantity;
+
+          await supabase
+            .from("products")
+            .update({ stock: newStock })
+            .eq("id", item.product_id);
+
+          await supabase.from("stock_movements").insert({
+            product_id: item.product_id,
+            movement_type: "purchase",
+            quantity: item.quantity,
+            new_stock: newStock,
+            notes: `Orden de compra ${order.order_number}`,
+            user_id: user.id,
+          });
+        }
       }
 
-      toast.success("Stock actualizado correctamente");
+      toast.success("Stock actualizado en la sucursal");
     } catch (error) {
       console.error("Error updating stock:", error);
       toast.error("Error al actualizar el stock");

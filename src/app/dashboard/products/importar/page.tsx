@@ -4,8 +4,9 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { FaUpload, FaSpinner, FaCheckCircle, FaTimesCircle, FaArrowLeft, FaFileExcel } from "react-icons/fa";
+import { FaUpload, FaSpinner, FaCheckCircle, FaTimesCircle, FaArrowLeft, FaFileExcel, FaBuilding } from "react-icons/fa";
 import Link from "next/link";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface ProductExcelRow {
   SKU: string;
@@ -17,6 +18,7 @@ interface ProductExcelRow {
 
 export default function ImportProductsPage() {
   const router = useRouter();
+  const { activeBranch } = useBranch();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<{ success: number; errors: number; duplicates: number } | null>(null);
@@ -78,9 +80,10 @@ export default function ImportProductsPage() {
         });
 
         if (productsToInsert.length > 0) {
-          const { error } = await supabase
+          const { data: insertedData, error } = await supabase
             .from("products")
-            .insert(productsToInsert);
+            .insert(productsToInsert)
+            .select("id, sku, stock");
              
           if (error) {
             if (error.message.includes("duplicate key value violates unique constraint")) {
@@ -90,6 +93,40 @@ export default function ImportProductsPage() {
               throw new Error(error.message);
             }
           } else {
+            // Asignar el stock importado a la sucursal activa
+            if (activeBranch && insertedData && insertedData.length > 0) {
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+
+              const branchStockEntries = insertedData.map((p: any) => ({
+                branch_id: activeBranch.id,
+                product_id: p.id,
+                stock: Number(p.stock) || 0,
+                updated_at: new Date().toISOString(),
+              }));
+
+              await (supabase as any)
+                .from("branch_stock")
+                .upsert(branchStockEntries, { onConflict: "branch_id,product_id" });
+
+              // Registrar movimientos en stock_movements
+              const movementsToInsert = insertedData.map((p: any) => ({
+                product_id: p.id,
+                user_id: user?.id || null,
+                branch_id: activeBranch.id,
+                movement_type: "ajuste_manual",
+                quantity: Number(p.stock) || 0,
+                previous_stock: 0,
+                new_stock: Number(p.stock) || 0,
+                notes: `Importación inicial desde Excel (${activeBranch.name})`,
+              }));
+
+              await (supabase as any)
+                .from("stock_movements")
+                .insert(movementsToInsert);
+            }
+
             setResults({ success: productsToInsert.length, errors: currentErrors.length, duplicates: duplicateCount });
           }
         } else {
@@ -128,13 +165,21 @@ export default function ImportProductsPage() {
         </div>
 
         {/* CABECERA */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
-          <h1 className="text-lg font-black text-gray-900 dark:text-slate-55 flex items-center gap-2">
-            <FaFileExcel className="text-indigo-600 w-5 h-5" /> Importar Catálogo desde Excel
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Carga de forma masiva tu base de productos mediante un archivo de hoja de cálculo.
-          </p>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-black text-gray-900 dark:text-slate-55 flex items-center gap-2">
+              <FaFileExcel className="text-indigo-600 w-5 h-5" /> Importar Catálogo desde Excel
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Carga de forma masiva tu base de productos mediante un archivo de hoja de cálculo.
+            </p>
+          </div>
+          {activeBranch && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold">
+              <FaBuilding className="text-[11px]" />
+              Sucursal destino: {activeBranch.name}
+            </div>
+          )}
         </div>
 
         {/* INSTRUCCIONES */}

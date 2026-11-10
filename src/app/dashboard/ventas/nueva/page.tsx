@@ -25,6 +25,7 @@ import SaleTabs from "./components/SaleTabs";
 import ShortcutsBar from "./components/ShortcutsBar";
 import { getAppliedPromotion } from "@/lib/promotions";
 import { useRegister } from "@/hooks/useRegister";
+import { useBranch } from "@/contexts/BranchContext";
 import ActiveRegisterBadge from "@/components/ActiveRegisterBadge";
 import QuickShiftAction from "./components/QuickShiftAction";
 import TerminalPrinterModal from "./components/TerminalPrinterModal";
@@ -52,6 +53,7 @@ function findDefaultCustomer(customers: Customer[]) {
 
 export default function NewSalePage() {
   const { activeRegister } = useRegister();
+  const { activeBranch } = useBranch();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -643,8 +645,9 @@ export default function NewSalePage() {
     enabled: true,
   });
 
-  // Sincronización de Stock en Tiempo Real entre terminales
+  // Sincronización de Stock en Tiempo Real entre terminales para la sucursal activa
   useRealtimeProductStock({
+    branchId: activeBranch?.id,
     onProductUpdate: (updatedProduct) => {
       setTabs((prevTabs) =>
         prevTabs.map((tab) => ({
@@ -844,6 +847,7 @@ export default function NewSalePage() {
           p_iva_amount: 0,
           p_iva_breakdown: [],
           p_register_id: activeRegister?.id || null,
+          p_branch_id: activeBranch?.id || null,
         }
       );
 

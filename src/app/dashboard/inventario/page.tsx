@@ -18,6 +18,8 @@ import {
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import AdjustmentModal from "./components/AdjustmentModal";
+import { useBranch } from "@/contexts/BranchContext";
+import { FaBuilding } from "react-icons/fa";
 
 type StockMovement = {
   id: string;
@@ -26,6 +28,7 @@ type StockMovement = {
   quantity: number;
   previous_stock: number;
   new_stock: number;
+  branch_id?: number | null;
   notes: string | null;
   products: {
     name: string;
@@ -35,11 +38,16 @@ type StockMovement = {
     full_name: string | null;
     username: string | null;
   } | null;
+  branches: {
+    name: string;
+  } | null;
 };
 
 const ITEMS_PER_PAGE = 20;
 
 export default function InventoryKardexPage() {
+  const { branches, activeBranch } = useBranch();
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("active");
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,20 +64,28 @@ export default function InventoryKardexPage() {
   const [areActionsOpen, setAreActionsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Sincronizar el branch selector si el usuario cambia la sucursal activa global
+  useEffect(() => {
+    if (selectedBranchId === "active" && activeBranch) {
+      fetchMovements();
+    }
+  }, [activeBranch]);
+
   useEffect(() => {
     fetchMovements();
-  }, [startDate, endDate, typeFilter]);
+  }, [startDate, endDate, typeFilter, selectedBranchId]);
 
   const fetchMovements = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from("stock_movements")
         .select(
           `
           *,
           products (name, sku),
-          profiles (full_name, username)
+          profiles (full_name, username),
+          branches (name)
         `
         )
         .gte("created_at", `${startDate}T00:00:00`)
@@ -78,6 +94,15 @@ export default function InventoryKardexPage() {
 
       if (typeFilter !== "all") {
         query = query.eq("movement_type", typeFilter);
+      }
+
+      // Filtrado por sucursal
+      if (selectedBranchId === "active") {
+        if (activeBranch) {
+          query = query.eq("branch_id", activeBranch.id);
+        }
+      } else if (selectedBranchId !== "all") {
+        query = query.eq("branch_id", Number(selectedBranchId));
       }
 
       const { data, error } = await query;
@@ -90,9 +115,10 @@ export default function InventoryKardexPage() {
         const lowerTerm = searchTerm.toLowerCase();
         filteredData = filteredData.filter(
           (m) =>
-            m.products?.name.toLowerCase().includes(lowerTerm) ||
-            m.products?.sku.toLowerCase().includes(lowerTerm) ||
-            m.notes?.toLowerCase().includes(lowerTerm)
+            m.products?.name?.toLowerCase().includes(lowerTerm) ||
+            m.products?.sku?.toLowerCase().includes(lowerTerm) ||
+            m.notes?.toLowerCase().includes(lowerTerm) ||
+            m.branches?.name?.toLowerCase().includes(lowerTerm)
         );
       }
 
@@ -192,6 +218,7 @@ export default function InventoryKardexPage() {
 
     const dataToExport = movements.map((m) => ({
       Fecha: new Date(m.created_at).toLocaleString("es-AR"),
+      Sucursal: m.branches?.name || "General",
       Producto: m.products?.name || "N/A",
       SKU: m.products?.sku || "N/A",
       Tipo: m.movement_type,
@@ -308,6 +335,30 @@ export default function InventoryKardexPage() {
 
         <div className="w-full md:w-auto">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">
+            Sucursal
+          </label>
+          <div className="relative">
+            <FaBuilding className="absolute left-3 top-3 text-gray-400" />
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className="w-full md:w-auto pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900"
+            >
+              <option value="active">
+                {activeBranch ? `Sucursal Activa (${activeBranch.name})` : "Sucursal Activa"}
+              </option>
+              <option value="all">Todas las sucursales</option>
+              {branches.map((b) => (
+                <option key={b.id} value={String(b.id)}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="w-full md:w-auto">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">
             Tipo de Movimiento
           </label>
           <div className="relative">
@@ -320,6 +371,7 @@ export default function InventoryKardexPage() {
               <option value="all">Todos</option>
               <option value="venta">Venta</option>
               <option value="compra">Compra</option>
+              <option value="transferencia">Transferencia</option>
               <option value="devolucion">Devolución</option>
               <option value="ajuste_manual">Ajuste Manual</option>
             </select>
@@ -362,6 +414,9 @@ export default function InventoryKardexPage() {
                   Fecha
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Sucursal
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Producto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
@@ -382,7 +437,7 @@ export default function InventoryKardexPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-10 text-center text-gray-500 dark:text-slate-400"
                   >
                     Cargando movimientos...
@@ -391,7 +446,7 @@ export default function InventoryKardexPage() {
               ) : movements.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-10 text-center text-gray-500 dark:text-slate-400"
                   >
                     No se encontraron movimientos en este período.
@@ -402,6 +457,12 @@ export default function InventoryKardexPage() {
                   <tr key={movement.id} className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
                       {new Date(movement.created_at).toLocaleString("es-AR")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                        <FaBuilding className="text-[10px] text-indigo-500" />
+                        {movement.branches?.name || "General"}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-slate-50">
@@ -473,9 +534,15 @@ export default function InventoryKardexPage() {
                   <h3 className="font-bold text-gray-900 dark:text-slate-50">
                     {movement.products?.name || "Producto Eliminado"}
                   </h3>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">
-                    {movement.products?.sku}
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      {movement.products?.sku}
+                    </p>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
+                      <FaBuilding className="text-[8px] text-indigo-500" />
+                      {movement.branches?.name || "General"}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="text-xs text-gray-400 block mb-1">
