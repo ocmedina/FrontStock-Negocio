@@ -14,7 +14,7 @@ import ChangePasswordModal from '@/components/ChangePasswordModal';
 import {
   listUsers, updateUserRole, updateUserStatus,
   saveUserPermissions, resetUserPermissions,
-  listBranches, assignUserBranch, type UserWithPermissions, type BranchOption,
+  listBranches, assignUserBranches, type UserWithPermissions, type BranchOption,
 } from '@/app/actions/userManagementActions';
 import {
   ROLES, PERMISSION_GROUPS, PERMISSION_LABELS,
@@ -36,6 +36,83 @@ const ROLE_COLORS: Record<Role, string> = {
   vendedor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800',
   repartidor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800',
 };
+
+function BranchAssignmentControl({
+  user,
+  branches,
+  disabled,
+  onSave,
+}: {
+  user: UserWithPermissions;
+  branches: BranchOption[];
+  disabled: boolean;
+  onSave: (branchIds: number[]) => Promise<boolean>;
+}) {
+  const [selected, setSelected] = useState<number[]>(user.branch_ids || []);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const isGlobal = selected.length === 0;
+
+  useEffect(() => setSelected(user.branch_ids || []), [user.branch_ids]);
+
+  const toggleBranch = (branchId: number) => {
+    if (selected.includes(branchId)) {
+      if (selected.length === 1) return;
+      setSelected(selected.filter((id) => id !== branchId));
+    } else {
+      setSelected([...selected, branchId]);
+    }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const saved = await onSave(selected);
+    setSaving(false);
+    if (saved) setOpen(false);
+  };
+
+  const label = isGlobal
+    ? 'Global · todas las sucursales'
+    : branches.filter((branch) => selected.includes(branch.id)).map((branch) => branch.name).join(', ');
+
+  return (
+    <div className="relative min-w-52">
+      <button type="button" disabled={disabled} onClick={() => setOpen(!open)}
+        className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-left text-xs text-gray-700 dark:text-slate-200 disabled:opacity-60">
+        <span className="block truncate">{label || 'Sucursales seleccionadas'}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 z-30 mt-1 w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-xl">
+          <label className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 text-xs font-bold">
+            <input type="checkbox" checked={isGlobal} onChange={(event) => {
+              if (event.target.checked) setSelected([]);
+              else {
+                const fallback = branches.find((branch) => branch.id === user.branch_id)?.id
+                  ?? branches.find((branch) => branch.is_active)?.id
+                  ?? branches[0]?.id;
+                setSelected(fallback ? [fallback] : []);
+              }
+            }} />
+            Global · todas las sucursales
+          </label>
+          <div className="max-h-44 space-y-1 overflow-y-auto py-2">
+            {branches.filter((branch) => branch.is_active).map((branch) => (
+              <label key={branch.id} className="flex items-center gap-2 rounded-md px-1 py-1 text-xs">
+                <input type="checkbox" checked={selected.includes(branch.id)} disabled={isGlobal}
+                  onChange={() => toggleBranch(branch.id)} />
+                {branch.name}
+              </label>
+            ))}
+          </div>
+          <button type="button" disabled={saving} onClick={() => void save()}
+            className="w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+            {saving ? 'Guardando…' : 'Guardar sucursales'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Modal: Crear usuario ─────────────────────────────────────────────────────
 
@@ -367,17 +444,21 @@ function UsersPageContent() {
     setLoading(false);
   }, []);
 
-  const handleBranchChange = async (user: UserWithPermissions, value: string) => {
-    const branchId = value === 'global' ? null : Number(value);
-    const result = await assignUserBranch(user.id, branchId);
+  const handleBranchChange = async (user: UserWithPermissions, branchIds: number[]): Promise<boolean> => {
+    const result = await assignUserBranches(user.id, branchIds);
     if (!result.success) {
       toast.error(result.error || 'Error al asignar sucursal');
-      return;
+      return false;
     }
-    toast.success('Sucursal asignada');
+    toast.success('Sucursales guardadas');
     setUsers((current) =>
-      current.map((item) => item.id === user.id ? { ...item, branch_id: branchId } : item)
+      current.map((item) => item.id === user.id ? {
+        ...item,
+        branch_ids: branchIds,
+        branch_id: branchIds.includes(item.branch_id || -1) ? item.branch_id : branchIds[0] ?? null,
+      } : item)
     );
+    return true;
   };
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
@@ -465,7 +546,7 @@ function UsersPageContent() {
                   Rol
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
-                  Sucursal
+                  Sucursales habilitadas
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wider hidden md:table-cell">
                   Permisos
@@ -525,17 +606,12 @@ function UsersPageContent() {
                       </td>
 
                       <td className="px-6 py-4">
-                        <select
-                          value={u.branch_id ?? 'global'}
-                          onChange={(event) => void handleBranchChange(u, event.target.value)}
+                        <BranchAssignmentControl
+                          user={u}
+                          branches={branches}
                           disabled={!can('EDITAR_USUARIOS') || u.role === 'administrador'}
-                          className="max-w-40 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-xs text-gray-700 dark:text-slate-200 disabled:opacity-60"
-                        >
-                          <option value="global">Global</option>
-                          {branches.filter((branch) => branch.is_active).map((branch) => (
-                            <option key={branch.id} value={branch.id}>{branch.name}</option>
-                          ))}
-                        </select>
+                          onSave={(branchIds) => handleBranchChange(u, branchIds)}
+                        />
                       </td>
 
                       {/* Permisos (override count) */}
@@ -730,3 +806,4 @@ export default function UsersPage() {
     </ProtectedRoute>
   );
 }
+
