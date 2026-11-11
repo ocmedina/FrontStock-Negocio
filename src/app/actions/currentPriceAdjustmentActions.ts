@@ -40,7 +40,7 @@ export async function getCurrentPriceAdjustmentCandidates(): Promise<{
         .select(`
           id, created_at, customer_id, amount_pending, status,
           customers(full_name, customer_type),
-          order_items(id, product_id, quantity, price, unit_price,
+          order_items(id, product_id, quantity, price,
             products(name, price_minorista, price_mayorista))
         `)
         .gt('amount_pending', 0)
@@ -107,7 +107,7 @@ export async function getCurrentPriceAdjustmentCandidates(): Promise<{
         const product = item.products;
         if (!product) return sum;
         const originalPrice = Number(
-          origin === 'order' ? item.price ?? item.unit_price ?? 0 : item.price ?? 0
+          item.price ?? 0
         );
         const baseline = priorPrices.get(String(item.id)) ?? originalPrice;
         const currentPrice = getCurrentPrice(product, customerType);
