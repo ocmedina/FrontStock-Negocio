@@ -21,6 +21,7 @@ export type UserRegisterAssignment = {
   full_name: string | null;
   username: string | null;
   role: string | null;
+  branch_id: number;
   register_id: number | null;
   register_name: string | null;
 };
@@ -42,11 +43,11 @@ export async function getRegisters(branchId?: number): Promise<{
         .select('*')
         .order('id', { ascending: true });
     if (branchId) registersQuery = registersQuery.eq('branch_id', branchId);
-    const [registersRes, profilesRes] = await Promise.all([
+    const [registersRes, assignmentsRes] = await Promise.all([
       registersQuery,
-      supabase
-        .from('profiles')
-        .select('register_id'),
+      branchId
+        ? (supabase as any).from('profile_register_assignments').select('register_id').eq('branch_id', branchId)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (registersRes.error) {
@@ -62,12 +63,13 @@ export async function getRegisters(branchId?: number): Promise<{
       }
       throw registersRes.error;
     }
+    if (assignmentsRes.error) throw assignmentsRes.error;
 
     // Contar usuarios asignados por caja
     const counts: Record<number, number> = {};
-    for (const p of (profilesRes.data || []) as any[]) {
-      if (p.register_id) {
-        counts[p.register_id] = (counts[p.register_id] || 0) + 1;
+    for (const assignment of (assignmentsRes.data || []) as any[]) {
+      if (assignment.register_id) {
+        counts[assignment.register_id] = (counts[assignment.register_id] || 0) + 1;
       }
     }
 
@@ -140,7 +142,7 @@ export async function getActiveRegisters(branchId?: number): Promise<{
 
 // ─── Obtener caja asignada a un usuario específico ────────────────────────────
 
-export async function getUserAssignedRegister(profileId: string): Promise<{
+export async function getUserAssignedRegister(profileId: string, branchId: number): Promise<{
   success: boolean;
   data?: Register | null;
   error?: string;
@@ -149,15 +151,16 @@ export async function getUserAssignedRegister(profileId: string): Promise<{
     await requireAuth();
 
     const supabase = createLooseAdminClient();
-    const { data: profile, error } = await supabase
-      .from('profiles')
+    const { data: assignment, error } = await (supabase as any)
+      .from('profile_register_assignments')
       .select('register_id')
-      .eq('id', profileId)
-      .single();
+      .eq('profile_id', profileId)
+      .eq('branch_id', branchId)
+      .maybeSingle();
 
     if (error) throw error;
 
-    const regId = (profile as any)?.register_id;
+    const regId = assignment?.register_id;
     if (!regId) return { success: true, data: null };
 
     const { data: reg, error: regError } = await supabase
@@ -190,18 +193,34 @@ export async function getUserAssignedRegister(profileId: string): Promise<{
 
 export async function assignUserRegister(
   profileId: string,
+  branchId: number,
   registerId: number | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await requirePermission('GESTIONAR_CAJAS');
 
     const supabase = createLooseAdminClient();
-    const { error } = await supabase
-      .from('profiles')
-      .update({ register_id: registerId } as any)
-      .eq('id', profileId);
+    if (!Number.isInteger(branchId) || branchId <= 0) return { success: false, error: 'Seleccioná una sucursal válida.' };
+    if (registerId !== null) {
+      const { data: register, error: registerError } = await supabase
+        .from('registers' as any)
+        .select('id, branch_id, is_active')
+        .eq('id', registerId)
+        .maybeSingle();
+      if (registerError) throw registerError;
+      if (!register || Number(register.branch_id) !== branchId) return { success: false, error: 'La caja no pertenece a la sucursal seleccionada.' };
+      if (!register.is_active) return { success: false, error: 'No se puede asignar una caja inactiva.' };
 
-    if (error) throw error;
+      const { error } = await (supabase as any).from('profile_register_assignments').upsert(
+        { profile_id: profileId, branch_id: branchId, register_id: registerId },
+        { onConflict: 'profile_id,branch_id' }
+      );
+      if (error) throw error;
+    } else {
+      const { error } = await (supabase as any).from('profile_register_assignments')
+        .delete().eq('profile_id', profileId).eq('branch_id', branchId);
+      if (error) throw error;
+    }
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
@@ -293,7 +312,7 @@ export async function updateRegister(
 
 // ─── Listar asignaciones de usuarios a cajas ─────────────────────────────────
 
-export async function getUserRegisterAssignments(): Promise<{
+export async function getUserRegisterAssignments(branchId: number): Promise<{
   success: boolean;
   data?: UserRegisterAssignment[];
   error?: string;
@@ -302,28 +321,27 @@ export async function getUserRegisterAssignments(): Promise<{
     await requireAuth();
 
     const supabase = createLooseAdminClient();
-    const { data, error } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        full_name,
-        username,
-        role,
-        register_id,
-        registers ( id, name )
-      `)
-      .order('full_name', { ascending: true });
-
-    if (error) throw error;
-
-    const list: UserRegisterAssignment[] = (data || []).map((p: any) => ({
-      profile_id: p.id,
-      full_name: p.full_name,
-      username: p.username,
-      role: p.role,
-      register_id: p.register_id ?? null,
-      register_name: p.registers?.name ?? null,
-    }));
+    if (!Number.isInteger(branchId) || branchId <= 0) return { success: true, data: [] };
+    const [profilesResult, assignmentsResult] = await Promise.all([
+      supabase.from('profiles').select('id, full_name, username, role').order('full_name', { ascending: true }),
+      (supabase as any).from('profile_register_assignments')
+        .select('profile_id, register_id, registers ( id, name )').eq('branch_id', branchId),
+    ]);
+    if (profilesResult.error) throw profilesResult.error;
+    if (assignmentsResult.error) throw assignmentsResult.error;
+    const assignments = new Map<string, any>((assignmentsResult.data || []).map((row: any) => [row.profile_id, row]));
+    const list: UserRegisterAssignment[] = (profilesResult.data || []).map((p: any) => {
+      const assignment = assignments.get(p.id);
+      return {
+        profile_id: p.id,
+        full_name: p.full_name,
+        username: p.username,
+        role: p.role,
+        branch_id: branchId,
+        register_id: assignment?.register_id ?? null,
+        register_name: assignment?.registers?.name ?? null,
+      };
+    });
 
     return { success: true, data: list };
   } catch (err) {
@@ -332,3 +350,4 @@ export async function getUserRegisterAssignments(): Promise<{
     return { success: false, error: msg };
   }
 }
+
