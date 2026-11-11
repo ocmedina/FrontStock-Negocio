@@ -169,7 +169,7 @@ export default function CurrentPriceAdjustmentPanel({ onApplied }: CurrentPriceA
                               <span className="text-xs font-medium text-slate-500">{candidate.customer_name}</span>
                             </span>
                             <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1">
-                              {new Date(candidate.created_at).toLocaleDateString("es-AR")} · {candidate.customer_type === "mayorista" ? "Mayorista" : "Minorista"} · Saldo {formatCurrency(candidate.current_pending)} · nuevo saldo {formatCurrency(candidate.new_pending)}
+                              {new Date(candidate.created_at).toLocaleDateString("es-AR")} · Sucursal: {candidate.branch_name} · {candidate.customer_type === "mayorista" ? "Mayorista" : "Minorista"} · Saldo {formatCurrency(candidate.current_pending)} · nuevo saldo {formatCurrency(candidate.new_pending)}
                             </span>
                           </span>
                           <span className="text-right">
@@ -202,3 +202,4 @@ export default function CurrentPriceAdjustmentPanel({ onApplied }: CurrentPriceA
     </>
   );
 }
+
