@@ -166,8 +166,11 @@ export default function ProductSearch({
       .select("product_id, stock")
       .eq("branch_id", activeBranch.id)
       .in("product_id", products.map((product) => product.id));
-    const branchStockByProduct = new Map(
-      (data || []).map((item: any) => [item.product_id, Number(item.stock) || 0])
+    const branchStockByProduct = new Map<string, number>(
+      (data || []).map((item: any) => [
+        item.product_id,
+        Number(item.stock) || 0,
+      ] as [string, number])
     );
     return products
       .filter((product) => (branchStockByProduct.get(product.id) || 0) > 0)
