@@ -110,7 +110,7 @@ BEGIN
     v_record_adjustment := 0;
 
     FOR v_item IN
-      SELECT oi.id, oi.product_id, oi.quantity, COALESCE(oi.price, oi.unit_price, 0) AS original_price,
+      SELECT oi.id, oi.product_id, oi.quantity, COALESCE(oi.price, 0) AS original_price,
              p.price_minorista, p.price_mayorista
       FROM public.order_items oi
       JOIN public.products p ON p.id = oi.product_id
