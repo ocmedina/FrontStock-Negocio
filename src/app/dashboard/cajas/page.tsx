@@ -73,6 +73,8 @@ export default function CashRegistersPage() {
 
     if (usersRes.success && usersRes.data) {
       setUserAssignments(usersRes.data);
+    } else if (usersRes.error) {
+      toast.error(`Error cargando asignaciones: ${usersRes.error}`);
     }
 
     setLoading(false);
