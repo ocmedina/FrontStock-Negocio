@@ -14,6 +14,7 @@ export type UserWithPermissions = {
   role: Role;
   is_active: boolean;
   branch_id: number | null;
+  branch_ids: number[];
   overrides: Record<string, boolean>; // permission → granted
 };
 
@@ -35,7 +36,7 @@ export async function listUsers(): Promise<{
 
     const supabase = createLooseAdminClient();
 
-    const [profilesResult, overridesResult] = await Promise.all([
+    const [profilesResult, overridesResult, branchAssignmentsResult] = await Promise.all([
       supabase
         .from('profiles')
         .select('id, full_name, username, email, role, is_active, branch_id')
@@ -43,9 +44,13 @@ export async function listUsers(): Promise<{
       supabase
         .from('user_permissions')
         .select('profile_id, permission, granted'),
+      (supabase as any)
+        .from('profile_branch_assignments')
+        .select('profile_id, branch_id'),
     ]);
 
     if (profilesResult.error) throw profilesResult.error;
+    if (branchAssignmentsResult.error) throw branchAssignmentsResult.error;
 
     const overridesByProfile: Record<string, Record<string, boolean>> = {};
     for (const row of overridesResult.data || []) {
@@ -53,6 +58,12 @@ export async function listUsers(): Promise<{
         overridesByProfile[row.profile_id] = {};
       }
       overridesByProfile[row.profile_id][row.permission] = row.granted;
+    }
+
+    const branchesByProfile: Record<string, number[]> = {};
+    for (const row of branchAssignmentsResult.data || []) {
+      if (!branchesByProfile[row.profile_id]) branchesByProfile[row.profile_id] = [];
+      branchesByProfile[row.profile_id].push(Number(row.branch_id));
     }
 
     const users: UserWithPermissions[] = (profilesResult.data || []).map((p: any) => ({
@@ -63,6 +74,7 @@ export async function listUsers(): Promise<{
       role: p.role as Role,
       is_active: p.is_active ?? true,
       branch_id: p.branch_id ? Number(p.branch_id) : null,
+      branch_ids: branchesByProfile[p.id] ?? [],
       overrides: overridesByProfile[p.id] ?? {},
     }));
 
@@ -103,31 +115,49 @@ export async function listBranches(): Promise<{
   }
 }
 
-export async function assignUserBranch(
+export async function assignUserBranches(
 profileId: string,
-branchId: number | null
+branchIds: number[]
 ): Promise<{ success: boolean; error?: string }> {
 try {
   await requirePermission('EDITAR_USUARIOS');
   const supabase = createLooseAdminClient();
+  const normalizedIds = [...new Set((branchIds || []).map(Number))].filter((id) => Number.isInteger(id) && id > 0);
+  const { data: target, error: targetError } = await supabase.from('profiles').select('id, role, branch_id').eq('id', profileId).single();
+  if (targetError) throw targetError;
+  if (target.role === 'administrador') return { success: false, error: 'Las sucursales asignadas a administradores no se cambian desde esta pantalla.' };
 
-  if (branchId !== null) {
-    const { data: branch, error: branchError } = await supabase
-      .from('branches' as any)
-      .select('id, is_active')
-      .eq('id', branchId)
-      .single();
+  if (normalizedIds.length > 0) {
+    const { data: branches, error: branchError } = await (supabase as any)
+      .from('branches').select('id').in('id', normalizedIds).eq('is_active', true);
     if (branchError) throw branchError;
-    if (!branch?.is_active) {
-      return { success: false, error: 'La sucursal seleccionada está inactiva.' };
-      }
+    if ((branches || []).length !== normalizedIds.length) return { success: false, error: 'Una o más sucursales no están activas.' };
   }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({ branch_id: branchId } as any)
-    .eq('id', profileId);
-  if (error) throw error;
+  const { data: existing, error: existingError } = await (supabase as any)
+    .from('profile_branch_assignments').select('branch_id').eq('profile_id', profileId);
+  if (existingError) throw existingError;
+  const existingIds = (existing || []).map((row: any) => Number(row.branch_id));
+  const toAdd = normalizedIds.filter((id) => !existingIds.includes(id));
+  const toRemove = existingIds.filter((id: number) => !normalizedIds.includes(id));
+
+  if (toAdd.length > 0) {
+    const { error } = await (supabase as any).from('profile_branch_assignments').insert(
+      toAdd.map((branch_id) => ({ profile_id: profileId, branch_id }))
+    );
+    if (error) throw error;
+  }
+  if (toRemove.length > 0) {
+    const { error } = await (supabase as any).from('profile_branch_assignments')
+      .delete().eq('profile_id', profileId).in('branch_id', toRemove);
+    if (error) throw error;
+  }
+
+  const nextActiveBranchId = normalizedIds.includes(Number(target.branch_id))
+    ? Number(target.branch_id)
+    : normalizedIds[0] ?? null;
+  const { error: profileError } = await supabase.from('profiles').update({ branch_id: nextActiveBranchId } as any).eq('id', profileId);
+  if (profileError) throw profileError;
   return { success: true };
 } catch (err) {
   const msg = err instanceof Error ? err.message : JSON.stringify(err);
@@ -276,3 +306,4 @@ export async function resetUserPermissions(
     return { success: false, error: msg };
   }
 }
+
