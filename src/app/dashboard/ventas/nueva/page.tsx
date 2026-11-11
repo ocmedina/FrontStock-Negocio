@@ -644,8 +644,11 @@ export default function NewSalePage() {
               .eq("branch_id", activeBranch?.id)
               .in("product_id", similarProducts.map((product: any) => product.id))
           : { data: [] };
-        const branchStockByProduct = new Map(
-          (branchStocks || []).map((item: any) => [item.product_id, Number(item.stock) || 0])
+        const branchStockByProduct = new Map<string, number>(
+          (branchStocks || []).map((item: any) => [
+            item.product_id,
+            Number(item.stock) || 0,
+          ] as [string, number])
         );
         const availableProducts = similarProducts
           .map((product: any) => ({
