@@ -12,6 +12,7 @@
 - `create_finalize_sale_transaction.sql`: transaccion atomica de cierre de venta
 - `create_current_price_adjustments.sql`: ajustes seleccionados de precios actuales para saldos de cuenta corriente (ejecutar una vez)
 - `05_separate_customer_accounts_by_branch.sql`: separa movimientos y cobros de clientes por sucursal y conserva como “Sin asignar” los pagos históricos sin origen comprobable
+- `06_multi_branch_user_register_assignments.sql`: permite asignar el mismo usuario a sucursales y cajas distintas; sin filas asignadas, el acceso queda global
 - `create_register_customer_payment_transaction.sql`: registro atomico de pago de cliente
 - `create_cancel_customer_payment_transaction.sql`: anulacion atomica de pago de cliente
 - `create_branches_and_branch_stock.sql`: sucursales, stock por sucursal y transferencias
