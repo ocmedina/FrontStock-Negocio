@@ -759,7 +759,7 @@ $$;
 grant execute on function public.edit_customer_payment_transaction(bigint, numeric, text, text) to authenticated;
 
 
-+
+
 -- Reemplaza tambien la función de ajustes para limitarla a la sucursal activa.
 -- Permite que un administrador cobre aumentos de precio en comprobantes con saldo.
 -- Los precios originales de los renglones no se sobrescriben: cada aumento queda
