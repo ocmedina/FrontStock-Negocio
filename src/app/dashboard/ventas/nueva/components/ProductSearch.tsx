@@ -91,7 +91,7 @@ export default function ProductSearch({
           return;
         }
         // Agregar directamente al carrito
-        onProductSelect(exactMatch);
+        onProductSelect({ ...exactMatch, stock: Number(stock.stock) || 0 });
         toast.success(`✓ ${exactMatch.name} agregado`);
         return;
       }
@@ -166,12 +166,15 @@ export default function ProductSearch({
       .select("product_id, stock")
       .eq("branch_id", activeBranch.id)
       .in("product_id", products.map((product) => product.id));
-    const availableIds = new Set(
-      (data || [])
-        .filter((item: any) => Number(item.stock) > 0)
-        .map((item: any) => item.product_id)
+    const branchStockByProduct = new Map(
+      (data || []).map((item: any) => [item.product_id, Number(item.stock) || 0])
     );
-    return products.filter((product) => availableIds.has(product.id));
+    return products
+      .filter((product) => (branchStockByProduct.get(product.id) || 0) > 0)
+      .map((product) => ({
+        ...product,
+        stock: branchStockByProduct.get(product.id) || 0,
+      }));
   };
 
   const handleSelect = (product: Product) => {
