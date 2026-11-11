@@ -12,6 +12,7 @@ export type CurrentPriceAdjustmentCandidate = {
   customer_id: string;
   customer_name: string;
   customer_type: string;
+  branch_name: string;
   current_pending: number;
   adjustment_amount: number;
   new_pending: number;
@@ -33,28 +34,39 @@ export async function getCurrentPriceAdjustmentCandidates(): Promise<{
   try {
     await requireAdmin();
     const admin = createLooseAdminClient();
+    const sessionClient = await createClient();
+    const { data: authData } = await sessionClient.auth.getUser();
+    const { data: profileData } = authData.user
+      ? await sessionClient.from('profiles').select('branch_id').eq('id', authData.user.id).maybeSingle()
+      : { data: null };
+    const branchId = Number((profileData as any)?.branch_id || 0);
+    if (!branchId) throw new Error('Selecciona una sucursal activa antes de actualizar los fiados.');
+    const { data: branchData } = await (admin as any).from('branches').select('name').eq('id', branchId).maybeSingle();
+    const branchName = String(branchData?.name || 'Sucursal activa');
 
     const [ordersResult, salesResult] = await Promise.all([
       admin
         .from('orders')
         .select(`
-          id, created_at, customer_id, amount_pending, status,
+          id, created_at, customer_id, amount_pending, status, branch_id,
           customers(full_name, customer_type),
           order_items(id, product_id, quantity, price,
             products(name, price_minorista, price_mayorista))
         `)
         .gt('amount_pending', 0)
+        .eq('branch_id', branchId)
         .neq('status', 'cancelado')
         .order('created_at', { ascending: false }),
       admin
         .from('sales')
         .select(`
-          id, created_at, customer_id, amount_pending, is_cancelled,
+          id, created_at, customer_id, amount_pending, is_cancelled, branch_id,
           customers(full_name, customer_type),
           sale_items(id, product_id, quantity, price,
             products(name, price_minorista, price_mayorista))
         `)
         .gt('amount_pending', 0)
+        .eq('branch_id', branchId)
         .eq('is_cancelled', false)
         .order('created_at', { ascending: false }),
     ]);
@@ -121,6 +133,7 @@ export async function getCurrentPriceAdjustmentCandidates(): Promise<{
         customer_id: row.customer_id,
         customer_name: row.customers?.full_name || 'Cliente sin nombre',
         customer_type: customerType,
+        branch_name: branchName,
         current_pending: Number(row.amount_pending || 0),
         adjustment_amount: adjustmentAmount,
         new_pending: Number(row.amount_pending || 0) + adjustmentAmount,
@@ -186,3 +199,4 @@ export async function canApplyCurrentPriceAdjustments(): Promise<boolean> {
     return false;
   }
 }
+
