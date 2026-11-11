@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { formatCurrency } from "@/lib/numberFormat";
+import { useBranch } from "@/contexts/BranchContext";
 import toast from "react-hot-toast";
 import SupplierActions from "@/components/SupplierActions";
 import {
@@ -28,6 +29,7 @@ import {
 } from "react-icons/fa";
 
 export default function SuppliersPage() {
+  const { activeBranch } = useBranch();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,17 +38,27 @@ export default function SuppliersPage() {
   const [areActionsOpen, setAreActionsOpen] = useState(false);
 
   const fetchSuppliers = async () => {
+    if (!activeBranch?.id) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("suppliers")
-      .select("*")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
+    const [{ data, error }, { data: purchases, error: purchasesError }, { data: payments, error: paymentsError }] = await Promise.all([
+      supabase.from("suppliers").select("*").eq("is_active", true).order("name", { ascending: true }),
+      (supabase as any).from("purchases").select("supplier_id, total_amount, amount_paid").eq("branch_id", activeBranch.id),
+      (supabase as any).from("supplier_payments").select("supplier_id, amount").eq("branch_id", activeBranch.id),
+    ]);
 
-    if (error) {
+    if (error || purchasesError || paymentsError) {
       toast.error("Error al cargar los proveedores.");
     } else {
-      setSuppliers(data || []);
+      const balances = new Map<string, number>();
+      for (const purchase of purchases || []) {
+        const id = String(purchase.supplier_id);
+        balances.set(id, (balances.get(id) || 0) + Math.max(0, Number(purchase.total_amount || 0) - Number(purchase.amount_paid || 0)));
+      }
+      for (const payment of payments || []) {
+        const id = String(payment.supplier_id);
+        balances.set(id, (balances.get(id) || 0) - Number(payment.amount || 0));
+      }
+      setSuppliers((data || []).map((supplier) => ({ ...supplier, debt: balances.get(supplier.id) || 0 })));
     }
     setLoading(false);
   };
@@ -72,7 +84,7 @@ export default function SuppliersPage() {
   }, []);
 
   useEffect(() => {
-    fetchSuppliers();
+    if (activeBranch?.id) void fetchSuppliers();
 
     // Recargar cuando la página se vuelve visible
     const handleVisibilityChange = () => {
@@ -87,7 +99,7 @@ export default function SuppliersPage() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [activeBranch?.id]);
 
   // Calcular resumen de deudas
   const debtSummary = useMemo(() => {
@@ -146,8 +158,9 @@ export default function SuppliersPage() {
                 Gestión de Proveedores
               </h1>
               <p className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                Administración operativa, compras y estados de cuentas corrientes
+                Compras y saldos de la sucursal activa
               </p>
+              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1">Sucursal: {activeBranch?.name || "Cargando..."}</p>
             </div>
           </div>
           
@@ -652,3 +665,4 @@ export default function SuppliersPage() {
     </div>
   );
 }
+
