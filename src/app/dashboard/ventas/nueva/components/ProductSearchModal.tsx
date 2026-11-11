@@ -58,8 +58,11 @@ export default function ProductSearchModal({
         .from("branch_stock")
         .select("product_id, stock")
         .eq("branch_id", activeBranch?.id);
-      const branchStockByProduct = new Map(
-        (stockData || []).map((item: any) => [item.product_id, Number(item.stock) || 0])
+      const branchStockByProduct = new Map<string, number>(
+        (stockData || []).map((item: any) => [
+          item.product_id,
+          Number(item.stock) || 0,
+        ] as [string, number])
       );
       const availableProducts = (data || [])
         .filter((product) => (branchStockByProduct.get(product.id) || 0) > 0)
