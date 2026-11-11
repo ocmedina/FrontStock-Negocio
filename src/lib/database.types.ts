@@ -160,28 +160,34 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          branch_id: number | null
           comment: string | null
           created_at: string
           customer_id: string
           id: number
+          order_id: string | null
           type: string
           payment_method: string | null
         }
         Insert: {
           amount: number
+          branch_id?: number | null
           comment?: string | null
           created_at?: string
           customer_id: string
           id?: number
+          order_id?: string | null
           type: string
           payment_method?: string | null
         }
         Update: {
           amount?: number
+          branch_id?: number | null
           comment?: string | null
           created_at?: string
           customer_id?: string
           id?: number
+          order_id?: string | null
           type?: string
           payment_method?: string | null
         }
@@ -443,6 +449,7 @@ export type Database = {
       supplier_payments: {
         Row: {
           amount: number
+          branch_id: number | null
           created_at: string
           id: number
           notes: string | null
@@ -451,6 +458,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          branch_id?: number | null
           created_at?: string
           id?: number
           notes?: string | null
@@ -459,6 +467,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          branch_id?: number | null
           created_at?: string
           id?: number
           notes?: string | null
@@ -666,6 +675,15 @@ export type Database = {
         }
         Returns: Json
       }
+      edit_customer_payment_transaction: {
+        Args: {
+          p_payment_id: number
+          p_new_amount: number
+          p_new_payment_method: string
+          p_new_comment: string
+        }
+        Returns: Json
+      }
       consume_referral_discount: {
         Args: {
           p_referral_id: string
@@ -854,3 +872,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
