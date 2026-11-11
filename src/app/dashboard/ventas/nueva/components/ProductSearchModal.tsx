@@ -58,12 +58,15 @@ export default function ProductSearchModal({
         .from("branch_stock")
         .select("product_id, stock")
         .eq("branch_id", activeBranch?.id);
-      const availableIds = new Set(
-        (stockData || [])
-          .filter((item: any) => Number(item.stock) > 0)
-          .map((item: any) => item.product_id)
+      const branchStockByProduct = new Map(
+        (stockData || []).map((item: any) => [item.product_id, Number(item.stock) || 0])
       );
-      const availableProducts = (data || []).filter((product) => availableIds.has(product.id));
+      const availableProducts = (data || [])
+        .filter((product) => (branchStockByProduct.get(product.id) || 0) > 0)
+        .map((product) => ({
+          ...product,
+          stock: branchStockByProduct.get(product.id) || 0,
+        }));
       setProducts(availableProducts);
       setFilteredProducts(availableProducts);
     } catch (error) {
