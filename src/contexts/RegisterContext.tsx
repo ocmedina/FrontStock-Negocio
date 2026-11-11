@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { getActiveRegisters, type Register } from '@/app/actions/registerActions';
+import { getActiveRegisters, getUserAssignedRegister, type Register } from '@/app/actions/registerActions';
 import toast from 'react-hot-toast';
 import { useBranch } from '@/contexts/BranchContext';
 
@@ -50,15 +50,8 @@ export function RegisterProvider({ children }: { children: React.ReactNode }) {
       let fixedId: number | null = null;
 
       if (session?.user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('register_id')
-          .eq('id', session.user.id)
-          .single();
-
-        if ((profile as any)?.register_id) {
-          fixedId = Number((profile as any).register_id);
-        }
+        const assignment = await getUserAssignedRegister(session.user.id, activeBranch.id);
+        if (assignment.success && assignment.data?.id) fixedId = Number(assignment.data.id);
       }
 
       // Si tiene caja fija asignada
@@ -138,3 +131,4 @@ export function useRegister() {
   }
   return context;
 }
+

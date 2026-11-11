@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getCurrentBranchAccess, setCurrentActiveBranch } from "@/app/actions/branchActions";
 import toast from "react-hot-toast";
 
 export type Branch = {
@@ -16,83 +17,79 @@ interface BranchContextValue {
   activeBranch: Branch | null;
   isAssignedFixed: boolean;
   isLoading: boolean;
-  setActiveBranchById: (branchId: number) => void;
+  setActiveBranchById: (branchId: number) => Promise<void>;
   refreshBranches: () => Promise<void>;
 }
 
 const BranchContext = createContext<BranchContextValue | undefined>(undefined);
 const STORAGE_KEY = "frontstock_active_branch_id";
 
+function userStorageKey(userId: string | null) {
+  return `${STORAGE_KEY}_${userId || "anonymous"}`;
+}
+
 export function BranchProvider({ children }: { children: React.ReactNode }) {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [activeBranch, setActiveBranch] = useState<Branch | null>(null);
   const [isAssignedFixed, setIsAssignedFixed] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const initBranches = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [{ data: branchData, error: branchError }, { data: sessionData }] =
-        await Promise.all([
-          (supabase as any)
-            .from("branches")
-            .select("id, name, description, is_active")
-            .eq("is_active", true)
-            .order("id", { ascending: true }),
-          supabase.auth.getSession(),
-        ]);
+      const [{ data: branchData, error: branchError }, { data: sessionData }, access] = await Promise.all([
+        (supabase as any)
+          .from("branches")
+          .select("id, name, description, is_active")
+          .eq("is_active", true)
+          .order("id", { ascending: true }),
+        supabase.auth.getSession(),
+        getCurrentBranchAccess(),
+      ]);
 
       if (branchError) throw branchError;
+      if (!access.success) throw new Error(access.error || "No se pudo consultar el acceso a sucursales.");
 
-      const activeList = (branchData ?? []) as unknown as Branch[];
-      setBranches(activeList);
-      if (activeList.length === 0) return;
+      const allActive = (branchData ?? []) as Branch[];
+      const userId = sessionData.session?.user.id ?? null;
+      setCurrentUserId(userId);
 
-      const userId = sessionData.session?.user.id;
-      let assignedBranchId: number | null = null;
-      let isAdmin = false;
+      const assignedIds = access.isAdmin ? [] : (access.assignedBranchIds || []);
+      const hasBranchRestriction = !access.isAdmin && assignedIds.length > 0;
+      const available = hasBranchRestriction
+        ? allActive.filter((branch) => assignedIds.includes(branch.id))
+        : allActive;
+      setBranches(available);
 
-      if (userId) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("branch_id, role")
-          .eq("id", userId)
-          .single();
-
-        if (profileError) throw profileError;
-        const profileRow = profile as { branch_id?: number | null; role?: string } | null;
-        assignedBranchId = profileRow?.branch_id ? Number(profileRow.branch_id) : null;
-        isAdmin = profileRow?.role === "administrador";
-        setIsAdmin(isAdmin);
-      }
-
-      const fixedBranch = assignedBranchId
-        ? activeList.find((branch) => branch.id === assignedBranchId) ?? null
-        : null;
-
-      if (fixedBranch && !isAdmin) {
-        setActiveBranch(fixedBranch);
-        setIsAssignedFixed(true);
+      if (available.length === 0) {
+        setActiveBranch(null);
+        setIsAssignedFixed(hasBranchRestriction);
         return;
       }
 
-      setIsAssignedFixed(false);
-      const savedId = Number(window.localStorage.getItem(STORAGE_KEY));
-      const savedBranch = activeList.find((branch) => branch.id === savedId);
-      const resolved = savedBranch ?? fixedBranch ?? activeList[0];
+      const key = userStorageKey(userId);
+      const savedId = Number(
+        window.localStorage.getItem(key) || window.localStorage.getItem(STORAGE_KEY)
+      );
+      const savedBranch = available.find((branch) => branch.id === savedId);
+      const profileBranch = available.find((branch) => branch.id === access.profileBranchId);
+      const resolved = savedBranch ?? profileBranch ?? available[0];
+
+      setIsAssignedFixed(hasBranchRestriction && available.length === 1);
       setActiveBranch(resolved);
-      window.localStorage.setItem(STORAGE_KEY, String(resolved.id));
-      // Keep the selected branch available to server-side account/history queries.
-      if (isAdmin && assignedBranchId !== resolved.id && userId) {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ branch_id: resolved.id } as any)
-          .eq("id", userId);
-        if (error) throw error;
+      window.localStorage.setItem(key, String(resolved.id));
+
+      // The profile branch is the server-side active branch; the assignment table remains the allow-list.
+      if (access.profileBranchId !== resolved.id && userId) {
+        const result = await setCurrentActiveBranch(resolved.id);
+        if (!result.success) {
+          console.error("[BranchContext] No se pudo sincronizar la sucursal activa:", result.error);
+          toast.error(result.error || "No se pudo guardar la sucursal activa.");
+        }
       }
     } catch (error) {
-      console.error("[BranchContext] Error initializing branches:", error);
+      console.error("[BranchContext] Error inicializando sucursales:", error);
       toast.error("No se pudieron cargar las sucursales");
     } finally {
       setIsLoading(false);
@@ -103,35 +100,61 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
     void initBranches();
   }, [initBranches]);
 
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void initBranches();
+    };
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [initBranches]);
+
+  useEffect(() => {
+    const key = userStorageKey(currentUserId);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== key || !event.newValue) return;
+      const branch = branches.find((item) => item.id === Number(event.newValue));
+      if (!branch || isAssignedFixed) return;
+      void (async () => {
+        const result = await setCurrentActiveBranch(branch.id);
+        if (!result.success) {
+          toast.error(result.error || "No se pudo sincronizar la sucursal entre pestañas.");
+          return;
+        }
+        setActiveBranch(branch);
+      })();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [branches, currentUserId, isAssignedFixed]);
+
   const setActiveBranchById = useCallback(
-    (branchId: number) => {
+    async (branchId: number) => {
       if (isAssignedFixed) {
-        toast.error("Tu usuario tiene una sucursal asignada por el administrador.");
+        toast.error("Tu usuario tiene una sola sucursal asignada por el administrador.");
         return;
       }
 
       const branch = branches.find((item) => item.id === branchId);
-      if (!branch) return;
+      if (!branch) {
+        toast.error("No tenés acceso a esa sucursal.");
+        return;
+      }
+
+      const result = await setCurrentActiveBranch(branch.id);
+      if (!result.success) {
+        toast.error(result.error || "No se pudo guardar la sucursal activa.");
+        return;
+      }
 
       setActiveBranch(branch);
-      window.localStorage.setItem(STORAGE_KEY, String(branch.id));
-      if (isAdmin) {
-        void (async () => {
-          const { data: userData, error: userError } = await supabase.auth.getUser();
-          if (userError || !userData.user) return;
-          const { error } = await supabase
-            .from("profiles")
-            .update({ branch_id: branch.id } as any)
-            .eq("id", userData.user.id);
-          if (error) {
-            console.error("[BranchContext] Error saving active admin branch:", error);
-            toast.error("No se pudo guardar la sucursal activa");
-          }
-        })();
-      }
+      window.localStorage.setItem(userStorageKey(currentUserId), String(branch.id));
       toast.success(`Sucursal activa: ${branch.name}`, { id: "active-branch-toast" });
     },
-    [branches, isAdmin, isAssignedFixed]
+    [branches, currentUserId, isAssignedFixed]
   );
 
   return (

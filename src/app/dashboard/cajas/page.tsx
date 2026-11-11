@@ -54,9 +54,15 @@ export default function CashRegistersPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    if (!activeBranch?.id) {
+      setRegisters([]);
+      setUserAssignments([]);
+      setLoading(false);
+      return;
+    }
     const [regsRes, usersRes] = await Promise.all([
       getRegisters(activeBranch?.id),
-      getUserRegisterAssignments(),
+      getUserRegisterAssignments(activeBranch.id),
     ]);
 
     if (regsRes.success && regsRes.data) {
@@ -67,6 +73,8 @@ export default function CashRegistersPage() {
 
     if (usersRes.success && usersRes.data) {
       setUserAssignments(usersRes.data);
+    } else if (usersRes.error) {
+      toast.error(`Error cargando asignaciones: ${usersRes.error}`);
     }
 
     setLoading(false);
@@ -146,7 +154,8 @@ export default function CashRegistersPage() {
   const handleUserAssignmentChange = async (profileId: string, newRegIdStr: string) => {
     const regId = newRegIdStr === "none" ? null : Number(newRegIdStr);
     const toastId = toast.loading("Actualizando puesto asignado...");
-    const res = await assignUserRegister(profileId, regId);
+    if (!activeBranch?.id) return;
+    const res = await assignUserRegister(profileId, activeBranch.id, regId);
     if (res.success) {
       toast.success("Asignación guardada exitosamente.", { id: toastId });
       await fetchData();
@@ -176,7 +185,7 @@ export default function CashRegistersPage() {
               Puestos de Venta / Cajas
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Gestión de cajas simultáneas independientes sobre el mismo stock centralizado.
+              Sucursal: {activeBranch?.name || "Sin asignar"}. Asignaciones de caja independientes por sucursal.
             </p>
           </div>
         </div>
@@ -385,7 +394,7 @@ export default function CashRegistersPage() {
               <span>Asignación Fija de Puestos por Usuario</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Si fijas una caja a un usuario, no podrá operar ni cambiar a otra caja accidentalmente.
+              La caja fija se guarda por sucursal. El mismo usuario puede tener una distinta en cada una; habilitá también sus sucursales desde Usuarios.
             </p>
           </div>
         </div>
@@ -590,3 +599,4 @@ export default function CashRegistersPage() {
     </div>
   );
 }
+
