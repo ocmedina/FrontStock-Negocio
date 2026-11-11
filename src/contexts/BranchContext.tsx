@@ -83,6 +83,14 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
       const resolved = savedBranch ?? fixedBranch ?? activeList[0];
       setActiveBranch(resolved);
       window.localStorage.setItem(STORAGE_KEY, String(resolved.id));
+      // Keep the selected branch available to server-side account/history queries.
+      if (isAdmin && assignedBranchId !== resolved.id && userId) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ branch_id: resolved.id } as any)
+          .eq("id", userId);
+        if (error) throw error;
+      }
     } catch (error) {
       console.error("[BranchContext] Error initializing branches:", error);
       toast.error("No se pudieron cargar las sucursales");
@@ -149,3 +157,4 @@ export function useBranch() {
   }
   return context;
 }
+
