@@ -14,6 +14,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import RegisterPayment from "@/components/payments/RegisterPayment";
+import { useBranch } from "@/contexts/BranchContext";
 
 type DebtDetail = {
   id: string;
@@ -42,6 +43,7 @@ type PendingDebtRow = {
 };
 
 export default function DeudoresPage() {
+  const { activeBranch } = useBranch();
   const [deudores, setDeudores] = useState<DebtDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<DebtDetail | null>(null);
@@ -56,10 +58,11 @@ export default function DeudoresPage() {
   };
 
   useEffect(() => {
-    fetchDeudores();
-  }, []);
+    if (activeBranch?.id) void fetchDeudores();
+  }, [activeBranch?.id]);
 
   const fetchDeudores = async () => {
+    if (!activeBranch?.id) return;
     setLoading(true);
     try {
       const { data: customersData, error: customersError } = await supabase
@@ -71,6 +74,7 @@ export default function DeudoresPage() {
       const { data: ordersDebtData } = await supabase
         .from("orders")
         .select("customer_id, amount_pending")
+        .eq("branch_id", activeBranch!.id)
         .gt("amount_pending", 0)
         .neq("status", "cancelado");
 
@@ -79,6 +83,7 @@ export default function DeudoresPage() {
         const res = await (supabase as any)
           .from("sales")
           .select("customer_id, amount_pending, is_cancelled")
+          .eq("branch_id", activeBranch!.id)
           .gt("amount_pending", 0);
         if (!res.error && res.data) {
           salesDebtRows = (res.data as any[]).filter((s) => !s.is_cancelled);
@@ -86,6 +91,7 @@ export default function DeudoresPage() {
           const fallback = await (supabase as any)
             .from("sales")
             .select("customer_id, amount_pending")
+            .eq("branch_id", activeBranch!.id)
             .gt("amount_pending", 0);
           if (!fallback.error && fallback.data) {
             salesDebtRows = fallback.data;
@@ -207,12 +213,13 @@ export default function DeudoresPage() {
             >
               <FaArrowLeft /> Volver a Clientes
             </Link>
-            <h1 className="text-xl font-black text-gray-900 dark:text-slate-50 flex items-center gap-2">
-              <FaExclamationTriangle className="text-rose-500 text-lg animate-pulse" /> Cartera Unificada de Cuentas Corrientes (Fiados)
+        <h1 className="text-xl font-black text-gray-900 dark:text-slate-50 flex items-center gap-2">
+              <FaExclamationTriangle className="text-rose-500 text-lg animate-pulse" /> Cuentas Corrientes de {activeBranch?.name || "Sucursal"}
             </h1>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-              Todos los clientes activos con saldo deudor en ventas de mostrador y pedidos de reparto unificados ({deudores.length} clientes).
+              Saldos separados de pedidos y ventas de mostrador de esta sucursal ({deudores.length} clientes).
             </p>
+            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1">Sucursal: {activeBranch?.name || "Cargando..."}</p>
           </div>
 
           <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/40 rounded-xl px-5 py-3.5 flex flex-col justify-center min-w-[220px]">
@@ -229,7 +236,7 @@ export default function DeudoresPage() {
             href="/dashboard/clientes/deudores"
             className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 text-center"
           >
-            <FaUser className="text-xs shrink-0" /> Cartera Unificada ({deudores.length})
+            <FaUser className="text-xs shrink-0" /> Esta sucursal ({deudores.length})
           </Link>
           <Link
             href="/dashboard/pedidos/pendientes"
@@ -415,6 +422,8 @@ export default function DeudoresPage() {
               <RegisterPayment
                 customerId={selectedCustomer.id}
                 currentDebt={selectedCustomer.totalDebt}
+                branchId={activeBranch?.id || 0}
+                branchName={activeBranch?.name || "Sin asignar"}
                 onSuccess={handleClosePayment}
               />
             </div>
@@ -434,3 +443,4 @@ export default function DeudoresPage() {
     </div>
   );
 }
+
