@@ -10,6 +10,8 @@ import { FaCalendarAlt, FaReceipt, FaShoppingBag } from "react-icons/fa";
 interface RegisterPaymentProps {
   customerId: string;
   currentDebt: number;
+  branchId: number;
+  branchName: string;
   onSuccess?: () => void;
 }
 
@@ -26,6 +28,8 @@ type PendingItem = {
 export default function RegisterPayment({
   customerId,
   currentDebt,
+  branchId,
+  branchName,
   onSuccess,
 }: RegisterPaymentProps) {
   const router = useRouter();
@@ -53,8 +57,9 @@ export default function RegisterPayment({
       // 1. Fetch pending orders
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, amount_pending, total_amount, created_at")
+        .select("id, amount_pending, total_amount, created_at, branch_id")
         .eq("customer_id", customerId)
+        .eq("branch_id", branchId)
         .gt("amount_pending", 0)
         .neq("status", "cancelado")
         .order("created_at", { ascending: true });
@@ -62,8 +67,9 @@ export default function RegisterPayment({
       // 2. Fetch pending sales (unpaid or partially paid sales)
       const { data: sales, error: salesErr } = await (supabase as any)
         .from("sales")
-        .select("id, amount_pending, total_amount, created_at, payment_method, is_cancelled")
+        .select("id, amount_pending, total_amount, created_at, payment_method, is_cancelled, branch_id")
         .eq("customer_id", customerId)
+        .eq("branch_id", branchId)
         .gt("amount_pending", 0)
         .order("created_at", { ascending: true });
 
@@ -74,8 +80,9 @@ export default function RegisterPayment({
         // Fallback without is_cancelled if column missing
         const { data: fallbackSales } = await (supabase as any)
           .from("sales")
-          .select("id, amount_pending, total_amount, created_at, payment_method")
+          .select("id, amount_pending, total_amount, created_at, payment_method, branch_id")
           .eq("customer_id", customerId)
+          .eq("branch_id", branchId)
           .gt("amount_pending", 0)
           .order("created_at", { ascending: true });
         validSales = (fallbackSales || []) as any[];
@@ -227,7 +234,7 @@ export default function RegisterPayment({
               .filter(Boolean)
           : [];
 
-      const { data: txData, error: txError } = await supabase.rpc(
+      const { data: txData, error: txError } = await (supabase as any).rpc(
         "register_customer_payment_transaction",
         {
           p_customer_id: customerId,
@@ -309,6 +316,7 @@ export default function RegisterPayment({
       </div>
 
       <p className="text-[11px] text-slate-500 dark:text-slate-400 -mt-2 mb-4">
+        Sucursal: <strong className="text-indigo-600 dark:text-indigo-300">{branchName}</strong>. {" "}
         {paymentMode === "automatic"
           ? "El pago se imputará automáticamente cancelando los pedidos y ventas más antiguos del cliente."
           : "Selecciona individualmente los pedidos o ventas mostrador que deseas cancelar con este cobro."}
@@ -555,3 +563,4 @@ export default function RegisterPayment({
     </div >
   );
 }
+

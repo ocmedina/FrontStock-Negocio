@@ -19,18 +19,24 @@ type Supplier = Database["public"]["Tables"]["suppliers"]["Row"];
 type Payment = Database["public"]["Tables"]["supplier_payments"]["Row"];
 type Purchase = Database["public"]["Tables"]["purchases"]["Row"];
 
+type HistoryBranch = { branch_id?: number | null; branch_name: string };
 type HistoryItem =
-  | (Purchase & { type: "compra"; amount: number })
-  | (Payment & { type: "pago" });
+  | (Purchase & { type: "compra"; amount: number } & HistoryBranch)
+  | (Payment & { type: "pago" } & HistoryBranch);
 
 type SupplierAccount = {
   supplier: Supplier | null;
   history: HistoryItem[];
+  branchId: number | null;
+  branchName: string;
+  branchDebt: number;
 };
 
 async function fetchSupplierAccountWithClient(
   client: any,
-  supplierId: string
+  supplierId: string,
+  branchId: number | null,
+  branchName: string
 ): Promise<SupplierAccount> {
   const [{ data: supplier }, { data: purchases }, { data: payments }] =
     await Promise.all([
@@ -39,36 +45,61 @@ async function fetchSupplierAccountWithClient(
         .from("purchases")
         .select("*")
         .eq("supplier_id", supplierId)
+        .eq("branch_id", branchId)
         .order("created_at", { ascending: false }),
       client
         .from("supplier_payments")
         .select("*")
         .eq("supplier_id", supplierId)
+        .or(branchId ? `branch_id.eq.${branchId},branch_id.is.null` : "branch_id.is.null")
         .order("created_at", { ascending: false }),
     ]);
+
+  const purchaseRows = (purchases || []) as any[];
+  const paymentRows = (payments || []) as any[];
+  const branchDebt = purchaseRows.reduce(
+    (sum, purchase) => sum + Math.max(0, Number(purchase.total_amount || 0) - Number(purchase.amount_paid || 0)),
+    0
+  ) - paymentRows.reduce(
+    (sum, payment) => sum + (Number(payment.branch_id) === branchId ? Number(payment.amount || 0) : 0),
+    0
+  );
 
   const history: HistoryItem[] = [
     ...((purchases || []).map((p: Purchase) => ({
       ...p,
       type: "compra" as const,
       amount: Number(p.total_amount) || 0,
+      branch_id: (p as any).branch_id ?? null,
+      branch_name: (p as any).branch_id ? branchName : "Sin asignar",
     })) as Array<Purchase & { type: "compra"; amount: number }>),
     ...((payments || []).map((p: Payment) => ({
       ...p,
       type: "pago" as const,
+      branch_id: (p as any).branch_id ?? null,
+      branch_name: (p as any).branch_id ? branchName : "Sin asignar",
     })) as Array<Payment & { type: "pago" }>),
   ].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  return { supplier: (supplier as Supplier | null) || null, history };
+  return { supplier: (supplier as Supplier | null) || null, history, branchId, branchName, branchDebt };
 }
 
 async function getSupplierAccount(id: string) {
   const normalizedId = decodeURIComponent(id).trim();
   const supabase = await createClient();
-  const account = await fetchSupplierAccountWithClient(supabase, normalizedId);
+  const { data: authData } = await supabase.auth.getUser();
+  const { data: profile } = authData.user
+    ? await supabase.from("profiles").select("branch_id").eq("id", authData.user.id).maybeSingle()
+    : { data: null };
+  const branchId = Number((profile as any)?.branch_id || 0) || null;
+  const { data: branch } = branchId
+    ? await (supabase as any).from("branches").select("name").eq("id", branchId).maybeSingle()
+    : { data: null };
+  const branchName = String(branch?.name || "Sin asignar");
+  const account = await fetchSupplierAccountWithClient(supabase, normalizedId, branchId, branchName);
 
   if (account.supplier) {
     return account;
@@ -76,14 +107,14 @@ async function getSupplierAccount(id: string) {
 
   // Fallback defensivo: evita falsos "no encontrado" si la sesión SSR no está disponible.
   const adminClient = createLooseAdminClient();
-  return fetchSupplierAccountWithClient(adminClient, normalizedId);
+  return fetchSupplierAccountWithClient(adminClient, normalizedId, branchId, branchName);
 }
 
 export default async function SupplierDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const params = await props.params;
-  const { supplier, history } = await getSupplierAccount(params.id);
+  const { supplier, history, branchId, branchName, branchDebt } = await getSupplierAccount(params.id);
 
   if (!supplier) {
     return (
@@ -132,19 +163,19 @@ export default async function SupplierDetailPage(props: {
 
           <div
             className={`px-6 py-4 rounded-2xl border transition-all duration-350 text-left md:text-right min-w-[200px] ${
-              (supplier.debt || 0) > 0
+              branchDebt > 0
                 ? "bg-rose-50/50 dark:bg-rose-950/15 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400"
-                : (supplier.debt || 0) < 0
+              : branchDebt < 0
                 ? "bg-emerald-50/50 dark:bg-emerald-950/15 border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400"
                 : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400"
             }`}
           >
             <p className="text-[10px] font-black uppercase tracking-wider flex items-center md:justify-end gap-1.5">
-              {(supplier.debt || 0) > 0 ? (
+              {branchDebt > 0 ? (
                 <>
                   <FaExclamationTriangle className="text-rose-500" /> Deuda Pendiente
                 </>
-              ) : (supplier.debt || 0) < 0 ? (
+              ) : branchDebt < 0 ? (
                 <>
                   <FaCheckCircle className="text-emerald-500" /> Crédito a Favor
                 </>
@@ -153,19 +184,21 @@ export default async function SupplierDetailPage(props: {
               )}
             </p>
             <p className="text-3xl font-black mt-1.5 tracking-tight">
-              {formatCurrency(Math.abs(supplier.debt || 0))}
+              {formatCurrency(Math.abs(branchDebt))}
             </p>
+            <p className="text-[10px] font-bold mt-1">Sucursal: {branchName}</p>
           </div>
         </div>
       </div>
 
       <RegisterSupplierPayment
         supplierId={supplier.id}
-        currentDebt={supplier.debt || 0}
+        currentDebt={branchDebt}
+        branchName={branchName}
       />
 
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-xs">
-        <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-4">Historial de Cuenta</h2>
+        <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-4">Historial de {branchName}</h2>
         <div className="space-y-3">
           {history.length === 0 ? (
             <p className="text-center text-slate-400 py-10 font-medium text-sm">No hay movimientos registrados</p>
@@ -218,6 +251,7 @@ export default async function SupplierDetailPage(props: {
                           minute: "2-digit",
                         })}
                       </p>
+                      <span className="inline-flex mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">Sucursal: {"branch_name" in item ? item.branch_name : branchName}</span>
                       {noteText && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 italic mt-1 bg-slate-50 dark:bg-slate-800/60 px-2 py-1 rounded-md inline-block">
                           {noteText}
@@ -233,7 +267,7 @@ export default async function SupplierDetailPage(props: {
                     >
                       {isCompra ? "+" : "-"}{formatCurrency(item.amount)}
                     </p>
-                    {!isCompra && (
+                    {!isCompra && (item as any).branch_id != null && (
                       <DeleteSupplierPaymentButton
                         paymentId={item.id}
                         supplierId={supplier.id}
@@ -250,3 +284,4 @@ export default async function SupplierDetailPage(props: {
     </div>
   );
 }
+

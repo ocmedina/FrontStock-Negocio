@@ -18,6 +18,8 @@ export type PendingVoucher = {
   created_at: string;
   total_amount: number;
   amount_pending: number;
+  branch_id?: number | null;
+  branch_name?: string | null;
 };
 
 interface CustomerPendingVouchersProps {
@@ -219,6 +221,8 @@ export default function CustomerPendingVouchers({
                     </span>
                     <span>•</span>
                     <span>Total: {formatCurrency(item.total_amount)}</span>
+                    <span>•</span>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-300">Sucursal: {item.branch_name || "Sin asignar"}</span>
                   </div>
                 </div>
               </div>
@@ -249,3 +253,4 @@ export default function CustomerPendingVouchers({
     </div>
   );
 }
+

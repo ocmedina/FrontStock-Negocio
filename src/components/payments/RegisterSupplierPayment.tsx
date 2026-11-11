@@ -8,9 +8,11 @@ import { registerSupplierPayment } from "@/app/actions/supplierActions";
 export default function RegisterSupplierPayment({
   supplierId,
   currentDebt: _currentDebt,
+  branchName,
 }: {
   supplierId: string;
   currentDebt: number;
+  branchName: string;
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
@@ -52,7 +54,8 @@ export default function RegisterSupplierPayment({
 
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-xs">
-      <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-4">Registrar Pago a Proveedor</h2>
+      <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">Registrar Pago a Proveedor</h2>
+      <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold mb-4">Sucursal: {branchName}</p>
       <form
         onSubmit={handleRegisterPayment}
         className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
@@ -94,4 +97,5 @@ export default function RegisterSupplierPayment({
     </div>
   );
 }
+
 

@@ -27,6 +27,8 @@ interface Payment {
   customer_id: string;
   payment_method: string | null;
   comment: string | null;
+  branch_id?: number | null;
+  branch_name?: string | null;
 }
 
 interface PaymentHistoryListProps {
@@ -653,6 +655,9 @@ export default function PaymentHistoryList({ initialPayments }: PaymentHistoryLi
                         }
                       })()}
                     </p>
+                    <span className={`inline-flex mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${payment.branch_id == null ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"}`}>
+                      Sucursal: {payment.branch_name || "Sin asignar"}
+                    </span>
                     {payment.comment && (
                       <p className="text-xs text-slate-450 dark:text-slate-400 italic mt-0.5">
                         "{payment.comment}"
@@ -684,7 +689,7 @@ export default function PaymentHistoryList({ initialPayments }: PaymentHistoryLi
                     </p>
                   </div>
 
-                  {!isCancelled && !isCompra && (
+                  {!isCancelled && !isCompra && payment.branch_id != null && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleOpenEdit(payment)}
@@ -807,3 +812,4 @@ export default function PaymentHistoryList({ initialPayments }: PaymentHistoryLi
     </div>
   );
 }
+

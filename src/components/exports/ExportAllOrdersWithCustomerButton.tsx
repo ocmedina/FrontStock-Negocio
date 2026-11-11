@@ -4,13 +4,16 @@ import toast from "react-hot-toast";
 import { FaFileExcel } from "react-icons/fa";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useBranch } from "@/contexts/BranchContext";
 
 export default function ExportAllOrdersWithCustomerButton() {
+  const { activeBranch } = useBranch();
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
     setLoading(true);
     try {
+      if (!activeBranch) throw new Error("Seleccioná una sucursal para exportar");
       const XLSX = await import("xlsx");
       const { default: JSZip } = await import("jszip");
 
@@ -32,9 +35,10 @@ export default function ExportAllOrdersWithCustomerButton() {
 
       while (true) {
         const to = from + chunkSize - 1;
-        const { data: orders, error: ordersError } = await supabase
+        const { data: orders, error: ordersError } = await (supabase as any)
           .from("orders")
-          .select("id, created_at, customer_id, amount_pending, payment_method, status")
+          .select("id, created_at, customer_id, amount_pending, payment_method, status, branch_id")
+          .eq("branch_id", activeBranch.id)
           .order("created_at", { ascending: true })
           .range(from, to);
 
@@ -49,6 +53,7 @@ export default function ExportAllOrdersWithCustomerButton() {
           return {
             "ID Pedido": order.id,
             "Nombre del Cliente": nombreCliente,
+            Sucursal: activeBranch.name,
             Fecha: new Date(order.created_at).toLocaleString("es-AR"),
             "Monto Pendiente": Number(order.amount_pending ?? 0),
             "Método de Pago": order.payment_method || "No especificado",
@@ -60,6 +65,7 @@ export default function ExportAllOrdersWithCustomerButton() {
           header: [
             "ID Pedido",
             "Nombre del Cliente",
+            "Sucursal",
             "Fecha",
             "Monto Pendiente",
             "Método de Pago",
@@ -69,6 +75,7 @@ export default function ExportAllOrdersWithCustomerButton() {
         worksheet["!cols"] = [
           { wch: 18 },
           { wch: 30 },
+          { wch: 20 },
           { wch: 22 },
           { wch: 16 },
           { wch: 20 },
@@ -82,7 +89,7 @@ export default function ExportAllOrdersWithCustomerButton() {
           bookType: "xlsx",
         });
         zip.file(
-          `pedidos_con_clientes_${exportDate}_parte_${part}.xlsx`,
+          `pedidos_${activeBranch.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_con_clientes_${exportDate}_parte_${part}.xlsx`,
           buffer
         );
         filesAdded += 1;
@@ -101,7 +108,7 @@ export default function ExportAllOrdersWithCustomerButton() {
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `pedidos_con_clientes_${exportDate}.zip`;
+      link.download = `pedidos_${activeBranch.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_con_clientes_${exportDate}.zip`;
       link.click();
       URL.revokeObjectURL(url);
       toast.success("Pedidos exportados en ZIP");
@@ -123,3 +130,4 @@ export default function ExportAllOrdersWithCustomerButton() {
     </button>
   );
 }
+

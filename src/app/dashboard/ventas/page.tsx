@@ -303,7 +303,7 @@ export default function SalesHistoryPage() {
               Historial de Ventas
             </h1>
             <p className="text-xs text-slate-500 mt-1.5">
-              Gestiona y revisa todas las ventas realizadas
+              Sucursal: {activeBranch?.name || "Sin asignar"} · Gestiona y revisa sus ventas
             </p>
           </div>
         </div>
@@ -889,3 +889,4 @@ export default function SalesHistoryPage() {
     </div>
   );
 }
+

@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import ExportAllCustomersMovementsButton from "@/components/exports/ExportAllCustomersMovementsButton";
 import ExportAllOrdersWithCustomerButton from "@/components/exports/ExportAllOrdersWithCustomerButton";
+import { useBranch } from "@/contexts/BranchContext";
 import {
   FaUsers,
   FaPlus,
@@ -38,6 +39,7 @@ type CustomerRow = {
 const ITEMS_PER_PAGE = 12;
 
 function CustomersPageContent() {
+  const { activeBranch } = useBranch();
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter");
 
@@ -83,6 +85,11 @@ function CustomersPageContent() {
   useEffect(() => {
     const fetchCustomers = async () => {
       setLoading(true);
+      if (!activeBranch?.id) {
+        setCustomers([]);
+        setLoading(false);
+        return;
+      }
       try {
         const { data: customersData, error: customersError } = await supabase
           .from("customers")
@@ -95,6 +102,7 @@ function CustomersPageContent() {
         const { data: ordersDebtData } = await supabase
           .from("orders")
           .select("customer_id, amount_pending")
+          .eq("branch_id", activeBranch!.id)
           .gt("amount_pending", 0)
           .neq("status", "cancelado");
 
@@ -103,6 +111,7 @@ function CustomersPageContent() {
           const res = await (supabase as any)
             .from("sales")
             .select("customer_id, amount_pending, is_cancelled")
+            .eq("branch_id", activeBranch!.id)
             .gt("amount_pending", 0);
           if (!res.error && res.data) {
             salesDebtRows = (res.data as any[]).filter((s) => !s.is_cancelled);
@@ -110,6 +119,7 @@ function CustomersPageContent() {
             const fallback = await (supabase as any)
               .from("sales")
               .select("customer_id, amount_pending")
+              .eq("branch_id", activeBranch!.id)
               .gt("amount_pending", 0);
             if (!fallback.error && fallback.data) {
               salesDebtRows = fallback.data;
@@ -156,7 +166,7 @@ function CustomersPageContent() {
     };
 
     fetchCustomers();
-  }, [debtFilter]);
+  }, [debtFilter, activeBranch?.id]);
 
   // Search Filter
   const filteredCustomers = useMemo(() => {
@@ -297,8 +307,9 @@ function CustomersPageContent() {
               <FaUsers className="text-indigo-500 text-lg" /> Gestión de Clientes
             </h1>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-              Administra las cuentas corrientes, los datos de contacto y el tipo de facturación de tus clientes.
+              Ficha compartida de clientes; los saldos y movimientos se muestran por sucursal.
             </p>
+            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1">Sucursal activa: {activeBranch?.name || "Cargando..."}</p>
           </div>
 
           <div className="flex flex-col gap-2 w-full lg:w-auto">
@@ -611,3 +622,4 @@ export default function CustomersPage() {
     </Suspense>
   );
 }
+

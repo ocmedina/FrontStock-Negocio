@@ -1,6 +1,7 @@
 'use server';
 
 import { createLooseAdminClient } from '@/lib/admin';
+import { createClient } from '@/lib/server';
 import { revalidatePath } from 'next/cache';
 
 /** Extrae un mensaje legible de cualquier tipo de error (Error nativo, objeto Supabase, string, etc.) */
@@ -28,6 +29,13 @@ export async function registerSupplierPayment(
   }
 
   const supabase = createLooseAdminClient();
+  const sessionClient = await createClient();
+  const { data: authData } = await sessionClient.auth.getUser();
+  const { data: profile } = authData.user
+    ? await sessionClient.from('profiles').select('branch_id').eq('id', authData.user.id).maybeSingle()
+    : { data: null };
+  const branchId = Number((profile as any)?.branch_id || 0);
+  if (!branchId) return { success: false, error: 'El usuario no tiene una sucursal activa.' };
 
   // Timestamp en zona horaria Argentina
   const now = new Date();
@@ -43,6 +51,7 @@ export async function registerSupplierPayment(
       .from('supplier_payments')
       .insert({
         supplier_id: supplierId,
+        branch_id: branchId,
         amount: amount,
         notes: notes || 'Pago a cuenta',
         created_at: argentinaTime.toISOString(),
@@ -141,12 +150,19 @@ export async function deleteSupplierPayment(
   }
 
   const supabase = createLooseAdminClient();
+  const sessionClient = await createClient();
+  const { data: authData } = await sessionClient.auth.getUser();
+  const { data: profile } = authData.user
+    ? await sessionClient.from('profiles').select('branch_id').eq('id', authData.user.id).maybeSingle()
+    : { data: null };
+  const branchId = Number((profile as any)?.branch_id || 0);
+  if (!branchId) return { success: false, error: 'El usuario no tiene una sucursal activa.' };
 
   try {
     // 1. Obtener la información del pago para saber el monto
     const { data: paymentData, error: fetchError } = await supabase
       .from('supplier_payments')
-      .select('amount, supplier_id')
+      .select('amount, supplier_id, branch_id')
       .eq('id', paymentId)
       .single();
 
@@ -155,10 +171,13 @@ export async function deleteSupplierPayment(
       throw new Error('No se pudo encontrar el pago a eliminar.');
     }
 
-    const { amount, supplier_id: paymentSupplierId } = paymentData as { amount: number; supplier_id: string };
+    const { amount, supplier_id: paymentSupplierId, branch_id: paymentBranchId } = paymentData as { amount: number; supplier_id: string; branch_id: number | null };
 
     if (paymentSupplierId !== supplierId) {
       throw new Error('El pago no corresponde al proveedor especificado.');
+    }
+    if (paymentBranchId == null || Number(paymentBranchId) !== branchId) {
+      throw new Error('Este pago pertenece a otra sucursal o está sin asignar.');
     }
 
     // 2. Eliminar el pago de supplier_payments
@@ -228,3 +247,4 @@ export async function deleteSupplierPayment(
     return { success: false, error: message };
   }
 }
+

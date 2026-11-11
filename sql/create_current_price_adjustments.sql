@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.price_adjustment_items (
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   adjustment_amount NUMERIC(12,2) NOT NULL CHECK (adjustment_amount > 0),
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  branch_id BIGINT REFERENCES public.branches(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT price_adjustment_items_one_source CHECK (
     (order_item_id IS NOT NULL AND sale_item_id IS NULL AND order_id IS NOT NULL AND sale_id IS NULL)
@@ -21,6 +22,13 @@ CREATE TABLE IF NOT EXISTS public.price_adjustment_items (
     (sale_item_id IS NOT NULL AND order_item_id IS NULL AND sale_id IS NOT NULL AND order_id IS NULL)
   )
 );
+
+ALTER TABLE public.price_adjustment_items
+  ADD COLUMN IF NOT EXISTS branch_id BIGINT REFERENCES public.branches(id) ON DELETE SET NULL;
+UPDATE public.price_adjustment_items pai SET branch_id = o.branch_id
+FROM public.orders o WHERE pai.branch_id IS NULL AND pai.order_id = o.id;
+UPDATE public.price_adjustment_items pai SET branch_id = s.branch_id
+FROM public.sales s WHERE pai.branch_id IS NULL AND pai.sale_id = s.id;
 
 CREATE INDEX IF NOT EXISTS idx_price_adjustment_items_order_item
   ON public.price_adjustment_items(order_item_id, id DESC);
@@ -47,6 +55,7 @@ AS $$
 DECLARE
   v_actor_id UUID := auth.uid();
   v_actor_role TEXT;
+  v_active_branch_id BIGINT;
   v_order_id UUID;
   v_sale_id UUID;
   v_order RECORD;
@@ -68,12 +77,15 @@ BEGIN
     RAISE EXCEPTION 'Usuario no autenticado';
   END IF;
 
-  SELECT role INTO v_actor_role
+  SELECT role, branch_id INTO v_actor_role, v_active_branch_id
   FROM public.profiles
   WHERE id = v_actor_id;
 
   IF v_actor_role IS DISTINCT FROM 'administrador' THEN
     RAISE EXCEPTION 'Solo un administrador puede aplicar ajustes de precio';
+  END IF;
+  IF v_active_branch_id IS NULL THEN
+    RAISE EXCEPTION 'Selecciona una sucursal activa antes de aplicar ajustes';
   END IF;
 
   IF COALESCE(cardinality(p_order_ids), 0) + COALESCE(cardinality(p_sale_ids), 0) = 0 THEN
@@ -91,13 +103,14 @@ BEGIN
     FROM unnest(COALESCE(p_order_ids, '{}'::UUID[])) AS x
     ORDER BY x
   LOOP
-    SELECT id, customer_id, total_amount, amount_pending, status
+    SELECT id, customer_id, total_amount, amount_pending, status, branch_id
       INTO v_order
     FROM public.orders
     WHERE id = v_order_id
     FOR UPDATE;
 
     IF NOT FOUND OR v_order.customer_id IS NULL
+       OR v_order.branch_id IS DISTINCT FROM v_active_branch_id
        OR COALESCE(v_order.amount_pending, 0) <= 0
        OR v_order.status = 'cancelado' THEN
       CONTINUE;
@@ -137,10 +150,10 @@ BEGIN
 
       IF v_line_adjustment > 0 THEN
         INSERT INTO public.price_adjustment_items (
-          order_id, order_item_id, product_id, previous_unit_price,
+          order_id, order_item_id, product_id, branch_id, previous_unit_price,
           applied_unit_price, quantity, adjustment_amount, created_by
         ) VALUES (
-          v_order_id, v_item.id, v_item.product_id, v_previous_unit_price,
+          v_order_id, v_item.id, v_item.product_id, v_order.branch_id, v_previous_unit_price,
           v_current_unit_price, v_item.quantity, v_line_adjustment, v_actor_id
         );
         v_record_adjustment := v_record_adjustment + v_line_adjustment;
@@ -156,9 +169,9 @@ BEGIN
 
       v_short_id := LEFT(v_order_id::TEXT, 8);
       INSERT INTO public.payments (
-        customer_id, order_id, type, amount, payment_method, comment, created_at
+        customer_id, branch_id, order_id, type, amount, payment_method, comment, created_at
       ) VALUES (
-        v_order.customer_id, v_order_id, 'compra', v_record_adjustment,
+        v_order.customer_id, v_order.branch_id, v_order_id, 'compra', v_record_adjustment,
         'ajuste_precio',
         'Ajuste de precio a valores actuales - Pedido #' || v_short_id,
         now()
@@ -183,13 +196,14 @@ BEGIN
     FROM unnest(COALESCE(p_sale_ids, '{}'::UUID[])) AS x
     ORDER BY x
   LOOP
-    SELECT id, customer_id, total_amount, amount_pending, is_cancelled
+    SELECT id, customer_id, total_amount, amount_pending, is_cancelled, branch_id
       INTO v_sale
     FROM public.sales
     WHERE id = v_sale_id
     FOR UPDATE;
 
     IF NOT FOUND OR v_sale.customer_id IS NULL
+       OR v_sale.branch_id IS DISTINCT FROM v_active_branch_id
        OR COALESCE(v_sale.amount_pending, 0) <= 0
        OR COALESCE(v_sale.is_cancelled, false) THEN
       CONTINUE;
@@ -229,10 +243,10 @@ BEGIN
 
       IF v_line_adjustment > 0 THEN
         INSERT INTO public.price_adjustment_items (
-          sale_id, sale_item_id, product_id, previous_unit_price,
+          sale_id, sale_item_id, product_id, branch_id, previous_unit_price,
           applied_unit_price, quantity, adjustment_amount, created_by
         ) VALUES (
-          v_sale_id, v_item.id, v_item.product_id, v_previous_unit_price,
+          v_sale_id, v_item.id, v_item.product_id, v_sale.branch_id, v_previous_unit_price,
           v_current_unit_price, v_item.quantity, v_line_adjustment, v_actor_id
         );
         v_record_adjustment := v_record_adjustment + v_line_adjustment;
@@ -247,9 +261,9 @@ BEGIN
 
       v_short_id := LEFT(v_sale_id::TEXT, 8);
       INSERT INTO public.payments (
-        customer_id, sale_id, type, amount, payment_method, comment, created_at
+        customer_id, branch_id, sale_id, type, amount, payment_method, comment, created_at
       ) VALUES (
-        v_sale.customer_id, v_sale_id, 'compra', v_record_adjustment,
+        v_sale.customer_id, v_sale.branch_id, v_sale_id, 'compra', v_record_adjustment,
         'ajuste_precio',
         'Ajuste de precio a valores actuales - Venta #' || v_short_id,
         now()
@@ -280,3 +294,4 @@ $$;
 
 REVOKE ALL ON FUNCTION public.apply_current_price_adjustments(UUID[], UUID[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.apply_current_price_adjustments(UUID[], UUID[]) TO authenticated;
+

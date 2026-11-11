@@ -32,6 +32,8 @@ type PaymentHistoryEntry = {
   customer_id: string;
   payment_method: string | null;
   comment: string | null;
+  branch_id?: number | null;
+  branch_name?: string | null;
 };
 
 type PaymentHistoryRaw = PaymentHistoryEntry & {
@@ -39,9 +41,9 @@ type PaymentHistoryRaw = PaymentHistoryEntry & {
 };
 
 const PAYMENTS_SELECT_WITH_SALE_ID =
-  "id, amount, created_at, type, customer_id, payment_method, comment, sale_id";
+  "id, amount, created_at, type, customer_id, payment_method, comment, sale_id, branch_id";
 const PAYMENTS_SELECT_BASE =
-  "id, amount, created_at, type, customer_id, payment_method, comment";
+  "id, amount, created_at, type, customer_id, payment_method, comment, branch_id";
 
 function isMissingSaleIdColumnError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -50,7 +52,7 @@ function isMissingSaleIdColumnError(error: unknown): boolean {
   return message.includes("sale_id") || details.includes("sale_id");
 }
 
-async function fetchPaymentRows(client: any, customerId: string): Promise<{
+async function fetchPaymentRows(client: any, customerId: string, branchId: number | null): Promise<{
   rows: PaymentHistoryRaw[];
   error: unknown;
 }> {
@@ -58,6 +60,7 @@ async function fetchPaymentRows(client: any, customerId: string): Promise<{
     .from("payments")
     .select(PAYMENTS_SELECT_WITH_SALE_ID)
     .eq("customer_id", customerId)
+    .or(branchId ? `branch_id.eq.${branchId},branch_id.is.null` : "branch_id.is.null")
     .order("created_at", { ascending: false });
 
   if (!withSaleId.error) {
@@ -75,6 +78,7 @@ async function fetchPaymentRows(client: any, customerId: string): Promise<{
     .from("payments")
     .select(PAYMENTS_SELECT_BASE)
     .eq("customer_id", customerId)
+    .or(branchId ? `branch_id.eq.${branchId},branch_id.is.null` : "branch_id.is.null")
     .order("created_at", { ascending: false });
 
   if (withoutSaleId.error) {
@@ -98,6 +102,8 @@ type OrderHistoryRow = {
   total_amount?: number | null;
   amount_paid?: number | null;
   amount_pending?: number | null;
+  branch_id?: number | null;
+  branch_name?: string | null;
 };
 
 type SaleHistoryRow = {
@@ -108,6 +114,8 @@ type SaleHistoryRow = {
   amount_paid?: number | null;
   amount_pending?: number | null;
   is_cancelled?: boolean | null;
+  branch_id?: number | null;
+  branch_name?: string | null;
 };
 
 function buildSyntheticMovements(
@@ -162,6 +170,8 @@ function buildSyntheticMovements(
       customer_id: customerId,
       payment_method: order.payment_method,
       comment: `Pedido #${String(order.id || "").slice(0, 8)} - saldo pendiente`,
+      branch_id: order.branch_id ?? null,
+      branch_name: order.branch_name ?? null,
     });
   }
 
@@ -189,6 +199,8 @@ function buildSyntheticMovements(
       customer_id: customerId,
       payment_method: sale.payment_method,
       comment: `Venta #${String(sale.id || "").slice(0, 8)} - saldo pendiente`,
+      branch_id: sale.branch_id ?? null,
+      branch_name: sale.branch_name ?? null,
     });
   }
 
@@ -204,6 +216,16 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
   const normalizedId = decodeURIComponent(params.id).trim();
   const supabase = await createClient();
   const adminClient = createLooseAdminClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const { data: profileData } = authData.user
+    ? await supabase.from("profiles").select("branch_id").eq("id", authData.user.id).maybeSingle()
+    : { data: null };
+  const activeBranchId = Number((profileData as any)?.branch_id || 0) || null;
+  const { data: branchesData } = await (supabase as any).from("branches").select("id, name");
+  const branchNameById = new Map<number, string>(
+    ((branchesData || []) as Array<{ id: number; name: string }>).map((branch) => [Number(branch.id), branch.name])
+  );
+  const activeBranchName = activeBranchId ? branchNameById.get(activeBranchId) || "Sucursal activa" : "Sin sucursal asignada";
 
   // Fetch Customer Row
   const { data: customerData } = await supabase
@@ -247,23 +269,29 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
   }
 
   // Fetch payments
-  const primaryPayments = await fetchPaymentRows(supabase, normalizedId);
+  const primaryPayments = await fetchPaymentRows(supabase, normalizedId, activeBranchId);
   let basePayments: PaymentHistoryRaw[] = primaryPayments.rows;
 
   if (primaryPayments.error || basePayments.length === 0) {
-    const adminPayments = await fetchPaymentRows(adminClient, normalizedId);
+    const adminPayments = await fetchPaymentRows(adminClient, normalizedId, activeBranchId);
     if (adminPayments.rows.length > 0 || primaryPayments.error) {
       basePayments = adminPayments.rows;
     }
   }
 
-  // Fetch orders
+  basePayments = basePayments.map((payment) => ({
+    ...payment,
+    branch_name: payment.branch_id ? branchNameById.get(Number(payment.branch_id)) || null : null,
+  }));
+
+  // Fetch orders for the active branch only.
   const ordersHistory = await (async () => {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
+        .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending, branch_id")
         .eq("customer_id", normalizedId)
+        .eq("branch_id", activeBranchId)
         .neq("status", "cancelado")
         .order("created_at", { ascending: false });
       if (!error && data) return data as unknown as OrderHistoryRow[];
@@ -271,8 +299,9 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
     try {
       const { data } = await adminClient
         .from("orders")
-        .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending")
+        .select("id, created_at, payment_method, status, total_amount, amount_paid, amount_pending, branch_id")
         .eq("customer_id", normalizedId)
+        .eq("branch_id", activeBranchId)
         .neq("status", "cancelado")
         .order("created_at", { ascending: false });
       if (data) return data as unknown as OrderHistoryRow[];
@@ -286,8 +315,9 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
       try {
         const { data, error } = await client
           .from("sales")
-          .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending, is_cancelled")
+          .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending, is_cancelled, branch_id")
           .eq("customer_id", normalizedId)
+          .eq("branch_id", activeBranchId)
           .order("created_at", { ascending: false });
         if (!error && data) {
           return (data as any[]).filter((s) => !s.is_cancelled) as SaleHistoryRow[];
@@ -296,8 +326,9 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
       try {
         const { data, error } = await client
           .from("sales")
-          .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending")
+          .select("id, created_at, payment_method, total_amount, amount_paid, amount_pending, branch_id")
           .eq("customer_id", normalizedId)
+          .eq("branch_id", activeBranchId)
           .order("created_at", { ascending: false });
         if (!error && data) {
           return data as SaleHistoryRow[];
@@ -317,11 +348,20 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
 
   const customerReference = (customer as any).reference as string | null;
 
-  const ordersData = (ordersHistory || []).filter(
+  const ordersHistoryWithBranch = ordersHistory.map((order) => ({
+    ...order,
+    branch_name: order.branch_id ? branchNameById.get(Number(order.branch_id)) || null : null,
+  }));
+  const salesHistoryWithBranch = salesHistory.map((sale) => ({
+    ...sale,
+    branch_name: sale.branch_id ? branchNameById.get(Number(sale.branch_id)) || null : null,
+  }));
+
+  const ordersData = (ordersHistoryWithBranch || []).filter(
     (order) => Number(order.amount_pending || 0) > 0
   );
 
-  const salesData = (salesHistory || []).filter(
+  const salesData = (salesHistoryWithBranch || []).filter(
     (sale) =>
       Number(sale.amount_pending || 0) > 0 &&
       !sale.is_cancelled
@@ -342,8 +382,8 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
   const syntheticMovements = buildSyntheticMovements(
     customer.id,
     basePayments,
-    ordersHistory || [],
-    salesHistory || []
+    ordersHistoryWithBranch || [],
+    salesHistoryWithBranch || []
   );
 
   const historyMovements: PaymentHistoryEntry[] = [
@@ -360,6 +400,8 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
       created_at: order.created_at,
       total_amount: Number(order.total_amount || 0),
       amount_pending: Number(order.amount_pending || 0),
+      branch_id: order.branch_id ?? null,
+      branch_name: order.branch_name ?? null,
     })),
     ...(salesData || []).map((sale) => ({
       id: String(sale.id),
@@ -367,6 +409,8 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
       created_at: sale.created_at,
       total_amount: Number(sale.total_amount || 0),
       amount_pending: Number(sale.amount_pending || 0),
+      branch_id: sale.branch_id ?? null,
+      branch_name: sale.branch_name ?? null,
     })),
   ];
 
@@ -437,6 +481,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
           {/* DEUDA ACUMULADA */}
           <div className="bg-slate-50/60 dark:bg-slate-950/20 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-center min-w-[220px] w-full md:w-auto">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Saldo en Cuenta Corriente (Fiado)</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300 mt-1">Sucursal: {branchNameById.get(activeBranchId || 0) || "Sin asignar"}</span>
             <span
               className={`text-2xl font-black mt-1 block ${
                 currentDebt > 0 ? "text-rose-600" : "text-emerald-600"
@@ -445,7 +490,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
               {formatCurrency(currentDebt)}
             </span>
             <span className="text-3xs text-slate-450 dark:text-slate-500 block mt-1">
-              {currentDebt > 0 ? "Deuda consolidada (pedidos y mostrador)" : "Cuenta corriente al día"}
+              {currentDebt > 0 ? "Saldo de esta sucursal (pedidos y mostrador)" : "Cuenta corriente al día en esta sucursal"}
             </span>
           </div>
         </div>
@@ -456,7 +501,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
               <FaMoneyBillWave className="text-emerald-500" /> Registrar Pago en Cuenta Corriente
             </h2>
-            <RegisterPayment customerId={customer.id} currentDebt={currentDebt} />
+            <RegisterPayment customerId={customer.id} currentDebt={currentDebt} branchId={activeBranchId || 0} branchName={branchNameById.get(activeBranchId || 0) || "Sin asignar"} />
           </div>
         )}
 
@@ -473,6 +518,7 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
             </h2>
             <ExportCustomerMovementsButton
               customerName={customer.full_name}
+              branchName={activeBranchName}
               payments={historyMovements}
             />
           </div>
@@ -483,3 +529,4 @@ export default async function CustomerDetailPage(props: CustomerDetailPageProps)
     </div>
   );
 }
+
