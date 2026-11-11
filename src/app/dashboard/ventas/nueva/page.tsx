@@ -614,7 +614,16 @@ export default function NewSalePage() {
           .maybeSingle();
 
         if (exactMatch) {
-          handleAddProduct(exactMatch);
+          const { data: branchStock } = await (supabase as any)
+            .from("branch_stock")
+            .select("stock")
+            .eq("branch_id", activeBranch?.id)
+            .eq("product_id", exactMatch.id)
+            .maybeSingle();
+          handleAddProduct({
+            ...exactMatch,
+            stock: Number(branchStock?.stock) || 0,
+          });
           toast.success(`✓ ${exactMatch.name} escaneado`, { id: `scan-${cleanCode}` });
           return;
         }
@@ -627,11 +636,34 @@ export default function NewSalePage() {
           .eq("is_active", true)
           .limit(2);
 
-        if (similar && similar.length === 1) {
-          handleAddProduct(similar[0]);
-          toast.success(`✓ ${similar[0].name} escaneado`, { id: `scan-${cleanCode}` });
+        const similarProducts = similar || [];
+        const { data: branchStocks } = similarProducts.length > 0
+          ? await (supabase as any)
+              .from("branch_stock")
+              .select("product_id, stock")
+              .eq("branch_id", activeBranch?.id)
+              .in("product_id", similarProducts.map((product: any) => product.id))
+          : { data: [] };
+        const branchStockByProduct = new Map<string, number>(
+          (branchStocks || []).map((item: any) => [
+            item.product_id,
+            Number(item.stock) || 0,
+          ] as [string, number])
+        );
+        const availableProducts = similarProducts
+          .map((product: any) => ({
+            ...product,
+            stock: branchStockByProduct.get(product.id) || 0,
+          }))
+          .filter((product: any) => product.stock > 0);
+
+        if (availableProducts.length === 1) {
+          handleAddProduct(availableProducts[0]);
+          toast.success(`✓ ${availableProducts[0].name} escaneado`, { id: `scan-${cleanCode}` });
+        } else if (availableProducts.length > 1) {
+          toast.error(`Hay varios productos con "${cleanCode}"; búscalo en la lista`, { id: `scan-err-${cleanCode}` });
         } else {
-          toast.error(`Código de barras "${cleanCode}" no encontrado`, { id: `scan-err-${cleanCode}` });
+          toast.error(`Código de barras "${cleanCode}" no encontrado en esta sucursal`, { id: `scan-err-${cleanCode}` });
         }
       } catch (err) {
         console.error("[BarcodeScanner] Error buscando producto:", err);
