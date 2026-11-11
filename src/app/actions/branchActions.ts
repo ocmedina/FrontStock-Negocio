@@ -1,7 +1,7 @@
 'use server';
 
 import { createLooseAdminClient } from '@/lib/admin';
-import { requireAdmin } from '@/lib/serverAuth';
+import { requireAdmin, requireAuth } from '@/lib/serverAuth';
 
 export type BranchRecord = {
   id: number;
@@ -21,6 +21,74 @@ export type BranchRecord = {
   point_of_sale: number | null;
   logo_url: string | null;
 };
+
+export async function getCurrentBranchAccess(): Promise<{
+  success: boolean;
+  profileBranchId?: number | null;
+  assignedBranchIds?: number[];
+  isAdmin?: boolean;
+  error?: string;
+}> {
+  try {
+    const ctx = await requireAuth();
+    const supabase = createLooseAdminClient();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles').select('branch_id').eq('id', ctx.user.id).single();
+    if (profileError) throw profileError;
+
+    let assignedBranchIds: number[] = [];
+    if (ctx.profile.role !== 'administrador') {
+      const { data, error } = await (supabase as any).from('profile_branch_assignments')
+        .select('branch_id').eq('profile_id', ctx.user.id);
+      if (error) {
+        // Keep existing single-branch installations usable until the multi-branch migration is applied.
+        assignedBranchIds = profile?.branch_id ? [Number(profile.branch_id)] : [];
+      } else {
+        assignedBranchIds = (data || []).map((row: any) => Number(row.branch_id));
+      }
+    }
+
+    return {
+      success: true,
+      profileBranchId: profile?.branch_id ? Number(profile.branch_id) : null,
+      assignedBranchIds,
+      isAdmin: ctx.profile.role === 'administrador',
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : JSON.stringify(error);
+    return { success: false, error: message };
+  }
+}
+
+export async function setCurrentActiveBranch(branchId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const ctx = await requireAuth();
+    if (!Number.isInteger(branchId) || branchId <= 0) return { success: false, error: 'Sucursal inválida.' };
+    const supabase = createLooseAdminClient();
+    const { data: branch, error: branchError } = await (supabase as any).from('branches')
+      .select('id, is_active').eq('id', branchId).maybeSingle();
+    if (branchError) throw branchError;
+    if (!branch?.is_active) return { success: false, error: 'La sucursal no está activa.' };
+
+    if (ctx.profile.role !== 'administrador') {
+      const { data, error } = await (supabase as any).from('profile_branch_assignments')
+        .select('branch_id').eq('profile_id', ctx.user.id);
+      if (error) {
+        const { data: profile } = await supabase.from('profiles').select('branch_id').eq('id', ctx.user.id).single();
+        if (Number(profile?.branch_id) !== branchId) return { success: false, error: 'No tenés asignada esta sucursal.' };
+      } else if (data?.length && !data.some((row: any) => Number(row.branch_id) === branchId)) {
+        return { success: false, error: 'No tenés asignada esta sucursal.' };
+      }
+    }
+
+    const { error } = await supabase.from('profiles').update({ branch_id: branchId } as any).eq('id', ctx.user.id);
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : JSON.stringify(error);
+    return { success: false, error: message };
+  }
+}
 
 export async function listBranchesForSettings(): Promise<{
   success: boolean;
@@ -219,3 +287,4 @@ function businessFields(input: {
     logo_url: input.logo_url?.trim() || null,
   };
 }
+
