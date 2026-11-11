@@ -4,13 +4,16 @@ import toast from "react-hot-toast";
 import { FaFileExcel } from "react-icons/fa";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useBranch } from "@/contexts/BranchContext";
 
 export default function ExportAllCustomersMovementsButton() {
+  const { activeBranch } = useBranch();
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
     setLoading(true);
     try {
+      if (!activeBranch) throw new Error("Seleccioná una sucursal para exportar");
       const XLSX = await import("xlsx");
       const { default: JSZip } = await import("jszip");
 
@@ -32,9 +35,10 @@ export default function ExportAllCustomersMovementsButton() {
 
       while (true) {
         const to = from + chunkSize - 1;
-        const { data: payments, error: paymentsError } = await supabase
+        const { data: payments, error: paymentsError } = await (supabase as any)
           .from("payments")
-          .select("id, amount, created_at, type, payment_method, comment, customer_id")
+          .select("id, amount, created_at, type, payment_method, comment, customer_id, branch_id")
+          .eq("branch_id", activeBranch.id)
           .order("created_at", { ascending: true })
           .range(from, to);
 
@@ -55,6 +59,7 @@ export default function ExportAllCustomersMovementsButton() {
           return {
             "DNI o CUIT (Opcional si hay nombre)": "",
             "Nombre del Cliente": nombreCliente,
+            Sucursal: activeBranch.name,
             Fecha: new Date(movement.created_at).toLocaleString("es-AR"),
             "Tipo de Movimiento": `${movementType}${stateText}`,
             Monto: Number(Math.abs(movement.amount).toFixed(2)),
@@ -66,6 +71,7 @@ export default function ExportAllCustomersMovementsButton() {
           header: [
             "DNI o CUIT (Opcional si hay nombre)",
             "Nombre del Cliente",
+            "Sucursal",
             "Fecha",
             "Tipo de Movimiento",
             "Monto",
@@ -75,6 +81,7 @@ export default function ExportAllCustomersMovementsButton() {
         worksheet["!cols"] = [
           { wch: 34 },
           { wch: 30 },
+          { wch: 20 },
           { wch: 22 },
           { wch: 22 },
           { wch: 12 },
@@ -88,7 +95,7 @@ export default function ExportAllCustomersMovementsButton() {
           bookType: "xlsx",
         });
         zip.file(
-          `historial_todos_los_clientes_${exportDate}_parte_${part}.xlsx`,
+          `historial_clientes_${activeBranch.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${exportDate}_parte_${part}.xlsx`,
           buffer
         );
         filesAdded += 1;
@@ -107,7 +114,7 @@ export default function ExportAllCustomersMovementsButton() {
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `historial_todos_los_clientes_${exportDate}.zip`;
+      link.download = `historial_clientes_${activeBranch.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${exportDate}.zip`;
       link.click();
       URL.revokeObjectURL(url);
       toast.success("Historial exportado en ZIP");
@@ -129,3 +136,4 @@ export default function ExportAllCustomersMovementsButton() {
     </button>
   );
 }
+
