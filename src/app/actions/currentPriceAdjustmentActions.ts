@@ -160,7 +160,7 @@ export async function applyCurrentPriceAdjustments(
     }
 
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc('apply_current_price_adjustments', {
+    const { data, error } = await (supabase as any).rpc('apply_current_price_adjustments', {
       p_order_ids: uniqueOrderIds,
       p_sale_ids: uniqueSaleIds,
     });
