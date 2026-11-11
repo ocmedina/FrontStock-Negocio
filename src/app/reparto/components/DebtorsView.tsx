@@ -14,6 +14,7 @@ import {
   FaExclamationCircle,
 } from "react-icons/fa";
 import RegisterPayment from "@/components/payments/RegisterPayment";
+import { useBranch } from "@/contexts/BranchContext";
 
 type DebtDetail = {
   id: string;
@@ -32,6 +33,7 @@ type DebtDetail = {
 };
 
 export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId: string) => void }) {
+  const { activeBranch } = useBranch();
   const [deudores, setDeudores] = useState<DebtDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,14 +44,15 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchDeudores();
-  }, []);
+    if (activeBranch?.id) void fetchDeudores();
+  }, [activeBranch?.id]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
   const fetchDeudores = async () => {
+    if (!activeBranch?.id) return;
     setLoading(true);
 
     const { data: customersData, error: customersError } = await supabase
@@ -69,6 +72,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
           .from("orders")
           .select("id, created_at, total_amount, amount_pending, order_items(id, quantity, price, products(name))")
           .eq("customer_id", customer.id)
+          .eq("branch_id", activeBranch.id)
           .gt("amount_pending", 0)
           .neq("status", "cancelado")
           .order('created_at', { ascending: false });
@@ -85,6 +89,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
             .from("sales")
             .select("id, created_at, total_amount, amount_pending, is_cancelled")
             .eq("customer_id", customer.id)
+            .eq("branch_id", activeBranch.id)
             .gt("amount_pending", 0)
             .order('created_at', { ascending: false });
           if (!sErr && sData) {
@@ -94,6 +99,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
               .from("sales")
               .select("id, created_at, total_amount, amount_pending")
               .eq("customer_id", customer.id)
+              .eq("branch_id", activeBranch.id)
               .gt("amount_pending", 0)
               .order('created_at', { ascending: false });
             salesList = fbData || [];
@@ -112,6 +118,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
           .from("payments")
           .select("*")
           .eq("customer_id", customer.id)
+          .or(`branch_id.eq.${activeBranch.id},branch_id.is.null`)
           .eq("type", "pago")
           .order("created_at", { ascending: false })
           .limit(20);
@@ -242,7 +249,7 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
           {/* Indicador de Deuda Global */}
           <div className="bg-gradient-to-br from-rose-500 to-red-650 p-5 rounded-2xl text-white shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] uppercase font-black tracking-wider opacity-85">Deuda Global Clientes</p>
+            <p className="text-[10px] uppercase font-black tracking-wider opacity-85">Deuda en {activeBranch?.name || "esta sucursal"}</p>
               <p className="text-2xl font-black mt-0.5">
                 ${deudores.reduce((sum, d) => sum + d.totalDebt, 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </p>
@@ -329,10 +336,10 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
                                   ${payment.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">
-                                  {new Date(payment.created_at).toLocaleDateString("es-AR")} - {isCancelled ? 'ANULADO' : payment.payment_method}
+                                  {new Date(payment.created_at).toLocaleDateString("es-AR")} - {isCancelled ? 'ANULADO' : payment.payment_method} - Sucursal: {payment.branch_id == null ? "Sin asignar" : activeBranch?.name}
                                 </p>
                               </div>
-                              {!isCancelled && (
+                              {!isCancelled && payment.branch_id != null && (
                                 <button
                                   onClick={(e) => handleCancelPayment(e, payment)}
                                   disabled={cancellingPaymentId === payment.id}
@@ -507,6 +514,8 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
               <RegisterPayment
                 customerId={selectedCustomer.id}
                 currentDebt={selectedCustomer.totalDebt}
+                branchId={activeBranch?.id || 0}
+                branchName={activeBranch?.name || "Sin asignar"}
                 onSuccess={handleClosePayment}
               />
             </div>
@@ -516,3 +525,4 @@ export default function DebtorsView({ onPrintRemito }: { onPrintRemito: (orderId
     </div>
   );
 }
+
