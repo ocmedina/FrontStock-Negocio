@@ -14,11 +14,13 @@ type PaymentMovement = {
 
 interface ExportCustomerMovementsButtonProps {
   customerName: string;
+  branchName: string;
   payments: PaymentMovement[];
 }
 
 export default function ExportCustomerMovementsButton({
   customerName,
+  branchName,
   payments,
 }: ExportCustomerMovementsButtonProps) {
   const handleExport = async () => {
@@ -40,6 +42,7 @@ export default function ExportCustomerMovementsButton({
       return {
         "DNI o CUIT (Opcional si hay nombre)": "",
         "Nombre del Cliente": customerName || "",
+        Sucursal: branchName || "Sin asignar",
         Fecha: new Date(movement.created_at).toLocaleString("es-AR"),
         "Tipo de Movimiento": `${movementType}${stateText}`,
         Monto: Number(Math.abs(movement.amount).toFixed(2)),
@@ -51,6 +54,7 @@ export default function ExportCustomerMovementsButton({
       header: [
         "DNI o CUIT (Opcional si hay nombre)",
         "Nombre del Cliente",
+        "Sucursal",
         "Fecha",
         "Tipo de Movimiento",
         "Monto",
@@ -61,6 +65,7 @@ export default function ExportCustomerMovementsButton({
     worksheet["!cols"] = [
       { wch: 34 },
       { wch: 30 },
+      { wch: 20 },
       { wch: 22 },
       { wch: 22 },
       { wch: 12 },
@@ -76,7 +81,11 @@ export default function ExportCustomerMovementsButton({
       .replace(/\s+/g, "_")
       .replace(/[^a-z0-9_]/g, "");
 
-    XLSX.writeFile(workbook, `historial_movimientos_${safeName}_${exportDate}.xlsx`);
+    const safeBranch = (branchName || "sucursal")
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
+    XLSX.writeFile(workbook, `historial_movimientos_${safeName}_${safeBranch}_${exportDate}.xlsx`);
     toast.success("Historial exportado correctamente");
   };
 
@@ -89,3 +98,4 @@ export default function ExportCustomerMovementsButton({
     </button>
   );
 }
+
