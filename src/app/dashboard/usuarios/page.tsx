@@ -735,6 +735,16 @@ function UsersPageContent() {
                     )}
                   </div>
 
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Sucursales habilitadas</p>
+                    <BranchAssignmentControl
+                      user={u}
+                      branches={branches}
+                      disabled={!can('EDITAR_USUARIOS') || u.role === 'administrador'}
+                      onSave={(branchIds) => handleBranchChange(u, branchIds)}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
                     {can('GESTIONAR_PERMISOS') && (
                       <button
