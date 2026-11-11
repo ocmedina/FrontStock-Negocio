@@ -10,6 +10,7 @@
 - `setup_complete.sql`: base integral para entorno nuevo
 - `bootstrap_new_database.sql`: bootstrap completo de tablas, funciones y politicas
 - `create_finalize_sale_transaction.sql`: transaccion atomica de cierre de venta
+- `create_current_price_adjustments.sql`: ajustes seleccionados de precios actuales para saldos de cuenta corriente (ejecutar una vez)
 - `create_register_customer_payment_transaction.sql`: registro atomico de pago de cliente
 - `create_cancel_customer_payment_transaction.sql`: anulacion atomica de pago de cliente
 - `create_branches_and_branch_stock.sql`: sucursales, stock por sucursal y transferencias

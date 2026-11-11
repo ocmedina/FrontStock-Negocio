@@ -22,6 +22,7 @@ import {
   FaPlus,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
+import CurrentPriceAdjustmentPanel from "@/components/payments/CurrentPriceAdjustmentPanel";
 
 export interface UnifiedPendingVoucher {
   id: string;
@@ -410,6 +411,7 @@ export default function UnifiedPendingVouchersList({
               {vouchers.length} comprobantes en {uniqueDebtorsCount} clientes
             </span>
           </div>
+          <CurrentPriceAdjustmentPanel onApplied={fetchPendingVouchers} />
         </div>
       </div>
 
