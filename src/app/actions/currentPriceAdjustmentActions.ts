@@ -177,3 +177,12 @@ export async function applyCurrentPriceAdjustments(
     return { success: false, error: message };
   }
 }
+
+export async function canApplyCurrentPriceAdjustments(): Promise<boolean> {
+  try {
+    await requireAdmin();
+    return true;
+  } catch {
+    return false;
+  }
+}
