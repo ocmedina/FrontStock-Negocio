@@ -711,7 +711,7 @@ export default function OrdersPage() {
               Reparto y Pedidos
             </h1>
             <p className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-              Gestión operativa, despacho de mercadería, rutas y emisión de remitos comerciales.
+              Sucursal: {activeBranch?.name || "Sin asignar"}. Gestión operativa, despacho, rutas y remitos.
             </p>
           </div>
         </div>
@@ -1222,3 +1222,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+
