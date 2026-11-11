@@ -31,6 +31,10 @@ CREATE INDEX IF NOT EXISTS idx_price_adjustment_items_customer_history
 
 ALTER TABLE public.price_adjustment_items ENABLE ROW LEVEL SECURITY;
 
+-- Vincula el débito de ajuste al pedido, también en bases creadas desde el bootstrap.
+ALTER TABLE public.payments
+  ADD COLUMN IF NOT EXISTS order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL;
+
 CREATE OR REPLACE FUNCTION public.apply_current_price_adjustments(
   p_order_ids UUID[] DEFAULT '{}'::UUID[],
   p_sale_ids UUID[] DEFAULT '{}'::UUID[]
@@ -66,7 +70,7 @@ BEGIN
 
   SELECT role INTO v_actor_role
   FROM public.profiles
-  WHERE id = v_actor_id AND COALESCE(is_active, true) = true;
+  WHERE id = v_actor_id;
 
   IF v_actor_role IS DISTINCT FROM 'administrador' THEN
     RAISE EXCEPTION 'Solo un administrador puede aplicar ajustes de precio';
