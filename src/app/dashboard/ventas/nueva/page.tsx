@@ -35,6 +35,7 @@ import { useGlobalBarcodeScanner } from "@/hooks/useGlobalBarcodeScanner";
 import { getTerminalPrinterSettings } from "@/lib/printerSettings";
 import ReferralBadge from "@/components/ReferralBadge";
 import { linkReferral, markReferralDiscountUsed } from "@/app/actions/referralActions";
+import { getCustomerProductPrice, isWholesaleCustomer } from "./pricing";
 
 function findDefaultCustomer(customers: Customer[]) {
   return (
@@ -118,9 +119,7 @@ export default function NewSalePage() {
       const price =
         item.customPrice !== undefined
           ? item.customPrice
-          : (selectedCustomer?.customer_type === "mayorista"
-              ? item.price_mayorista
-              : item.price_minorista) || 0;
+          : getCustomerProductPrice(item, selectedCustomer?.customer_type);
       return {
         price,
         quantity: item.quantity,
@@ -148,8 +147,13 @@ export default function NewSalePage() {
   };
 
   const setSelectedCustomer = (customer: Customer | null) => {
+    const customerChanged = activeTab.selectedCustomer?.id !== customer?.id;
     updateActiveTab({
       selectedCustomer: customer,
+      // Evita que precios manuales de otro cliente tapen la tarifa del nuevo.
+      ...(customerChanged
+        ? { cart: activeTab.cart.map(({ customPrice: _customPrice, ...item }) => item) }
+        : {}),
       referralDiscount: null,
       applyReferralDiscount: true,
     });
@@ -440,7 +444,7 @@ export default function NewSalePage() {
             }
 
             if (priceListData.items && priceListData.items.length > 0) {
-              const isMayorista = targetCustomer?.customer_type === "mayorista";
+              const isMayorista = isWholesaleCustomer(targetCustomer?.customer_type);
               const cartItems: CartItem[] = priceListData.items
                 .filter((item: any) => item.product !== null)
                 .map((item: any) => {
@@ -500,9 +504,7 @@ export default function NewSalePage() {
       const price =
         item.customPrice !== undefined
           ? item.customPrice
-          : (selectedCustomer?.customer_type === "mayorista"
-              ? item.price_mayorista
-              : item.price_minorista) || 0;
+          : getCustomerProductPrice(item, selectedCustomer?.customer_type);
       return sum + (price * item.quantity);
     }, 0);
 
@@ -829,9 +831,7 @@ export default function NewSalePage() {
         const itemPrice =
           item.customPrice !== undefined
             ? item.customPrice
-            : (selectedCustomer?.customer_type === "mayorista"
-                ? item.price_mayorista
-                : item.price_minorista) || 0;
+            : getCustomerProductPrice(item, selectedCustomer?.customer_type);
                
         const qty = item.quantity;
         const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -1169,6 +1169,7 @@ export default function NewSalePage() {
                 <ProductSearch
                   onProductSelect={handleAddProduct}
                   isEditingTab={editingTabId !== null}
+                  customerType={selectedCustomer?.customer_type}
                 />
               </div>
             </div>
@@ -1176,6 +1177,7 @@ export default function NewSalePage() {
             {/* Lista del Carrito */}
             <CartList
               cart={cart}
+              customerType={selectedCustomer?.customer_type}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveFromCart={handleRemoveFromCart}
               onUpdateCustomPrice={handleUpdateCustomPrice}
@@ -1422,6 +1424,7 @@ export default function NewSalePage() {
         isOpen={showProductSearchModal}
         onClose={() => setShowProductSearchModal(false)}
         onSelectProduct={handleAddProduct}
+        customerType={selectedCustomer?.customer_type}
       />
 
       {/* Modal de Ticket de Venta Rápido */}

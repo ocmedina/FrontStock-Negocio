@@ -6,15 +6,18 @@ import { Product } from "../types";
 import toast from "react-hot-toast";
 import { FaSearch, FaBarcode } from "react-icons/fa";
 import { useBranch } from "@/contexts/BranchContext";
+import { getCustomerProductPrice, isWholesaleCustomer } from "../pricing";
 
 interface ProductSearchProps {
   onProductSelect: (product: Product) => void;
   isEditingTab: boolean;
+  customerType?: string | null;
 }
 
 export default function ProductSearch({
   onProductSelect,
   isEditingTab,
+  customerType,
 }: ProductSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
@@ -22,6 +25,7 @@ export default function ProductSearch({
   const [barcodeBuffer, setBarcodeBuffer] = useState("");
   const [lastKeyTime, setLastKeyTime] = useState(0);
   const { activeBranch } = useBranch();
+  const isWholesale = isWholesaleCustomer(customerType);
 
   // Detectar entrada de lector de código de barras
   useEffect(() => {
@@ -252,7 +256,7 @@ export default function ProductSearch({
                     Stock: {product.stock || 0}
                   </div>
                   <div className="text-xs text-gray-400">
-                    ${(product.price_minorista || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {isWholesale ? "Mayorista · " : "Minorista · "}${getCustomerProductPrice(product, customerType).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
