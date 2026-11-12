@@ -28,6 +28,26 @@ import {
   FaChartBar,
 } from "react-icons/fa";
 
+const SUPPLIER_BALANCE_PAGE_SIZE = 500;
+
+async function fetchAllPages(buildQuery: (from: number, to: number) => any) {
+  const rows: any[] = [];
+
+  for (let from = 0; ; from += SUPPLIER_BALANCE_PAGE_SIZE) {
+    const { data, error } = await buildQuery(
+      from,
+      from + SUPPLIER_BALANCE_PAGE_SIZE - 1
+    );
+    if (error) return { data: null, error };
+
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < SUPPLIER_BALANCE_PAGE_SIZE) {
+      return { data: rows, error: null };
+    }
+  }
+}
+
 export default function SuppliersPage() {
   const { activeBranch } = useBranch();
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -42,8 +62,22 @@ export default function SuppliersPage() {
     setLoading(true);
     const [{ data, error }, { data: purchases, error: purchasesError }, { data: payments, error: paymentsError }] = await Promise.all([
       supabase.from("suppliers").select("*").eq("is_active", true).order("name", { ascending: true }),
-      (supabase as any).from("purchases").select("supplier_id, total_amount, amount_paid").eq("branch_id", activeBranch.id),
-      (supabase as any).from("supplier_payments").select("supplier_id, amount").eq("branch_id", activeBranch.id),
+      fetchAllPages((from, to) =>
+        (supabase as any)
+          .from("purchases")
+          .select("supplier_id, total_amount, amount_paid")
+          .eq("branch_id", activeBranch.id)
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllPages((from, to) =>
+        (supabase as any)
+          .from("supplier_payments")
+          .select("supplier_id, amount")
+          .eq("branch_id", activeBranch.id)
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     ]);
 
     if (error || purchasesError || paymentsError) {
