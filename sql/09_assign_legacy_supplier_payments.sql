@@ -1,6 +1,5 @@
 -- Los pagos de proveedores previos a la separación de sucursales pertenecen
--- a Sucursal Wenceslao Núñez. Asignarlos corrige el saldo por sucursal, que resta los
--- pagos únicamente cuando tienen branch_id.
+-- a Sucursal Wenceslao Núñez (ID 1, verificado en public.branches).
 -- Idempotente: solo modifica pagos que todavía están sin sucursal.
 
 BEGIN;
@@ -13,12 +12,12 @@ BEGIN
   SELECT id
     INTO v_branch_id
   FROM public.branches
-  WHERE lower(trim(name)) = lower(trim('Sucursal Wenceslao Núñez'))
-  ORDER BY id
+  WHERE id = 1
+    AND lower(name) LIKE '%wenceslao%'
   LIMIT 1;
 
   IF v_branch_id IS NULL THEN
-    RAISE EXCEPTION 'No se encontró la sucursal Sucursal Wenceslao Núñez. No se modificó ningún pago.';
+    RAISE EXCEPTION 'La sucursal ID 1 no existe o no corresponde a Wenceslao. No se modificó ningún pago.';
   END IF;
 
   UPDATE public.supplier_payments
