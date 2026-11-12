@@ -33,12 +33,15 @@ import {
 import { getUTCInterval } from "@/lib/date-utils";
 import SaleTicketModal from "./components/SaleTicketModal";
 import { getActiveRegisters, CashRegister } from "@/app/actions/registerActions";
+import { cancelSale } from "@/app/actions/salesActions";
 import { useBranch } from "@/contexts/BranchContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const ITEMS_PER_PAGE = 10; // Puedes ajustar cuántas ventas mostrar por página
 
 export default function SalesHistoryPage() {
   const { activeBranch, isLoading: branchLoading } = useBranch();
+  const { can } = useAuth();
   const [sales, setSales] = useState<any[]>([]);
   const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [startDate, setStartDate] = useState("");
@@ -48,6 +51,7 @@ export default function SalesHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [cancellingSaleId, setCancellingSaleId] = useState<string | null>(null);
 
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
@@ -126,150 +130,25 @@ export default function SalesHistoryPage() {
   }, [activeBranch, branchLoading, startDate, endDate, currentPage, paymentFilter, registerFilter]);
 
   const handleCancelSale = async (saleId: string) => {
+    if (!can('ANULAR_VENTAS') || cancellingSaleId) return;
     if (
       !confirm(
-        "⚠️ ¿Estás seguro de anular esta venta?\n\nEsta acción:\n- Marcará la venta como anulada\n- Devolverá el stock de los productos\n- Revertirá la deuda del cliente\n- Anulará los pagos registrados"
+        "⚠️ ¿Estás seguro de anular esta venta?\n\nSe devolverá el stock a la sucursal de origen, se recalculará la deuda y los pagos quedarán marcados como anulados."
       )
     ) {
       return;
     }
 
+    setCancellingSaleId(saleId);
     const loadingToast = toast.loading("Anulando venta...");
 
     try {
-      // 1. Obtener los detalles de la venta
-      const { data: saleData, error: saleError } = await supabase
-        .from("sales")
-        .select(
-          `
-          *,
-          sale_items ( product_id, quantity, price ),
-          customers ( id, debt )
-        `
-        )
-        .eq("id", saleId)
-        .single();
-
-      if (saleError) {
-        console.error("Error obteniendo venta:", saleError);
-        throw new Error(`Error obteniendo venta: ${saleError.message}`);
-      }
-
-      if (!saleData) {
-        throw new Error("No se encontró la venta");
-      }
-
-      // 2. Devolver stock de los productos
-      const stockUpdates = saleData.sale_items.map(async (item: any) => {
-        const { data: product, error: productError } = await supabase
-          .from("products")
-          .select("stock")
-          .eq("id", item.product_id)
-          .single();
-
-        if (productError) {
-          console.error(
-            `Error obteniendo producto ${item.product_id}:`,
-            productError
-          );
-          throw new Error(`Error obteniendo producto: ${productError.message}`);
-        }
-
-        if (product) {
-          const { error: updateError } = await supabase
-            .from("products")
-            .update({ stock: product.stock + item.quantity })
-            .eq("id", item.product_id);
-
-          if (updateError) {
-            console.error(
-              `Error actualizando stock de producto ${item.product_id}:`,
-              updateError
-            );
-            throw new Error(`Error actualizando stock: ${updateError.message}`);
-          }
-        }
-      });
-
-      await Promise.all(stockUpdates);
-
-      // 3. Revertir la deuda del cliente
-      const customer = saleData.customers;
-      if (customer) {
-        const { error: debtError } = await supabase
-          .from("customers")
-          .update({ debt: (customer.debt || 0) - saleData.total_amount })
-          .eq("id", customer.id);
-
-        if (debtError) {
-          console.error("Error actualizando deuda del cliente:", debtError);
-          throw new Error(`Error actualizando deuda: ${debtError.message}`);
-        }
-      }
-
-      // 4. Anular los pagos relacionados
-      const { error: paymentsError } = await supabase
-        .from("payments")
-        .delete()
-        .eq("sale_id", saleId);
-
-      if (paymentsError) {
-        console.error("Error eliminando pagos:", paymentsError);
-        throw new Error(`Error eliminando pagos: ${paymentsError.message}`);
-      }
-
-      // 5. Marcar la venta como anulada
-      console.log("Intentando marcar venta como anulada:", saleId);
-
-      // Primero verificar que la venta existe
-      const { data: checkSale, error: checkError } = await supabase
-        .from("sales")
-        .select("id, is_cancelled")
-        .eq("id", saleId)
-        .single();
-
-      console.log("Venta antes de actualizar:", checkSale, checkError);
-
-      const { data: updateData, error: updateError } = await supabase
-        .from("sales")
-        .update({ is_cancelled: true })
-        .eq("id", saleId)
-        .select();
-
-      console.log("Resultado de actualización:", { updateData, updateError });
-
-      if (updateError) {
-        console.error("Error marcando venta como anulada:", updateError);
-        throw new Error(
-          `Error marcando venta como anulada: ${updateError.message}. Asegúrate de ejecutar la migración SQL primero.`
-        );
-      }
-
-      if (!updateData || updateData.length === 0) {
-        console.warn(
-          "⚠️ UPDATE no afectó ninguna fila. Verificando RLS policies..."
-        );
-        // Intentar verificar si la venta realmente se actualizó
-        const { data: verifyData } = await supabase
-          .from("sales")
-          .select("id, is_cancelled")
-          .eq("id", saleId)
-          .single();
-        console.log("Verificación post-update:", verifyData);
-
-        if (verifyData?.is_cancelled) {
-          console.log(
-            "✅ La venta SÍ se actualizó (problema de RLS en SELECT)"
-          );
-        } else {
-          throw new Error(
-            "La venta no se pudo actualizar. Verifica las políticas RLS en Supabase."
-          );
-        }
-      }
-
-      console.log("Venta marcada como anulada exitosamente:", updateData);
-      toast.success("✅ Venta anulada exitosamente", { id: loadingToast });
+      const result = await cancelSale(saleId);
+      if (!result.success) throw new Error(result.error || "No se pudo anular la venta.");
+      toast.success(
+        result.alreadyCancelled ? "La venta ya estaba anulada" : "✅ Venta anulada exitosamente",
+        { id: loadingToast }
+      );
 
       // Recargar la lista de ventas sin recargar toda la página
       await fetchSales();
@@ -284,6 +163,8 @@ export default function SalesHistoryPage() {
         id: loadingToast,
         duration: 5000,
       });
+    } finally {
+      setCancellingSaleId(null);
     }
   };
 
@@ -685,10 +566,11 @@ export default function SalesHistoryPage() {
                           </div>
                         </Link>
 
-                        {!sale.is_cancelled ? (
+                        {can('ANULAR_VENTAS') && !sale.is_cancelled ? (
                           <button
+                            disabled={cancellingSaleId !== null}
                             onClick={() => handleCancelSale(sale.id)}
-                            className="group relative overflow-hidden rounded-lg border border-rose-100 dark:border-rose-900/40 bg-white dark:bg-slate-900 p-1 shadow-3xs hover:shadow-2xs hover:scale-[1.02] transition-all flex items-center gap-1.5 text-left w-[95px]"
+                            className="group relative overflow-hidden rounded-lg border border-rose-100 dark:border-rose-900/40 bg-white dark:bg-slate-900 p-1 shadow-3xs hover:shadow-2xs hover:scale-[1.02] transition-all flex items-center gap-1.5 text-left w-[95px] disabled:opacity-50 disabled:cursor-wait"
                           >
                             <div className="absolute -right-6 -top-6 h-10 w-10 rounded-full bg-rose-50/50 dark:bg-rose-950/20" />
                             <span className="relative flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-3xs flex-shrink-0 text-[9px]">
@@ -826,10 +708,11 @@ export default function SalesHistoryPage() {
                 >
                   <FaEye /> Ver
                 </Link>
-                {!sale.is_cancelled && (
+                {can('ANULAR_VENTAS') && !sale.is_cancelled && (
                   <button
+                    disabled={cancellingSaleId !== null}
                     onClick={() => handleCancelSale(sale.id)}
-                    className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-xs font-semibold"
+                    className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-wait"
                   >
                     <FaTrash /> Anular
                   </button>
