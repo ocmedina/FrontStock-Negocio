@@ -3,6 +3,7 @@
 import { FaTrash, FaMinus, FaPlus, FaGift } from "react-icons/fa";
 import { CartItem } from "../types";
 import { getAppliedPromotion } from "@/lib/promotions";
+import { getCustomerProductPrice, isWholesaleCustomer } from "../pricing";
 
 interface CartListProps {
   cart: CartItem[];
@@ -10,6 +11,7 @@ interface CartListProps {
   onRemoveFromCart: (productId: string) => void;
   onUpdateCustomPrice: (productId: string, newPrice: string) => void;
   onUpdateTaxRate?: (productId: string, taxRateId: number, taxRateVal: number) => void;
+  customerType?: string | null;
 }
 
 export default function CartList({
@@ -18,7 +20,9 @@ export default function CartList({
   onRemoveFromCart,
   onUpdateCustomPrice,
   onUpdateTaxRate,
+  customerType,
 }: CartListProps) {
+  const isWholesale = isWholesaleCustomer(customerType);
   const totalItems = cart.reduce((acc, item) => {
     const promo = getAppliedPromotion(item.quantity, item);
     return acc + item.quantity + (promo?.totalGiftQuantity || 0);
@@ -84,7 +88,7 @@ export default function CartList({
               const price =
                 item.customPrice !== undefined
                   ? item.customPrice
-                  : item.price_minorista || 0; // Default to minorista for display if not set
+                  : getCustomerProductPrice(item, customerType);
 
               const promo = getAppliedPromotion(item.quantity, item);
               const giftQty = promo?.totalGiftQuantity || 0;
@@ -173,6 +177,7 @@ export default function CartList({
                       <input
                         type="number"
                         value={price}
+                        aria-label={`Precio unitario de ${item.name}${isWholesale ? " a tarifa mayorista" : ""}`}
                         onChange={(e) =>
                           onUpdateCustomPrice(item.id, e.target.value)
                         }
