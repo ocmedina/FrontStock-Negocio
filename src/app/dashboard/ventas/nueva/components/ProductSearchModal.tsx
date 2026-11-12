@@ -6,17 +6,20 @@ import { Product } from "../types";
 import toast from "react-hot-toast";
 import { FaTimes, FaSearch } from "react-icons/fa";
 import { useBranch } from "@/contexts/BranchContext";
+import { getCustomerProductPrice, isWholesaleCustomer } from "../pricing";
 
 interface ProductSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectProduct: (product: Product) => void;
+  customerType?: string | null;
 }
 
 export default function ProductSearchModal({
   isOpen,
   onClose,
   onSelectProduct,
+  customerType,
 }: ProductSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -24,6 +27,7 @@ export default function ProductSearchModal({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { activeBranch } = useBranch();
+  const isWholesale = isWholesaleCustomer(customerType);
 
   // Scroll automático al elemento seleccionado cuando cambia el índice
   useEffect(() => {
@@ -246,10 +250,10 @@ export default function ProductSearchModal({
                     </div>
                     <div className="text-right ml-4">
                       <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-0.5">
-                        Precio
+                        {isWholesale ? "Precio mayorista" : "Precio minorista"}
                       </div>
                       <div className="text-xl font-bold text-green-600">
-                        ${(product.price_minorista || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${getCustomerProductPrice(product, customerType).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       <div
                         className={`text-xs font-medium mt-1 ${
