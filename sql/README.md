@@ -16,6 +16,7 @@
 - `create_register_customer_payment_transaction.sql`: registro atomico de pago de cliente
 - `create_cancel_customer_payment_transaction.sql`: anulacion atomica de pago de cliente
 - `08_cancel_sale_transaction.sql`: anulación atómica de ventas con devolución de stock por sucursal
+- `10_cancel_supplier_purchase_transaction.sql`: anulación atómica de facturas de proveedor con reversión de stock y deuda por sucursal
 - `create_branches_and_branch_stock.sql`: sucursales, stock por sucursal y transferencias
 - `01_create_branches_schema.sql`: sucursales, stock, columnas y migracion inicial
 - `02_create_branches_functions.sql`: funciones, triggers, transferencias y politicas

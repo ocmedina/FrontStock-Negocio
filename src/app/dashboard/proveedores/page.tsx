@@ -65,7 +65,7 @@ export default function SuppliersPage() {
       fetchAllPages((from, to) =>
         (supabase as any)
           .from("purchases")
-          .select("supplier_id, total_amount, amount_paid")
+          .select("supplier_id, total_amount, amount_paid, is_cancelled, cancellation_credit_amount")
           .eq("branch_id", activeBranch.id)
           .order("id", { ascending: true })
           .range(from, to)
@@ -86,7 +86,10 @@ export default function SuppliersPage() {
       const balances = new Map<string, number>();
       for (const purchase of purchases || []) {
         const id = String(purchase.supplier_id);
-        balances.set(id, (balances.get(id) || 0) + Math.max(0, Number(purchase.total_amount || 0) - Number(purchase.amount_paid || 0)));
+        const purchaseBalance = Boolean(purchase.is_cancelled)
+          ? -Math.max(0, Number(purchase.cancellation_credit_amount || 0))
+          : Math.max(0, Number(purchase.total_amount || 0) - Number(purchase.amount_paid || 0));
+        balances.set(id, (balances.get(id) || 0) + purchaseBalance);
       }
       for (const payment of payments || []) {
         const id = String(payment.supplier_id);
