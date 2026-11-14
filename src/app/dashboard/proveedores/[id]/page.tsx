@@ -12,6 +12,9 @@ import {
 } from "react-icons/fa";
 import RegisterSupplierPayment from "@/components/payments/RegisterSupplierPayment";
 import DeleteSupplierPaymentButton from "@/components/payments/DeleteSupplierPaymentButton";
+import CancelPurchaseButton from "@/components/payments/CancelPurchaseButton";
+import { getCurrentAuthUser } from "@/lib/serverAuth";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -57,10 +60,12 @@ async function fetchSupplierAccountWithClient(
 
   const purchaseRows = (purchases || []) as any[];
   const paymentRows = (payments || []) as any[];
-  const branchDebt = purchaseRows.reduce(
-    (sum, purchase) => sum + Math.max(0, Number(purchase.total_amount || 0) - Number(purchase.amount_paid || 0)),
-    0
-  ) - paymentRows.reduce(
+  const branchDebt = purchaseRows.reduce((sum, purchase) => {
+    if (Boolean(purchase.is_cancelled)) {
+      return sum - Math.max(0, Number(purchase.cancellation_credit_amount || 0));
+    }
+    return sum + Math.max(0, Number(purchase.total_amount || 0) - Number(purchase.amount_paid || 0));
+  }, 0) - paymentRows.reduce(
     (sum, payment) => sum + (Number(payment.branch_id) === branchId ? Number(payment.amount || 0) : 0),
     0
   );
@@ -114,7 +119,14 @@ export default async function SupplierDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const params = await props.params;
-  const { supplier, history, branchId, branchName, branchDebt } = await getSupplierAccount(params.id);
+  const [account, auth] = await Promise.all([
+    getSupplierAccount(params.id),
+    getCurrentAuthUser(),
+  ]);
+  const { supplier, history, branchId, branchName, branchDebt } = account;
+  const canCancelPurchases = auth
+    ? hasPermission(auth.profile.role, "CREAR_COMPRAS", auth.overrides)
+    : false;
 
   if (!supplier) {
     return (
@@ -205,6 +217,8 @@ export default async function SupplierDetailPage(props: {
           ) : (
             history.map((item) => {
               const isCompra = item.type === "compra";
+              const isCancelled = isCompra && Boolean((item as any).is_cancelled);
+              const cancellationCredit = Number((item as any).cancellation_credit_amount || 0);
               const displayTitle = isCompra
                 ? `Factura #${
                     "invoice_number" in item && item.invoice_number
@@ -241,7 +255,14 @@ export default async function SupplierDetailPage(props: {
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-extrabold text-slate-900 dark:text-white">{displayTitle}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-extrabold text-slate-900 dark:text-white">{displayTitle}</p>
+                        {isCancelled && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                            Anulada
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-450 dark:text-slate-400 mt-0.5">
                         {new Date(item.created_at).toLocaleDateString("es-AR", {
                           year: "numeric",
@@ -260,18 +281,37 @@ export default async function SupplierDetailPage(props: {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 sm:text-right">
-                    <p
-                      className={`font-black text-lg ${
-                        isCompra ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-                      }`}
-                    >
-                      {isCompra ? "+" : "-"}{formatCurrency(item.amount)}
-                    </p>
+                    {isCompra && isCancelled ? (
+                      <div>
+                        <p className="text-xs text-slate-400 line-through">{formatCurrency(item.amount)}</p>
+                        <p className="font-black text-sm text-slate-500 dark:text-slate-300">Factura anulada</p>
+                        {cancellationCredit > 0 && (
+                          <p className="font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                            A favor: {formatCurrency(cancellationCredit)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p
+                        className={`font-black text-lg ${
+                          isCompra ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                        }`}
+                      >
+                        {isCompra ? "+" : "-"}{formatCurrency(item.amount)}
+                      </p>
+                    )}
                     {!isCompra && (item as any).branch_id != null && (
                       <DeleteSupplierPaymentButton
                         paymentId={item.id}
                         supplierId={supplier.id}
                         amount={item.amount}
+                      />
+                    )}
+                    {isCompra && !isCancelled && canCancelPurchases && (
+                      <CancelPurchaseButton
+                        purchaseId={item.id}
+                        invoiceNumber={(item as any).invoice_number}
+                        amountPaid={Number((item as any).amount_paid || 0)}
                       />
                     )}
                   </div>
