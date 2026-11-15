@@ -77,13 +77,13 @@ async function fetchSupplierAccountWithClient(
       amount: Number(p.total_amount) || 0,
       branch_id: (p as any).branch_id ?? null,
       branch_name: (p as any).branch_id ? branchName : "Sin asignar",
-    })) as Array<Purchase & { type: "compra"; amount: number }>),
+    })) as Array<Purchase & { type: "compra"; amount: number } & HistoryBranch>),
     ...((payments || []).map((p: Payment) => ({
       ...p,
       type: "pago" as const,
       branch_id: (p as any).branch_id ?? null,
       branch_name: (p as any).branch_id ? branchName : "Sin asignar",
-    })) as Array<Payment & { type: "pago" }>),
+    })) as Array<Payment & { type: "pago" } & HistoryBranch>),
   ].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -302,7 +302,7 @@ export default async function SupplierDetailPage(props: {
                     )}
                     {!isCompra && (item as any).branch_id != null && (
                       <DeleteSupplierPaymentButton
-                        paymentId={item.id}
+                        paymentId={String(item.id)}
                         supplierId={supplier.id}
                         amount={item.amount}
                       />
@@ -324,4 +324,3 @@ export default async function SupplierDetailPage(props: {
     </div>
   );
 }
-

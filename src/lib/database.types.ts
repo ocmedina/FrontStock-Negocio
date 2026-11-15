@@ -490,27 +490,36 @@ export type Database = {
       purchases: {
         Row: {
           amount_paid: number
+          branch_id: number | null
+          cancellation_credit_amount: number
           created_at: string
           id: string
           invoice_number: string | null
+          is_cancelled: boolean
           profile_id: string
           supplier_id: string
           total_amount: number
         }
         Insert: {
           amount_paid?: number
+          branch_id?: number | null
+          cancellation_credit_amount?: number
           created_at?: string
           id?: string
           invoice_number?: string | null
+          is_cancelled?: boolean
           profile_id: string
           supplier_id: string
           total_amount: number
         }
         Update: {
           amount_paid?: number
+          branch_id?: number | null
+          cancellation_credit_amount?: number
           created_at?: string
           id?: string
           invoice_number?: string | null
+          is_cancelled?: boolean
           profile_id?: string
           supplier_id?: string
           total_amount?: number

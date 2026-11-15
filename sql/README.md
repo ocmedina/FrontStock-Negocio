@@ -49,7 +49,12 @@ Para separar una instalación existente con datos, ejecutar en Supabase, en este
 6. `02_create_branches_functions.sql`
 7. `03_add_branch_business_data.sql`
 8. `04_fix_order_branch_stock.sql`
-9. `05_confirm_delivery_transaction.sql`
+9. `05_separate_customer_accounts_by_branch.sql`
+10. `create_register_customer_payment_transaction.sql`
+11. `create_cancel_customer_payment_transaction.sql`
+12. `06_reconcile_historical_payment.sql`
+13. `05_confirm_delivery_transaction.sql`
+14. `07_branch_supplier_debts.sql`
 
 Cada etapa es independiente y no abre una transacción global. Si una etapa falla,
 las anteriores permanecen aplicadas y se puede repetir la misma etapa después de
@@ -60,4 +65,3 @@ resolver el bloqueo.
 - Ejecutar en entorno de staging antes de produccion.
 - Mantener scripts idempotentes (`create if not exists`, `drop if exists` cuando aplique).
 - Documentar impacto funcional en commit/PR.
-
