@@ -27,6 +27,10 @@
 - `01e_add_branch_foreign_keys.sql`: claves foraneas opcionales
 - `03_add_branch_business_data.sql`: datos comerciales específicos de cada sucursal para remitos
 - `04_fix_order_branch_stock.sql`: entrega, reversión y edición de pedidos usando stock por sucursal
+- `06_reconcile_historical_payment.sql`: columnas y función de imputación manual de pagos históricos a una factura y sucursal
+- `05_confirm_delivery_transaction.sql`: confirmación atómica de entrega, cobro, deuda y stock por sucursal
+- `create_register_customer_payment_transaction.sql`: distribución exacta de pagos entre facturas y actualización de saldos pagado/pendiente
+- `create_cancel_customer_payment_transaction.sql`: anulación vinculada a la factura real del pago y restauración exacta del saldo
 
 ## Orden sugerido para entorno nuevo
 
@@ -45,6 +49,7 @@ Para separar una instalación existente con datos, ejecutar en Supabase, en este
 6. `02_create_branches_functions.sql`
 7. `03_add_branch_business_data.sql`
 8. `04_fix_order_branch_stock.sql`
+9. `05_confirm_delivery_transaction.sql`
 
 Cada etapa es independiente y no abre una transacción global. Si una etapa falla,
 las anteriores permanecen aplicadas y se puede repetir la misma etapa después de

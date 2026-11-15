@@ -44,6 +44,8 @@ export type DeskSaleRow = {
   id: string;
   customer_name: string;
   total_amount: number;
+  amount_paid?: number;
+  amount_pending?: number;
   payment_method: string | null;
   is_cancelled: boolean;
   register_id?: number | null;
@@ -53,12 +55,21 @@ export type DeskSaleRow = {
 
 export type DeliveryCashCloseResult = {
   date: string;
+  branchId: number;
   totalOrders: number;
   delivered: number;
   pending: number;
   cancelled: number;
+  deliveredBilled: number;
+  deliveredCollected: number;
+  priorDebtCollected: number;
+  unallocatedCollected: number;
+  unattributedCollected: number;
   collected: PaymentBreakdown;
+  deliveryCollected: PaymentBreakdown;
+  priorDebtPayments: PaymentBreakdown;
   debtGenerated: number;
+  paymentCount: number;
   orders: DeliveryOrderRow[];
 };
 
@@ -75,10 +86,15 @@ export type DeskCashCloseResult = {
 // ─── Cierre de Reparto ────────────────────────────────────────────────────────
 
 export async function getDeliveryCashClose(
-  date: string
+  date: string,
+  branchId: number
 ): Promise<{ success: boolean; data?: DeliveryCashCloseResult; error?: string }> {
   try {
     await requirePermission('VER_CIERRE_CAJA');
+
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      return { success: false, error: 'Sucursal inválida para el cierre de reparto.' };
+    }
 
     const supabase = createLooseAdminClient();
     const { startISO, endISO } = getArgentinaDayBounds(date);
@@ -97,6 +113,7 @@ export async function getDeliveryCashClose(
       `)
       .gte('created_at', startISO)
       .lt('created_at', endISO)
+      .eq('branch_id', branchId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -119,39 +136,7 @@ export async function getDeliveryCashClose(
     const cancelled = orders.filter((o) => o.status === 'cancelado');
     const deliveredOrderIds = delivered.map((o) => o.id);
 
-    const paymentByOrder = new Map<
-      string,
-      { efectivo: number; transferencia: number; total: number }
-    >();
-
-    if (deliveredOrderIds.length > 0) {
-      const { data: paymentRows, error: paymentsError } = await supabase
-        .from('payments')
-        .select('order_id, amount, payment_method')
-        .in('order_id', deliveredOrderIds)
-        .eq('type', 'pago');
-
-      if (paymentsError) throw paymentsError;
-
-      for (const payment of (paymentRows || []) as any[]) {
-        if (!payment.order_id) continue;
-
-        const breakdown = paymentByOrder.get(payment.order_id) || {
-          efectivo: 0,
-          transferencia: 0,
-          total: 0,
-        };
-        const amount = Number(payment.amount) || 0;
-        const method = (payment.payment_method || '').toLowerCase().trim();
-
-        if (method === 'efectivo') breakdown.efectivo += amount;
-        if (method === 'transferencia') breakdown.transferencia += amount;
-        breakdown.total += amount;
-        paymentByOrder.set(payment.order_id, breakdown);
-      }
-    }
-
-    const collected: PaymentBreakdown = {
+    const emptyBreakdown = (): PaymentBreakdown => ({
       efectivo: 0,
       transferencia: 0,
       mercado_pago: 0,
@@ -161,49 +146,118 @@ export async function getDeliveryCashClose(
       tarjeta_credito: 0,
       mixto: 0,
       total: 0,
+    });
+    const collected = emptyBreakdown();
+    const deliveryCollected = emptyBreakdown();
+    const priorDebtPayments = emptyBreakdown();
+
+    const { data: paymentRows, error: paymentsError } = await supabase
+      .from('payments')
+      .select('id, order_id, sale_id, amount, payment_method, created_at')
+      .eq('type', 'pago')
+      .gte('created_at', startISO)
+      .lt('created_at', endISO);
+    if (paymentsError) throw paymentsError;
+
+    const paymentOrderIds = [...new Set(
+      ((paymentRows || []) as any[]).map((payment) => payment.order_id).filter(Boolean)
+    )];
+    const paymentSaleIds = [...new Set(
+      ((paymentRows || []) as any[]).map((payment) => payment.sale_id).filter(Boolean)
+    )];
+    const paymentOrders = paymentOrderIds.length
+      ? await supabase.from('orders').select('id, branch_id').in('id', paymentOrderIds)
+      : { data: [], error: null };
+    if (paymentOrders.error) throw paymentOrders.error;
+    const branchOrderIds = new Set(
+      ((paymentOrders.data || []) as any[])
+        .filter((order) => Number(order.branch_id) === branchId)
+        .map((order) => order.id)
+    );
+    const paymentSales = paymentSaleIds.length
+      ? await supabase.from('sales').select('id, branch_id').in('id', paymentSaleIds)
+      : { data: [], error: null };
+    if (paymentSales.error) throw paymentSales.error;
+    const branchSaleIds = new Set(
+      ((paymentSales.data || []) as any[])
+        .filter((sale) => Number(sale.branch_id) === branchId)
+        .map((sale) => sale.id)
+    );
+    const deliveryOrderIdSet = new Set(deliveredOrderIds);
+
+    const addPayment = (breakdown: PaymentBreakdown, methodValue: string | null, amount: number) => {
+      const method = (methodValue || 'otros').toLowerCase().trim();
+      if (method === 'efectivo') breakdown.efectivo += amount;
+      else if (method === 'transferencia') breakdown.transferencia += amount;
+      else if (method === 'mercado_pago' || method === 'mercadopago') breakdown.mercado_pago += amount;
+      else if (method === 'cuenta_corriente') breakdown.cuenta_corriente += amount;
+      else if (method === 'cheque') breakdown.cheque += amount;
+      else if (method === 'tarjeta_debito' || method === 'tarjeta_de_debito') breakdown.tarjeta_debito += amount;
+      else if (method === 'tarjeta_credito' || method === 'tarjeta_de_credito') breakdown.tarjeta_credito += amount;
+      else breakdown.mixto += amount;
+      breakdown.total += amount;
     };
 
     let debtGenerated = 0;
+    const deliveredBilled = delivered.reduce((sum, order) => sum + order.total_amount, 0);
 
     for (const o of delivered) {
-      const paid = o.amount_paid;
-      const method = (o.payment_method || 'otros').toLowerCase().trim();
-      const paymentBreakdown = paymentByOrder.get(o.id);
-      const hasMixedBreakdown =
-        method === 'mixto' &&
-        paymentBreakdown &&
-        paymentBreakdown.total > 0;
-
-      if (method === 'efectivo') collected.efectivo += paid;
-      else if (method === 'transferencia') collected.transferencia += paid;
-      else if (method === 'mercado_pago' || method === 'mercadopago') collected.mercado_pago += paid;
-      else if (method === 'cuenta_corriente') collected.cuenta_corriente += o.total_amount;
-      else if (method === 'cheque') collected.cheque += paid;
-      else if (method === 'tarjeta_debito' || method === 'tarjeta_de_debito') collected.tarjeta_debito += paid;
-      else if (method === 'tarjeta_credito' || method === 'tarjeta_de_credito') collected.tarjeta_credito += paid;
-      else if (method === 'mixto' || method === 'mixtos') {
-        if (hasMixedBreakdown) {
-          collected.efectivo += paymentBreakdown.efectivo;
-          collected.transferencia += paymentBreakdown.transferencia;
-        } else {
-          collected.mixto += paid;
-        }
-      }
-
-      collected.total += paid;
       debtGenerated += o.amount_pending;
     }
+
+    let deliveryCollectedTotal = 0;
+    let priorDebtCollected = 0;
+    let unallocatedCollected = 0;
+    let unattributedCollected = 0;
+    let classifiedPaymentCount = 0;
+    for (const payment of (paymentRows || []) as any[]) {
+      const amount = Number(payment.amount) || 0;
+      if (amount <= 0) continue;
+      if (payment.order_id && branchOrderIds.has(payment.order_id)) {
+        classifiedPaymentCount += 1;
+        if (deliveryOrderIdSet.has(payment.order_id)) {
+          addPayment(deliveryCollected, payment.payment_method, amount);
+          deliveryCollectedTotal += amount;
+        } else {
+          addPayment(priorDebtPayments, payment.payment_method, amount);
+          priorDebtCollected += amount;
+        }
+      } else if (payment.sale_id && branchSaleIds.has(payment.sale_id)) {
+        classifiedPaymentCount += 1;
+        addPayment(priorDebtPayments, payment.payment_method, amount);
+        priorDebtCollected += amount;
+      } else if (payment.order_id || payment.sale_id) {
+        // Payment belongs to another branch or references a missing invoice.
+        continue;
+      } else {
+        // Historical payments without an invoice cannot be assigned safely.
+        unattributedCollected += amount;
+      }
+    }
+    Object.keys(collected).forEach((key) => {
+      const typedKey = key as keyof PaymentBreakdown;
+      collected[typedKey] = (deliveryCollected[typedKey] || 0) + (priorDebtPayments[typedKey] || 0);
+    });
 
     return {
       success: true,
       data: {
         date,
+        branchId,
         totalOrders: orders.length,
         delivered: delivered.length,
         pending: pending.length,
         cancelled: cancelled.length,
+        deliveredBilled,
+        deliveredCollected: deliveryCollectedTotal,
+        priorDebtCollected,
+        unallocatedCollected,
+        unattributedCollected,
         collected,
+        deliveryCollected,
+        priorDebtPayments,
         debtGenerated,
+        paymentCount: classifiedPaymentCount,
         orders,
       },
     };
@@ -218,7 +272,8 @@ export async function getDeliveryCashClose(
 
 export async function getDeskCashClose(
   date: string,
-  registerId?: number | null
+  registerId?: number | null,
+  branchId?: number
 ): Promise<{ success: boolean; data?: DeskCashCloseResult; error?: string }> {
   try {
     await requirePermission('VER_CIERRE_CAJA');
@@ -226,10 +281,16 @@ export async function getDeskCashClose(
     const supabase = createLooseAdminClient();
     const { startISO, endISO } = getArgentinaDayBounds(date);
 
+    if (!Number.isInteger(branchId) || (branchId ?? 0) <= 0) {
+      return { success: false, error: 'Sucursal inválida para el cierre de mostrador.' };
+    }
+
     let query = (supabase.from('sales') as any)
       .select(`
         id,
         total_amount,
+        amount_paid,
+        amount_pending,
         payment_method,
         is_cancelled,
         register_id,
@@ -239,6 +300,7 @@ export async function getDeskCashClose(
       `)
       .gte('created_at', startISO)
       .lt('created_at', endISO)
+      .eq('branch_id', branchId)
       .order('created_at', { ascending: false });
 
     if (registerId !== undefined && registerId !== null) {
@@ -255,6 +317,8 @@ export async function getDeskCashClose(
       id: s.id,
       customer_name: s.customers?.full_name ?? 'Sin cliente',
       total_amount: Number(s.total_amount) || 0,
+      amount_paid: Number(s.amount_paid) || 0,
+      amount_pending: Number(s.amount_pending) || 0,
       payment_method: s.payment_method ?? null,
       is_cancelled: Boolean(s.is_cancelled),
       register_id: s.register_id ?? null,
@@ -277,10 +341,8 @@ export async function getDeskCashClose(
       total: 0,
     };
 
-    for (const s of active) {
-      const amount = s.total_amount;
-      const method = (s.payment_method || 'otros').toLowerCase().trim();
-
+    const addDeskPayment = (methodValue: string | null, amount: number) => {
+      const method = (methodValue || 'otros').toLowerCase().trim();
       if (method === 'efectivo') collected.efectivo += amount;
       else if (method === 'transferencia') collected.transferencia += amount;
       else if (method === 'mercado_pago' || method === 'mercadopago') collected.mercado_pago += amount;
@@ -288,9 +350,36 @@ export async function getDeskCashClose(
       else if (method === 'cheque') collected.cheque += amount;
       else if (method === 'tarjeta_debito' || method === 'tarjeta_de_debito') collected.tarjeta_debito += amount;
       else if (method === 'tarjeta_credito' || method === 'tarjeta_de_credito') collected.tarjeta_credito += amount;
-      else if (method === 'mixto' || method === 'mixtos') collected.mixto += amount;
-
+      else collected.mixto += amount;
       collected.total += amount;
+    };
+
+    const activeSaleIds = active.map((sale) => sale.id);
+    const { data: salePayments, error: salePaymentsError } = activeSaleIds.length
+      ? await supabase
+          .from('payments')
+          .select('sale_id, amount, payment_method')
+          .in('sale_id', activeSaleIds)
+          .eq('type', 'pago')
+          .gte('created_at', startISO)
+          .lt('created_at', endISO)
+      : { data: [], error: null };
+    if (salePaymentsError) throw salePaymentsError;
+
+    const paymentTotalsBySale = new Map<string, number>();
+    for (const payment of (salePayments || []) as any[]) {
+      const amount = Number(payment.amount) || 0;
+      addDeskPayment(payment.payment_method, amount);
+      paymentTotalsBySale.set(
+        payment.sale_id,
+        (paymentTotalsBySale.get(payment.sale_id) || 0) + amount
+      );
+    }
+
+    for (const sale of active) {
+      if (!paymentTotalsBySale.has(sale.id) && (sale.amount_paid || 0) > 0) {
+        addDeskPayment(sale.payment_method, sale.amount_paid || 0);
+      }
     }
 
     return {
@@ -367,6 +456,6 @@ export async function getCustomerRealDebt(
     return { debt: total };
   } catch (e) {
     console.error('[getCustomerRealDebt] CATCH error:', e);
-    return { debt: 0 };
+    throw e;
   }
 }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRegister } from '@/hooks/useRegister';
+import { useBranch } from '@/contexts/BranchContext';
 import {
   getActiveShift,
   openCashShift,
@@ -28,6 +29,7 @@ const fmt = (n: any) =>
 
 export default function QuickShiftAction() {
   const { activeRegister } = useRegister();
+  const { activeBranch } = useBranch();
   const [activeShift, setActiveShift] = useState<CashShift | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -45,10 +47,10 @@ export default function QuickShiftAction() {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchShift = useCallback(async () => {
-    if (!activeRegister?.id) return;
+    if (!activeRegister?.id || !activeBranch?.id) return;
     setLoading(true);
     try {
-      const res = await getActiveShift(activeRegister.id);
+      const res = await getActiveShift(activeRegister.id, activeBranch.id);
       if (res.success) {
         setActiveShift(res.data || null);
       }
@@ -57,7 +59,7 @@ export default function QuickShiftAction() {
     } finally {
       setLoading(false);
     }
-  }, [activeRegister?.id]);
+  }, [activeRegister?.id, activeBranch?.id]);
 
   useEffect(() => {
     fetchShift();
@@ -77,6 +79,7 @@ export default function QuickShiftAction() {
     try {
       const res = await openCashShift({
         registerId: activeRegister.id,
+        branchId: activeBranch?.id ?? 0,
         initialCash: cash,
         notes: openNotes.trim() || undefined,
       });
@@ -115,6 +118,7 @@ export default function QuickShiftAction() {
     try {
       const res = await createCashMovement({
         registerId: activeRegister.id,
+        branchId: activeBranch?.id ?? 0,
         shiftId: activeShift?.id || null,
         type: moveType,
         amount: amt,

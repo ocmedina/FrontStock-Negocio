@@ -17,6 +17,7 @@ import {
   FaUniversity,
   FaMobileAlt,
   FaFileInvoice,
+  FaHistory,
   FaClock,
   FaCheckCircle,
   FaBan,
@@ -164,6 +165,7 @@ function StatCard({ label, value, icon, color }: { label: string; value: number 
 // ─── Reparto Tab ─────────────────────────────────────────────────────────────
 
 function RepartoTab() {
+  const { activeBranch } = useBranch();
   const [date, setDate] = useState(todayAR);
   const [data, setData] = useState<DeliveryCashCloseResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -173,7 +175,12 @@ function RepartoTab() {
   const load = useCallback(async (d: string) => {
     setLoading(true);
     setError(null);
-    const res = await getDeliveryCashClose(d);
+    if (!activeBranch) {
+      setError("Selecciona una sucursal activa.");
+      setLoading(false);
+      return;
+    }
+    const res = await getDeliveryCashClose(d, activeBranch.id);
     if (res.success && res.data) {
       setData(res.data);
       setLoaded(true);
@@ -181,7 +188,7 @@ function RepartoTab() {
       setError(res.error ?? "Error desconocido");
     }
     setLoading(false);
-  }, []);
+  }, [activeBranch]);
 
   const handleDateChange = (d: string) => {
     setDate(d);
@@ -239,6 +246,17 @@ function RepartoTab() {
               color="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-450" />
           </div>
 
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:gap-2">
+            <StatCard label="Facturado entregado" value={fmt(data.deliveredBilled)} icon={<FaFileInvoice />}
+              color="bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400" />
+            <StatCard label="Cobrado entregas" value={fmt(data.deliveredCollected)} icon={<FaMoneyBillWave />}
+              color="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
+            <StatCard label="Cobrado deuda anterior" value={fmt(data.priorDebtCollected)} icon={<FaHistory />}
+              color="bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400" />
+            <StatCard label="Deuda generada" value={fmt(data.debtGenerated)} icon={<FaExclamationTriangle />}
+              color="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400" />
+          </div>
+
           {/* Cobros + Deuda */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Cobros por método */}
@@ -247,9 +265,9 @@ function RepartoTab() {
                 <FaMoneyBillWave className="text-emerald-500" /> Cobros por Método
               </h3>
               <div className="space-y-2">
-                <PaymentRow icon={<FaMoneyBillWave />} label="Efectivo" amount={data.collected.efectivo}
+                <PaymentRow icon={<FaMoneyBillWave />} label="Efectivo total" amount={data.collected.efectivo}
                   color="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" />
-                <PaymentRow icon={<FaUniversity />} label="Transferencia" amount={data.collected.transferencia}
+                <PaymentRow icon={<FaUniversity />} label="Transferencia total" amount={data.collected.transferencia}
                   color="bg-blue-500/10 text-blue-600 dark:text-blue-400" />
                 <PaymentRow icon={<FaMobileAlt />} label="Mercado Pago" amount={data.collected.mercado_pago}
                   color="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" />
@@ -272,6 +290,26 @@ function RepartoTab() {
                   <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Cobrado</span>
                   <span className="font-black text-2xl text-emerald-600 dark:text-emerald-450">{fmt(data.collected.total)}</span>
                 </div>
+              )}
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-850 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-emerald-500/10 p-3">
+                  <p className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400">Entregas</p>
+                  <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">{fmt(data.deliveryCollected.total)}</p>
+                </div>
+                <div className="rounded-xl bg-blue-500/10 p-3">
+                  <p className="text-[10px] font-black uppercase text-blue-700 dark:text-blue-400">Deuda anterior</p>
+                  <p className="text-sm font-black text-blue-700 dark:text-blue-400">{fmt(data.priorDebtPayments.total)}</p>
+                </div>
+              </div>
+              {data.unallocatedCollected > 0 && (
+                <p className="mt-3 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                  Atención: {fmt(data.unallocatedCollected)} en pagos sin factura de esta sucursal. Revisar antes de cerrar.
+                </p>
+              )}
+              {data.unattributedCollected > 0 && (
+                <p className="mt-3 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                  Atención: {fmt(data.unattributedCollected)} en pagos históricos sin factura ni sucursal asignada. Conciliar antes de cerrar.
+                </p>
               )}
             </div>
 
@@ -442,7 +480,7 @@ function MostradorTab() {
     setError(null);
     const activeReg = regVal !== undefined ? regVal : selectedRegister;
     const regId = activeReg === "all" ? null : Number(activeReg);
-    const res = await getDeskCashClose(d, regId);
+    const res = await getDeskCashClose(d, regId, activeBranch?.id);
     if (res.success && res.data) {
       setData(res.data);
       setLoaded(true);
@@ -505,9 +543,10 @@ function MostradorTab() {
       {/* Control de Efectivo, Turnos y Arqueos */}
       <CashShiftControl
         selectedRegisterId={selectedRegister === "all" ? "all" : Number(selectedRegister)}
+        branchId={activeBranch?.id ?? 0}
         registers={registers}
         onShiftChange={() => {
-          if (loaded) load(date);
+          if (loaded && activeBranch) load(date);
         }}
       />
 

@@ -166,6 +166,7 @@ export type Database = {
           customer_id: string
           id: number
           order_id: string | null
+          sale_id: string | null
           type: string
           payment_method: string | null
         }
@@ -177,6 +178,7 @@ export type Database = {
           customer_id: string
           id?: number
           order_id?: string | null
+          sale_id?: string | null
           type: string
           payment_method?: string | null
         }
@@ -188,6 +190,7 @@ export type Database = {
           customer_id?: string
           id?: number
           order_id?: string | null
+          sale_id?: string | null
           type?: string
           payment_method?: string | null
         }
@@ -872,4 +875,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

@@ -1,4 +1,10 @@
 -- Atomic customer payment registration: debt distribution + payment records + customer debt sync
+alter table public.payments
+  add column if not exists order_id uuid references public.orders(id) on delete set null;
+
+alter table public.payments
+  add column if not exists sale_id uuid references public.sales(id) on delete set null;
+
 create or replace function public.register_customer_payment_transaction(
   p_customer_id uuid,
   p_total_amount numeric,
@@ -23,6 +29,12 @@ declare
   v_remaining numeric := coalesce(p_total_amount, 0);
   v_unapplied_amount numeric := 0;
   v_new_customer_debt numeric := 0;
+  v_applied_amount numeric := 0;
+  v_applied_allocations jsonb := '[]'::jsonb;
+  v_applied_total numeric := 0;
+  v_remaining_to_link numeric := 0;
+  v_method_linked numeric := 0;
+  v_link_amount numeric := 0;
   v_tolerance constant numeric := 0.01;
 begin
   if auth.uid() is null then
@@ -31,6 +43,10 @@ begin
 
   if p_customer_id is null then
     raise exception 'Cliente requerido';
+  end if;
+
+  if coalesce(p_mode, 'automatic') not in ('automatic', 'specific') then
+    raise exception 'Modo de pago inválido';
   end if;
 
   if coalesce(p_total_amount, 0) <= 0 then
@@ -102,10 +118,20 @@ begin
         end if;
 
         update public.orders
-        set amount_pending = greatest(0, coalesce(amount_pending, 0) - v_allocation.amount)
+        set amount_paid = coalesce(amount_paid, 0) + v_allocation.amount,
+            amount_pending = greatest(0, coalesce(amount_pending, 0) - v_allocation.amount)
         where id = v_allocation.item_id;
 
         v_allocations_sum := v_allocations_sum + v_allocation.amount;
+        v_applied_amount := v_allocation.amount;
+        v_applied_total := v_applied_total + v_applied_amount;
+        v_applied_allocations := v_applied_allocations || jsonb_build_array(
+          jsonb_build_object(
+            'item_id', v_allocation.item_id,
+            'item_type', 'order',
+            'amount', v_applied_amount
+          )
+        );
       elsif v_allocation.item_type = 'sale' then
         select id, customer_id, amount_pending, payment_method, is_cancelled
           into v_sale
@@ -130,10 +156,20 @@ begin
         end if;
 
         update public.sales
-        set amount_pending = greatest(0, coalesce(amount_pending, 0) - v_allocation.amount)
+        set amount_paid = coalesce(amount_paid, 0) + v_allocation.amount,
+            amount_pending = greatest(0, coalesce(amount_pending, 0) - v_allocation.amount)
         where id = v_allocation.item_id;
 
         v_allocations_sum := v_allocations_sum + v_allocation.amount;
+        v_applied_amount := v_allocation.amount;
+        v_applied_total := v_applied_total + v_applied_amount;
+        v_applied_allocations := v_applied_allocations || jsonb_build_array(
+          jsonb_build_object(
+            'item_id', v_allocation.item_id,
+            'item_type', 'sale',
+            'amount', v_applied_amount
+          )
+        );
       else
         raise exception 'Tipo de asignacion invalido: %', coalesce(v_allocation.item_type, 'null');
       end if;
@@ -159,11 +195,21 @@ begin
         continue;
       end if;
 
+      v_applied_amount := least(v_remaining, v_order.amount_pending);
       update public.orders
-      set amount_pending = greatest(0, amount_pending - least(v_remaining, v_order.amount_pending))
+      set amount_paid = coalesce(amount_paid, 0) + v_applied_amount,
+          amount_pending = greatest(0, amount_pending - v_applied_amount)
       where id = v_order.id;
 
-      v_remaining := v_remaining - least(v_remaining, v_order.amount_pending);
+      v_remaining := v_remaining - v_applied_amount;
+      v_applied_total := v_applied_total + v_applied_amount;
+      v_applied_allocations := v_applied_allocations || jsonb_build_array(
+        jsonb_build_object(
+          'item_id', v_order.id,
+          'item_type', 'order',
+          'amount', v_applied_amount
+        )
+      );
     end loop;
 
     for v_sale in
@@ -181,17 +227,28 @@ begin
         continue;
       end if;
 
+      v_applied_amount := least(v_remaining, v_sale.amount_pending);
       update public.sales
-      set amount_pending = greatest(0, amount_pending - least(v_remaining, v_sale.amount_pending))
+      set amount_paid = coalesce(amount_paid, 0) + v_applied_amount,
+          amount_pending = greatest(0, amount_pending - v_applied_amount)
       where id = v_sale.id;
 
-      v_remaining := v_remaining - least(v_remaining, v_sale.amount_pending);
+      v_remaining := v_remaining - v_applied_amount;
+      v_applied_total := v_applied_total + v_applied_amount;
+      v_applied_allocations := v_applied_allocations || jsonb_build_array(
+        jsonb_build_object(
+          'item_id', v_sale.id,
+          'item_type', 'sale',
+          'amount', v_applied_amount
+        )
+      );
     end loop;
 
     v_unapplied_amount := greatest(0, v_remaining);
   end if;
 
-  -- Register one movement per payment method for traceability.
+  -- Register each method split across the invoices it actually paid.
+  v_remaining_to_link := v_applied_total;
   for v_method in
     select *
     from jsonb_to_recordset(p_methods) as t(
@@ -203,28 +260,71 @@ begin
       continue;
     end if;
 
-    insert into public.payments (
-      customer_id,
-      type,
-      amount,
-      payment_method,
-      comment,
-      created_at
-    )
-    values (
-      p_customer_id,
-      'pago',
-      v_method.amount,
-      v_method.method,
-      coalesce(
-        nullif(p_comment, ''),
-        case
-          when coalesce(p_mode, 'automatic') = 'specific' then 'Pago Especifico'
-          else 'Pago a cuenta'
-        end
-      ),
-      coalesce(p_created_at, now())
-    );
+    v_method_linked := 0;
+    if v_remaining_to_link > v_tolerance then
+      for v_allocation in
+        select *
+        from jsonb_to_recordset(v_applied_allocations) as t(
+          item_id uuid,
+          item_type text,
+          amount numeric
+        )
+      loop
+        v_link_amount := least(v_method.amount, v_remaining_to_link)
+          * v_allocation.amount / v_applied_total;
+        if v_link_amount <= v_tolerance then
+          continue;
+        end if;
+
+        insert into public.payments (
+          customer_id,
+          order_id,
+          sale_id,
+          type,
+          amount,
+          payment_method,
+          comment,
+          created_at
+        )
+        values (
+          p_customer_id,
+          case when v_allocation.item_type = 'order' then v_allocation.item_id else null end,
+          case when v_allocation.item_type = 'sale' then v_allocation.item_id else null end,
+          'pago',
+          v_link_amount,
+          v_method.method,
+          coalesce(
+            nullif(p_comment, ''),
+            case
+              when coalesce(p_mode, 'automatic') = 'specific' then 'Pago Especifico'
+              else 'Pago a cuenta'
+            end
+          ),
+          coalesce(p_created_at, now())
+        );
+        v_method_linked := v_method_linked + v_link_amount;
+      end loop;
+    end if;
+    v_remaining_to_link := greatest(0, v_remaining_to_link - v_method_linked);
+
+    if v_method.amount - v_method_linked > v_tolerance then
+      insert into public.payments (
+        customer_id,
+        type,
+        amount,
+        payment_method,
+        comment,
+        created_at
+      )
+      values (
+        p_customer_id,
+        'pago',
+        v_method.amount - v_method_linked,
+        v_method.method,
+        coalesce(nullif(p_comment, ''), 'Pago a cuenta sin factura'),
+        coalesce(p_created_at, now())
+      );
+    end if;
   end loop;
 
   -- Keep denormalized customer debt in sync with pending balances.

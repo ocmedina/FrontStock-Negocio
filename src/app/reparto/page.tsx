@@ -497,7 +497,8 @@ export default function RepartoPage() {
     paymentBreakdown?: {
       cash: number;
       transfer: number;
-    }
+    },
+    debtAllocation?: { itemId: string; itemType: "order" }
   ): Promise<boolean> => {
     // Buscar el pedido en ambas listas (diarios y historial)
     const order =
@@ -509,117 +510,23 @@ export default function RepartoPage() {
     }
 
     const total = order.total_amount;
-    const debtGenerated = total - amountPaid;
 
     try {
-      const { data: currentOrder, error: currentOrderError } = await supabase
-        .from("orders")
-        .select("status")
-        .eq("id", orderId)
-        .single();
-
-      if (currentOrderError) throw currentOrderError;
-      if (currentOrder?.status !== "pendiente") {
-        toast.error("Este pedido ya fue procesado por otro usuario.");
+      if (!activeBranch) {
+        toast.error("Selecciona una sucursal activa.");
         return false;
       }
 
-      // 1. Actualizar la deuda del cliente (si es necesario)
-      if (debtGenerated > 0) {
-        const { data: customerData } = await supabase
-          .from("customers")
-          .select("debt")
-          .eq("id", order.customer_id)
-          .single();
-
-        const currentDebt = (customerData?.debt as number) || 0;
-        const newDebt = currentDebt + debtGenerated;
-
-        await supabase
-          .from("customers")
-          .update({ debt: newDebt })
-          .eq("id", order.customer_id);
-      }
-
-      // 2. Registrar movimientos en la cuenta corriente
-      // Check if a "compra" movement already exists for this order to avoid duplicates
-      const shortId = orderId.substring(0, 8);
-      const { data: existingPurchase } = await supabase
-        .from("payments")
-        .select("id")
-        .eq("customer_id", order.customer_id)
-        .eq("type", "compra")
-        .ilike("comment", `%Pedido%${shortId}%`)
-        .maybeSingle();
-
-      const movements = [];
-      if (!existingPurchase) {
-        movements.push({
-          customer_id: order.customer_id,
-          order_id: order.id,
-          type: "compra",
-          amount: total,
-          comment: `Pedido ${order.id.substring(0, 8)}`,
-        });
-      }
-
-      if (paymentMethod === "mixto" && paymentBreakdown) {
-        if (paymentBreakdown.cash > 0) {
-          movements.push({
-            customer_id: order.customer_id,
-            order_id: order.id,
-            type: "pago",
-            amount: paymentBreakdown.cash,
-            payment_method: "efectivo",
-            comment: "Pago en entrega (mixto - efectivo)",
-          });
-        }
-        if (paymentBreakdown.transfer > 0) {
-          movements.push({
-            customer_id: order.customer_id,
-            order_id: order.id,
-            type: "pago",
-            amount: paymentBreakdown.transfer,
-            payment_method: "transferencia",
-            comment: "Pago en entrega (mixto - transferencia)",
-          });
-        }
-      } else if (amountPaid > 0) {
-        movements.push({
-          customer_id: order.customer_id,
-          order_id: order.id,
-          type: "pago",
-          amount: amountPaid,
-          payment_method: paymentMethod,
-          comment: `Pago en entrega (${paymentMethod})`,
-        });
-      }
-
-      if (movements.length > 0) {
-        const { error: paymentsError } = await supabase
-          .from("payments")
-          .insert(movements);
-        if (paymentsError) throw paymentsError;
-      }
-
-      // 3. Marcar pedido como 'entregado' y actualizar método de pago usando RPC
-      // Primero actualizamos los datos de pago
-      const { error: orderPaymentError } = await (supabase as any)
-        .from("orders")
-        .update({
-          payment_method: paymentMethod,
-          amount_paid: amountPaid,
-          amount_pending: total - amountPaid,
-        })
-        .eq("id", orderId);
-      if (orderPaymentError) throw orderPaymentError;
-
-      // Luego llamamos al RPC para cambiar estado y descontar stock
-      const { error } = await supabase.rpc("handle_order_status_change", {
-        order_id_param: orderId,
-        new_status_param: "entregado",
+      const { error } = await supabase.rpc("confirm_delivery_transaction", {
+        p_order_id: orderId,
+        p_branch_id: activeBranch.id,
+        p_amount_paid: amountPaid,
+        p_payment_method: paymentMethod,
+        p_cash: paymentBreakdown?.cash ?? 0,
+        p_transfer: paymentBreakdown?.transfer ?? 0,
+        p_debt_item_id: debtAllocation?.itemId ?? null,
+        p_debt_item_type: debtAllocation?.itemType ?? null,
       });
-
       if (error) throw error;
 
       toast.success("✅ Pedido marcado como entregado.");

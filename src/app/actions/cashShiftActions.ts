@@ -7,6 +7,7 @@ import { hasPermission } from '@/lib/permissions';
 export type CashShift = {
   id: number;
   register_id: number;
+  branch_id?: number | null;
   register_name?: string;
   profile_id: string;
   cashier_name?: string;
@@ -42,10 +43,14 @@ export type CashMovement = {
  * Obtener el turno activo (abierto) de una caja específica con totales en tiempo real
  */
 export async function getActiveShift(
-  registerId: number
+  registerId: number,
+  branchId: number
 ): Promise<{ success: boolean; data?: CashShift | null; error?: string }> {
   try {
     await requireAuth();
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      return { success: false, error: 'Sucursal inválida.' };
+    }
 
     const supabase = createLooseAdminClient();
 
@@ -57,6 +62,7 @@ export async function getActiveShift(
         profiles:profile_id ( id, full_name, email )
       `)
       .eq('register_id', registerId)
+      .eq('branch_id', branchId)
       .eq('status', 'open')
       .order('opened_at', { ascending: false })
       .limit(1)
@@ -83,7 +89,7 @@ export async function getActiveShift(
     for (const s of salesData || []) {
       const method = (s.payment_method || '').toLowerCase().trim();
       if (method === 'efectivo') {
-        cashSales += Number(s.total_amount) || 0;
+        cashSales += Number(s.amount_paid ?? s.total_amount) || 0;
       }
     }
 
@@ -112,6 +118,7 @@ export async function getActiveShift(
     const result: CashShift = {
       id: Number(shift.id),
       register_id: Number(shift.register_id),
+      branch_id: shift.branch_id ? Number(shift.branch_id) : null,
       register_name: shift.registers?.name || `Caja ${shift.register_id}`,
       profile_id: shift.profile_id,
       cashier_name: shift.profiles?.full_name || shift.profiles?.email || 'Cajero',
@@ -139,18 +146,32 @@ export async function getActiveShift(
  */
 export async function openCashShift(params: {
   registerId: number;
+  branchId: number;
   initialCash: number;
   notes?: string;
   profileId?: string;
 }): Promise<{ success: boolean; data?: CashShift; error?: string }> {
   try {
     const ctx = await requireAuth();
+    if (!Number.isInteger(params.branchId) || params.branchId <= 0) {
+      return { success: false, error: 'Sucursal inválida.' };
+    }
     const supabase = createLooseAdminClient();
+
+    const { data: register, error: registerErr } = await (supabase.from('registers') as any)
+      .select('id, branch_id, is_active')
+      .eq('id', params.registerId)
+      .maybeSingle();
+    if (registerErr) throw registerErr;
+    if (!register || !register.is_active || Number(register.branch_id) !== params.branchId) {
+      return { success: false, error: 'La caja no pertenece a la sucursal activa.' };
+    }
 
     // Validar que no haya ya un turno abierto en esta caja
     const { data: existing } = await (supabase.from('cash_shifts') as any)
       .select('id')
       .eq('register_id', params.registerId)
+      .eq('branch_id', params.branchId)
       .eq('status', 'open')
       .maybeSingle();
 
@@ -172,6 +193,7 @@ export async function openCashShift(params: {
     const { data: inserted, error: insertErr } = await (supabase.from('cash_shifts') as any)
       .insert({
         register_id: params.registerId,
+        branch_id: params.branchId,
         profile_id: cashierId,
         initial_cash: initialAmount,
         status: 'open',
@@ -193,6 +215,7 @@ export async function openCashShift(params: {
     const result: CashShift = {
       id: Number(inserted.id),
       register_id: Number(inserted.register_id),
+      branch_id: inserted.branch_id ? Number(inserted.branch_id) : params.branchId,
       register_name: inserted.registers?.name || `Caja ${inserted.register_id}`,
       profile_id: inserted.profile_id,
       cashier_name: inserted.profiles?.full_name || 'Cajero',
@@ -220,6 +243,7 @@ export async function openCashShift(params: {
  */
 export async function createCashMovement(params: {
   registerId: number;
+  branchId: number;
   shiftId?: number | null;
   type: 'ingreso' | 'egreso';
   amount: number;
@@ -228,7 +252,19 @@ export async function createCashMovement(params: {
 }): Promise<{ success: boolean; data?: CashMovement; error?: string }> {
   try {
     const ctx = await requireAuth();
+    if (!Number.isInteger(params.branchId) || params.branchId <= 0) {
+      return { success: false, error: 'Sucursal inválida.' };
+    }
     const supabase = createLooseAdminClient();
+
+    const { data: register, error: registerErr } = await (supabase.from('registers') as any)
+      .select('id, branch_id, is_active')
+      .eq('id', params.registerId)
+      .maybeSingle();
+    if (registerErr) throw registerErr;
+    if (!register || !register.is_active || Number(register.branch_id) !== params.branchId) {
+      return { success: false, error: 'La caja no pertenece a la sucursal activa.' };
+    }
 
     const amt = Number(params.amount);
     if (isNaN(amt) || amt <= 0) {
@@ -244,6 +280,7 @@ export async function createCashMovement(params: {
     const { data: inserted, error } = await (supabase.from('cash_movements') as any)
       .insert({
         register_id: params.registerId,
+        branch_id: params.branchId,
         shift_id: params.shiftId || null,
         profile_id: cashierId,
         type: params.type,
@@ -281,7 +318,8 @@ export async function createCashMovement(params: {
 export async function getShiftMovements(
   shiftId?: number | null,
   registerId?: number | null,
-  openedAt?: string
+  openedAt?: string,
+  branchId?: number
 ): Promise<{ success: boolean; data?: CashMovement[]; error?: string }> {
   try {
     await requireAuth();
@@ -296,11 +334,11 @@ export async function getShiftMovements(
       .order('created_at', { ascending: false });
 
     if (shiftId) {
-      query = query.eq('shift_id', shiftId);
+      query = query.eq('shift_id', shiftId).eq('branch_id', branchId);
     } else if (registerId && openedAt) {
-      query = query.eq('register_id', registerId).gte('created_at', openedAt);
+      query = query.eq('register_id', registerId).eq('branch_id', branchId).gte('created_at', openedAt);
     } else if (registerId) {
-      query = query.eq('register_id', registerId).limit(50);
+      query = query.eq('register_id', registerId).eq('branch_id', branchId).limit(50);
     }
 
     const { data, error } = await query;
@@ -365,11 +403,16 @@ export async function closeCashShift(params: {
 
     const openedAt = shift.opened_at;
     const registerId = shift.register_id;
+    const branchId = Number(shift.branch_id);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      return { success: false, error: 'El turno no tiene una sucursal válida.' };
+    }
 
     // 2. Calcular ventas en efectivo desde opened_at
     const { data: salesData, error: salesErr } = await (supabase.from('sales') as any)
-      .select('total_amount, payment_method, is_cancelled')
+      .select('total_amount, amount_paid, payment_method, is_cancelled')
       .eq('register_id', registerId)
+      .eq('branch_id', branchId)
       .eq('is_cancelled', false)
       .gte('created_at', openedAt);
 
@@ -378,7 +421,7 @@ export async function closeCashShift(params: {
     let cashSales = 0;
     for (const s of salesData || []) {
       if ((s.payment_method || '').toLowerCase().trim() === 'efectivo') {
-        cashSales += Number(s.total_amount) || 0;
+        cashSales += Number(s.amount_paid ?? s.total_amount) || 0;
       }
     }
 
@@ -386,6 +429,7 @@ export async function closeCashShift(params: {
     const { data: movsData, error: movErr } = await (supabase.from('cash_movements') as any)
       .select('type, amount')
       .eq('register_id', registerId)
+      .eq('branch_id', branchId)
       .gte('created_at', openedAt);
 
     if (movErr) throw movErr;
@@ -433,6 +477,7 @@ export async function closeCashShift(params: {
     const result: CashShift = {
       id: Number(updated.id),
       register_id: Number(updated.register_id),
+      branch_id: updated.branch_id ? Number(updated.branch_id) : branchId,
       register_name: updated.registers?.name || `Caja ${updated.register_id}`,
       profile_id: updated.profile_id,
       cashier_name: updated.profiles?.full_name || 'Cajero',
@@ -465,7 +510,8 @@ export async function closeCashShift(params: {
  */
 export async function getShiftHistory(
   registerId?: number | null,
-  limit: number = 30
+  limit: number = 30,
+  branchId?: number
 ): Promise<{ success: boolean; data?: CashShift[]; error?: string }> {
   try {
     await requireAuth();
@@ -485,6 +531,9 @@ export async function getShiftHistory(
 
     if (registerId) {
       query = query.eq('register_id', registerId);
+    }
+    if (branchId) {
+      query = query.eq('branch_id', branchId);
     }
 
     const { data, error } = await query;

@@ -40,12 +40,14 @@ const fmt = (n: any) =>
 
 interface CashShiftControlProps {
   selectedRegisterId: number | 'all';
+  branchId: number;
   registers: CashRegister[];
   onShiftChange?: () => void;
 }
 
 export default function CashShiftControl({
   selectedRegisterId,
+  branchId,
   registers,
   onShiftChange,
 }: CashShiftControlProps) {
@@ -81,7 +83,7 @@ export default function CashShiftControl({
       setActiveShift(null);
       setMovements([]);
       // Cargar historial general si es consolidado
-      const histRes = await getShiftHistory(null, 15);
+      const histRes = await getShiftHistory(null, 15, branchId);
       if (histRes.success && histRes.data) setHistory(histRes.data);
       return;
     }
@@ -89,14 +91,14 @@ export default function CashShiftControl({
     setLoading(true);
     try {
       const [shiftRes, histRes] = await Promise.all([
-        getActiveShift(regId),
-        getShiftHistory(regId, 15),
+        getActiveShift(regId, branchId),
+        getShiftHistory(regId, 15, branchId),
       ]);
 
       if (shiftRes.success) {
         setActiveShift(shiftRes.data || null);
         if (shiftRes.data) {
-          const movsRes = await getShiftMovements(shiftRes.data.id, regId, shiftRes.data.opened_at);
+          const movsRes = await getShiftMovements(shiftRes.data.id, regId, shiftRes.data.opened_at, branchId);
           if (movsRes.success) setMovements(movsRes.data || []);
         } else {
           setMovements([]);
@@ -111,7 +113,7 @@ export default function CashShiftControl({
     } finally {
       setLoading(false);
     }
-  }, [regId]);
+  }, [regId, branchId]);
 
   useEffect(() => {
     loadShiftData();
@@ -132,6 +134,7 @@ export default function CashShiftControl({
     try {
       const res = await openCashShift({
         registerId: regId,
+        branchId,
         initialCash,
         notes: openNotesInput.trim() || undefined,
       });
@@ -174,6 +177,7 @@ export default function CashShiftControl({
     try {
       const res = await createCashMovement({
         registerId: regId,
+        branchId,
         shiftId: activeShift?.id || null,
         type: movementType,
         amount,

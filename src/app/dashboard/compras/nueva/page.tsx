@@ -536,6 +536,7 @@ export default function NewPurchasePage() {
           supplier_id: selectedSupplier,
           profile_id: currentUser!.id,
           invoice_number: invoiceNumber || null,
+          branch_id: activeBranch.id,
           total_amount: totalAmount,
           amount_paid: paid,
           created_at: argentinaTime.toISOString(),
@@ -586,25 +587,6 @@ export default function NewPurchasePage() {
           { id: toastId }
         );
         // Continuar de todos modos, pero notificar
-      }
-
-      // 4. Actualizar deuda del proveedor (si corresponde)
-      if (debtGenerated !== 0) {
-        toast.loading("Actualizando cuenta del proveedor...", { id: toastId });
-        const { error: debtError } = await supabase.rpc(
-          "increment_supplier_debt",
-          {
-            supplier_id_in: selectedSupplier,
-            amount_in: debtGenerated,
-          }
-        );
-
-        if (debtError) {
-          console.error("Debt update error:", debtError);
-          toast.error("Error al actualizar deuda del proveedor", {
-            id: toastId,
-          });
-        }
       }
 
       toast.success("¡Compra registrada exitosamente!", { id: toastId });

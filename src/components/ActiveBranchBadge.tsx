@@ -85,6 +85,7 @@ export default function ActiveBranchBadge({
           <div className="space-y-1 mt-1">
             {branches.map((branch) => (
               <button
+                key={branch.id}
                 type="button"
                 onClick={() => {
                   setActiveBranchById(branch.id);

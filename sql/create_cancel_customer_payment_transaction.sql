@@ -1,6 +1,14 @@
 -- Atomic payment cancelation: mark payment annulled + restore pending balances + sync customer debt
+alter table public.payments
+  add column if not exists order_id uuid references public.orders(id) on delete set null;
+
+alter table public.payments
+  add column if not exists sale_id uuid references public.sales(id) on delete set null;
+
+drop function if exists public.cancel_customer_payment_transaction(uuid);
+
 create or replace function public.cancel_customer_payment_transaction(
-  p_payment_id uuid
+  p_payment_id bigint
 )
 returns jsonb
 language plpgsql
@@ -25,7 +33,7 @@ begin
     raise exception 'Pago requerido';
   end if;
 
-  select id, customer_id, amount, type, payment_method
+  select id, customer_id, amount, type, payment_method, order_id, sale_id
     into v_payment
   from public.payments
   where id = p_payment_id
@@ -54,7 +62,51 @@ begin
 
   v_remaining_restoration := coalesce(v_payment.amount, 0);
 
+  -- Linked payments restore the exact invoice they affected.
+  if v_payment.order_id is not null then
+    select id, total_amount, amount_paid, amount_pending
+      into v_order
+    from public.orders
+    where id = v_payment.order_id
+      and coalesce(status, '') <> 'cancelado'
+    for update;
+
+    if found then
+      v_restored_amount := least(
+        v_remaining_restoration,
+        greatest(0, coalesce(v_order.total_amount, 0) - coalesce(v_order.amount_pending, 0))
+      );
+      update public.orders
+      set amount_pending = least(coalesce(total_amount, 0), coalesce(amount_pending, 0) + v_restored_amount),
+          amount_paid = greatest(0, coalesce(amount_paid, 0) - v_restored_amount)
+      where id = v_order.id;
+      v_remaining_restoration := v_remaining_restoration - v_restored_amount;
+    end if;
+  elsif v_payment.sale_id is not null then
+    select id, total_amount, amount_paid, amount_pending
+      into v_sale
+    from public.sales
+    where id = v_payment.sale_id
+      and coalesce(is_cancelled, false) = false
+    for update;
+
+    if found then
+      v_restored_amount := least(
+        v_remaining_restoration,
+        greatest(0, coalesce(v_sale.total_amount, 0) - coalesce(v_sale.amount_pending, 0))
+      );
+      update public.sales
+      set amount_pending = least(coalesce(total_amount, 0), coalesce(amount_pending, 0) + v_restored_amount),
+          amount_paid = greatest(0, coalesce(amount_paid, 0) - v_restored_amount)
+      where id = v_sale.id;
+      v_remaining_restoration := v_remaining_restoration - v_restored_amount;
+    end if;
+  end if;
+
   -- Restore debt in LIFO order (newest debts first), matching current UI behavior.
+  if v_remaining_restoration > v_tolerance
+     and v_payment.order_id is null
+     and v_payment.sale_id is null then
   for v_item in
     select item_type, item_id, created_at
     from (
@@ -98,7 +150,8 @@ begin
           set amount_pending = least(
             coalesce(total_amount, 0),
             coalesce(amount_pending, 0) + v_restore_amount
-          )
+          ),
+          amount_paid = greatest(0, coalesce(amount_paid, 0) - v_restore_amount)
           where id = v_order.id;
 
           v_remaining_restoration := v_remaining_restoration - v_restore_amount;
@@ -128,7 +181,8 @@ begin
           set amount_pending = least(
             coalesce(total_amount, 0),
             coalesce(amount_pending, 0) + v_restore_amount
-          )
+          ),
+          amount_paid = greatest(0, coalesce(amount_paid, 0) - v_restore_amount)
           where id = v_sale.id;
 
           v_remaining_restoration := v_remaining_restoration - v_restore_amount;
@@ -137,6 +191,7 @@ begin
       end if;
     end if;
   end loop;
+  end if;
 
   select
     coalesce((
@@ -170,4 +225,4 @@ begin
 end;
 $$;
 
-grant execute on function public.cancel_customer_payment_transaction(uuid) to authenticated;
+grant execute on function public.cancel_customer_payment_transaction(bigint) to authenticated;

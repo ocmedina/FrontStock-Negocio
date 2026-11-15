@@ -35,7 +35,8 @@ interface DeliveryConfirmationModalProps {
     paymentBreakdown?: {
       cash: number;
       transfer: number;
-    }
+    },
+    debtAllocation?: { itemId: string; itemType: "order" }
   ) => Promise<boolean>;
 }
 
@@ -50,11 +51,28 @@ export default function DeliveryConfirmationModal({
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [amountCash, setAmountCash] = useState("");
   const [amountTransfer, setAmountTransfer] = useState("");
+  const [pendingOrders, setPendingOrders] = useState<
+    { id: string; created_at: string; amount_pending: number }[]
+  >([]);
+  const [debtOrderId, setDebtOrderId] = useState("");
 
   useEffect(() => {
     if (order) {
       setAmountPaid(order.total_amount.toFixed(2));
       setPaymentMethod("efectivo");
+      setDebtOrderId("");
+      void (async () => {
+        const { supabase } = await import("@/lib/supabaseClient");
+        const { data } = await supabase
+          .from("orders")
+          .select("id, created_at, amount_pending")
+          .eq("customer_id", order.customer_id)
+          .neq("id", order.id)
+          .neq("status", "cancelado")
+          .gt("amount_pending", 0)
+          .order("created_at", { ascending: true });
+        setPendingOrders((data || []) as typeof pendingOrders);
+      })();
     }
   }, [order]);
 
@@ -106,7 +124,8 @@ export default function DeliveryConfirmationModal({
       order.id,
       paid,
       paymentMethod,
-      paymentBreakdown
+      paymentBreakdown,
+      debtOrderId ? { itemId: debtOrderId, itemType: "order" } : undefined
     );
     setIsDelivering(false);
     if (confirmed) onClose();
@@ -192,6 +211,27 @@ export default function DeliveryConfirmationModal({
                 </option>
               </select>
             </div>
+
+            {pendingOrders.length > 0 && (
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1.5">
+                  Aplicar este cobro a factura anterior
+                </label>
+                <select
+                  value={debtOrderId}
+                  onChange={(e) => setDebtOrderId(e.target.value)}
+                  className="w-full p-3 border border-amber-200 dark:border-amber-900/50 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 text-xs font-bold outline-none focus:border-amber-500 text-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Cobro del pedido actual</option>
+                  {pendingOrders.map((pendingOrder) => (
+                    <option key={pendingOrder.id} value={pendingOrder.id}>
+                      Factura {pendingOrder.id.slice(0, 8)} - saldo $
+                      {pendingOrder.amount_pending.toLocaleString("es-AR")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {paymentMethod === "mixto" ? (
               <div className="space-y-3 p-3 bg-slate-50/60 dark:bg-slate-950/30 rounded-2xl border border-slate-200/50 dark:border-slate-800/40">
